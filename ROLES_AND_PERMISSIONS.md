@@ -3,9 +3,9 @@
 ## Principles
 
 1. **Least privilege** for VAVS and Ad Book (operational data).
-2. **Ribbon Rack** keeps current PIN + relatively open profile model for MVP (owner decision); do not extend that pattern to other features.
-3. Prefer **Firebase Auth + custom claims** or `roleAssignments` docs over hard-coded emails (RibbonRack currently gates admin on `billy.hartman@gmail.com` — replace in portal).
-4. Scope: `none` | `detachment` | `department` (`dof`) | `national`.
+2. Prefer **Firebase Auth + custom claims** or `roleAssignments` docs over hard-coded admin emails.
+3. Scope: `none` | `detachment` | `department` (`dof`) | `national`.
+4. Ribbon Rack permissions are **out of scope** for this portal (separate site). See deferred note below.
 
 ## Role catalog
 
@@ -40,6 +40,8 @@ Legend: **C** create, **R** read, **U** update, **D** delete, **—** none, **ow
 | Assign roles | — | — | — | — | — | — | CUD scope | CUD |
 | Manage detachments | — | R | R | R | R | R | CRUD | CRUD |
 | Manage ad sizes | — | R | R | — | — | RU | CRUD | CRUD |
+| Toggle registration mode | — | — | — | — | — | — | U | U |
+| Approve pending users | — | — | — | — | — | — | U | U |
 
 \*companyAdvertiser = post-MVP; treat as member-like for ads until then.
 
@@ -55,7 +57,7 @@ Legend: **C** create, **R** read, **U** update, **D** delete, **—** none, **ow
 | Export CSV / print report | — | own only (**inferred**) | scope | dept | — | dept | all |
 | Read audit logs | — | — | R scope | R dept | — | R dept | R |
 
-**Pushback:** Giving department admins silent edit without audit is unsafe — **all rep/admin edits MUST write audit logs** (Phase 1 AC).
+**Pushback:** All rep/admin edits of others’ entries **MUST** write audit logs (Phase 1 AC).
 
 ### Ad Book
 
@@ -70,23 +72,18 @@ Legend: **C** create, **R** read, **U** update, **D** delete, **—** none, **ow
 | Print book | — | R if shared | R | R | R | R |
 | Payment | — | — | — | — | — | — | *(out of MVP)* |
 
-### Ribbon Rack
+### Deferred: Ribbon Rack
 
-| Action | guest | member | dept admin | national admin |
-|--------|-------|--------|------------|----------------|
-| Build rack in UI | R/C local | R/C | R/C | R/C |
-| Save/load profile + PIN | as today | as today | as today | as today |
-| Admin list/delete profiles | — | — | RUD (**migrate off email hard-code**) | RUD |
-| Shopping list print/email | yes | yes | yes | yes |
+Ribbon profiles, PIN save/load, shopping list, and ribbon admin are **not** portal permissions. They remain in [RibbonRackBuilder](https://github.com/bhartman21/RibbonRackBuilder). See `features/RIBBON_RACK.md` (deferred).
 
 ## Assignment workflow (Phase 0)
 
 1. User signs in → `users/{uid}` upserted.
 2. Default role: **`member`**, auto-granted on first sign-in (decided Nov 9, 2026).
-   - **Registration mode** (lock-down mechanism): Firestore doc `settings/registration` with `mode: 'open' | 'approval'` (default `'open'`), editable only by `departmentAdmin`/`nationalAdmin` from an admin settings page.
+   - **Registration mode** (lock-down mechanism): Firestore doc `settings/registration` with `mode: 'open' | 'approval'` (default `'open'`), editable only by `departmentAdmin`/`nationalAdmin`.
    - `open`: new users get `status: 'active'`, role `member`.
-   - `approval`: new users get `status: 'pending'`, no write access; admins see a pending-users queue to approve/reject.
-   - Every user doc carries `status: 'active' | 'pending' | 'suspended'`; security rules require `status == 'active'` for all writes, so admins can also suspend individual accounts at any time.
+   - `approval`: new users get `status: 'pending'`, no write access; admins approve/reject via pending queue.
+   - Every user doc carries `status: 'active' | 'pending' | 'suspended'`; security rules require `status == 'active'` for writes.
    - Switching mode affects only new sign-ins; existing active users are untouched.
 3. Department admin assigns `detachmentVavsRep` + `detachmentId`, or `departmentVavsRep`, or `adBookApprover`.
 4. Guards read claims or `roleAssignments` query.
@@ -94,10 +91,11 @@ Legend: **C** create, **R** read, **U** update, **D** delete, **—** none, **ow
 ## Guard checklist for implementers
 
 - `authGuard` — must be signed in.
-- `roleGuard(['departmentVavsRep','departmentAdmin',...])` — any of listed roles.
+- `activeUserGuard` — `status == 'active'`.
+- `roleGuard([...])` — any of listed roles.
 - `detachmentScopeGuard` — resource `detachmentId` ∈ user’s scopes.
 - `adOwnerOrApproverGuard` — owner OR adBookApprover OR admin.
 
 ## Open role questions
 
-See `OPEN_QUESTIONS.md`: default role on first login; whether guests can draft ads without Auth; national role timing.
+See `OPEN_QUESTIONS.md`: whether guests can draft ads without Auth; national role timing; Auth providers.

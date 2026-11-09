@@ -128,7 +128,7 @@ See `ARCHITECTURE.md` → `vavsEntries`, `vavsPeriods`, `vavsAuditLogs`, `detach
 
 ## Out of scope (MVP)
 
-- Automatic eligibility for Community/VAVS ribbon in Ribbon Rack
+- Automatic eligibility for Community/VAVS ribbon in RibbonRackBuilder (separate site)
 - National multi-department rollup UI
 - Offline sync / PWA
 - Converting miles to reimbursement $

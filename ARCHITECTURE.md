@@ -2,51 +2,64 @@
 
 ## Summary
 
-Single **Angular 21** SPA with **Bootstrap 5**, backed by **Firebase Auth + Firestore + Storage** on project **`mcl-rack-builder`**. Feature modules lazy-loaded under a shared shell. Code lives in a **new** GitHub repo `mcl-portal` (recommended); RibbonRackBuilder remains until cutover.
+Single **Angular 21** SPA with **Bootstrap 5**, backed by **Firebase Auth + Firestore + Storage** on a **dedicated** Firebase project (preferred id **`mcl-portal`** → default Hosting URL `https://mcl-portal.web.app`). Feature modules lazy-loaded under a shared shell. Code: GitHub `bhartman21/mcl-portal`.
+
+**Scope:** VAVS + Ad Book only. **RibbonRackBuilder** is a separate site/repo with its own Firebase project (`mcl-rack-builder`); this portal does **not** host `ribbon-profiles` or ribbon routes. Shared look-and-feel only via `STYLE_GUIDE.md`. Optional header link out to https://bhartman21.github.io/RibbonRackBuilder/.
 
 ## High-level diagram
 
 ```
 Browser (Angular SPA + Bootstrap)
     │
-    ├─ Firebase Auth (email link / optional Google)
-    ├─ Firestore (users, roles, detachments, vavs*, adBooks, ads, audits, ribbon-profiles)
+    ├─ Firebase Auth (email link / optional Google)  [project: mcl-portal]
+    ├─ Firestore (users, roles, detachments, settings, vavs*, adBooks, ads, audits)
     └─ Storage (ad-images/{uid}/{adId}/...)
 ```
+
+RibbonRackBuilder (separate browser app / GH Pages) → its own Firebase project — **no shared Auth/Firestore with this portal** for MVP.
+
+## Firebase project (decided direction)
+
+| Item | Guidance |
+|------|----------|
+| **Recommended project id** | `mcl-portal` |
+| **Default Hosting URL** | `https://mcl-portal.web.app` (and `*.firebaseapp.com`) |
+| **If id taken** | Create nearest available id; record actual id in env docs / CI secrets; keep domain-agnostic app config |
+| **Do not use** | `mcl-rack-builder` (RibbonRackBuilder production — isolate ribbon data/auth) |
+
+Decided Nov 9, 2026: launch on **Firebase Hosting default URL** (custom domain later optional).
 
 ## Angular application structure (target)
 
 ```
 src/
   app/
-    core/                 # singleton services, auth, guards, interceptors
+    core/                 # singleton services, auth, guards
       auth/
       guards/
       models/
       services/
     shared/               # presentational components, pipes, Bootstrap wrappers
       components/
-        shell-header/
+        shell-header/     # includes optional external Ribbon Rack link
         shell-footer/
         status-badge/
     features/
       home/
       vavs/
       ad-book/
-      ribbon-rack/        # ported from RibbonRackBuilder
-      admin/              # users, roles, detachments, size config
+      admin/              # users, roles, detachments, registration mode, ad sizes
     app.routes.ts
     app.config.ts
   styles/
     _variables.scss       # Bootstrap variable overrides (STYLE_GUIDE)
     styles.scss
-    ribbon-legacy.css     # preserved RibbonRack chrome (revert path)
   environments/
 public/
-  ribbons/                # PNGs (unchanged from RibbonRackBuilder)
+  # logos / static assets (not ribbon PNGs)
 ```
 
-**Inferred:** standalone components + `loadComponent` / `loadChildren` lazy routes (matches existing RibbonRack pattern).
+**Inferred:** standalone components + `loadComponent` / `loadChildren` lazy routes.
 
 ## Routes (target)
 
@@ -54,7 +67,7 @@ public/
 |------|---------|--------|
 | `/` | Landing / home | Public |
 | `/sign-in` | Auth | Public |
-| `/vavs` | VAVS hub (period + detachment picker) | `authGuard` |
+| `/vavs` | VAVS hub (period + detachment picker) | `authGuard` + active member |
 | `/vavs/entries` | Activity + in-kind editor | `authGuard` + member or VAVS rep |
 | `/vavs/reports` | CSV / print | VAVS rep (detachment or department) or admin |
 | `/ad-book` | Books list | `authGuard` |
@@ -62,21 +75,19 @@ public/
 | `/ad-book/ads/new` | Create ad | `authGuard` |
 | `/ad-book/ads/:adId` | Edit / view ad | owner or approver |
 | `/ad-book/queue` | Approval queue | `adBookApprover` or admin |
-| `/ribbons` | Ribbon Rack builder | Public read/build; save uses existing PIN model |
-| `/ribbons/admin` | Ribbon profiles admin | `departmentAdmin` or `nationalAdmin` (replace hard-coded email) |
-| `/admin/users` | Role assignment | department/national admin |
+| `/admin/users` | Role assignment + pending queue | department/national admin |
 | `/admin/detachments` | Detachment directory | department/national admin |
 | `/admin/ad-sizes` | Configurable ad sizes | ad approver or admin |
+| `/admin/settings` | Registration mode lock-down | department/national admin |
 | `/**` | Redirect `/` | — |
 
-Exact child paths may vary; keep feature prefixes stable.
+**No** in-app `/ribbons` routes. External link only.
 
 ## Shared shell
 
-- Header: MCL branding, nav links by role, user email, sign-out.
+- Header: MCL branding, nav (VAVS, Ad Book), optional **external** “Ribbon Rack” → RibbonRackBuilder live URL, user email, sign-out.
 - Footer: DoF attribution, print-hide class.
-- Theme: Bootstrap 5 with SCSS variable overrides from `STYLE_GUIDE.md`.
-- Content projection pattern from RibbonRack `HeaderComponent` can be merged into `shell-header` (inferred reuse).
+- Theme: Bootstrap 5 with SCSS overrides from `STYLE_GUIDE.md` (aligned visually with RibbonRackBuilder palette, not shared CSS files).
 
 ## Firebase: collections & data models
 
@@ -89,10 +100,17 @@ Exact child paths may vary; keep feature prefixes stable.
   displayName?: string;
   memberNumber?: string;       // open / inferred
   defaultDetachmentId?: string;
+  status: 'active' | 'pending' | 'suspended';
   roles: RoleId[];             // denormalized for UI; source of truth may be custom claims
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
+```
+
+### `settings/registration`
+
+```ts
+{ mode: 'open' | 'approval' }  // default 'open'; admin-editable lock-down switch
 ```
 
 ### `roleAssignments/{id}` (optional if using custom claims only)
@@ -122,16 +140,16 @@ Exact child paths may vary; keep feature prefixes stable.
 {
   id: string;                  // stable slug or number-based id — open
   departmentId: 'dof';
-  number: string;              // e.g. '52'
+  number: string;              // e.g. '52'; omit/empty when unconfirmed
   name: string;                // e.g. 'PFC BRUCE W CARTER'
   displayName: string;         // full label for selects
   active: boolean;
-  needsVerification?: boolean; // true for entries with unconfirmed number (e.g. S/Sgt Ted Archambault)
+  needsVerification?: boolean; // e.g. S/Sgt Ted Archambault until number confirmed
   notes?: string;
 }
 ```
 
-Seed from VAVS sample options. #54 = Morris F Dixon Jr. Detachment (confirmed Nov 9, 2026); seed S/Sgt Ted Archambault Detachment as a separate doc with `needsVerification: true` and no number.
+Seed from VAVS sample options. **#54 = Morris F Dixon Jr. Detachment** (confirmed Nov 9, 2026). Seed S/Sgt Ted Archambault as a separate doc with `needsVerification: true` and no number.
 
 ### `vavsPeriods/{id}`
 
@@ -149,7 +167,7 @@ Seed from VAVS sample options. #54 = Morris F Dixon Jr. Detachment (confirmed No
 
 ### `vavsEntries/{id}`
 
-Activity + in-kind can be one collection with `worksheet: 'activity' | 'kind'` **or** two collections. Recommend **one collection** for simpler rep queries.
+Recommend **one collection** with `worksheet: 'activity' | 'kind'`.
 
 ```ts
 {
@@ -158,11 +176,10 @@ Activity + in-kind can be one collection with `worksheet: 'activity' | 'kind'` *
   detachmentId: string;
   periodId: string;
   worksheet: 'activity' | 'kind';
-  ownerUid: string;            // member who created / primary owner
-  // activity fields (nullable when kind):
+  ownerUid: string;
   date?: string;
   endDate?: string;
-  member: string;              // description / member name (sample field)
+  member: string;
   vaHours?: number;
   vaDollars?: number;
   vetHours?: number;
@@ -172,8 +189,7 @@ Activity + in-kind can be one collection with `worksheet: 'activity' | 'kind'` *
   otherDollars?: number;       // tolls on activity
   miles?: number;
   notes?: string;
-  // kind fields:
-  category?: string;           // enum from sample list
+  category?: string;
   recipient?: 'va' | 'nonVA' | '';
   estimatedCost?: number;
   createdAt: Timestamp;
@@ -183,7 +199,7 @@ Activity + in-kind can be one collection with `worksheet: 'activity' | 'kind'` *
 }
 ```
 
-Keep sample semantics: app does **not** convert hours/miles to money.
+App does **not** convert hours/miles to money.
 
 ### `vavsAuditLogs/{id}`
 
@@ -218,8 +234,6 @@ Required when actor is a VAVS rep editing another member’s data; recommended f
 }
 ```
 
-Seed full / half from sample; add quarter + business card as configurable defaults.
-
 ### `adBooks/{id}`
 
 ```ts
@@ -227,10 +241,10 @@ Seed full / half from sample; add quarter + business card as configurable defaul
   id: string;
   departmentId: string;
   title: string;
-  eventName: string;           // convention / banquet
+  eventName: string;
   eventDate?: string;
   status: 'draft' | 'open' | 'locked' | 'printed';
-  pageSize: 'letter';           // MVP
+  pageSize: 'letter';
   createdBy: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -242,19 +256,18 @@ Seed full / half from sample; add quarter + business card as configurable defaul
 ```ts
 {
   id: string;
-  bookId?: string;             // assigned when placed; may be null while draft
+  bookId?: string;
   departmentId: string;
   sizeId: string;
   title: string;
   status: 'draft' | 'submitted' | 'approved' | 'rejected';
   rejectionNotes?: string;
-  createdBy: string;           // uid
-  createdByType: 'member' | 'company' | 'guest'; // company later
+  createdBy: string;
+  createdByType: 'member' | 'company' | 'guest';
   companyName?: string;
-  imagePath?: string;          // Storage path
+  imagePath?: string;
   fit?: 'cover' | 'contain';
   position?: { x: number; y: number };
-  // optional multi-slot later
   submittedAt?: Timestamp;
   reviewedBy?: string;
   reviewedAt?: Timestamp;
@@ -263,7 +276,7 @@ Seed full / half from sample; add quarter + business card as configurable defaul
 }
 ```
 
-**Payment:** no fields in MVP (or `paymentStatus: 'not_applicable'` reserved — open).
+**Payment:** no fields in MVP (or reserved later — open).
 
 ### `adBookPages/{id}` (optional MVP+)
 
@@ -275,92 +288,69 @@ Seed full / half from sample; add quarter + business card as configurable defaul
 }
 ```
 
-MVP may assemble pages client-side from approved ads ordered by size.
-
-### `ribbon-profiles/{profileId}` (EXISTING — do not rename)
-
-Preserve RibbonRackBuilder `UserRackProfile` shape:
-
-```ts
-{
-  profileId: string;
-  memberName: string;
-  detachmentName: string;
-  detachmentNumber: string;
-  detachmentLocation: string;
-  email?: string;
-  phone?: string;
-  awards: { ribbonId: number; count: number; marksmanshipLevel?; isFramed? }[];
-  updatedAt: Timestamp;
-  pin?: string;                // keep as-is for MVP (accepted risk)
-}
-```
-
 ### Storage paths
 
 ```
 ad-images/{uid}/{adId}/{filename}
 ```
 
-Images: jpeg/png/webp; max size policy e.g. 10–15 MB (**open**; sample used 30 MB client-side — prefer lower on Storage).
+Images: jpeg/png/webp; max size recommend **10 MB** (sample allowed 30 — prefer lower).
+
+### Not in this project
+
+- Collection `ribbon-profiles` — lives only on RibbonRackBuilder’s Firebase project.
+- Ribbon PNG assets / rack modules.
 
 ## Security rules outline (by role)
 
-Implement with **custom claims** (preferred) or Firestore `roleAssignments` reads. Outline only — write real rules in repo before production.
+Implement with **custom claims** (preferred) or Firestore `roleAssignments` reads. Outline only — write real rules before production. All writes require `users/{uid}.status == 'active'` when registration mode / suspension is enforced.
 
 | Collection | guest | member | det VAVS rep | dept VAVS rep | ad approver | dept admin | national admin |
 |------------|-------|--------|--------------|---------------|-------------|------------|----------------|
 | users own doc | — | read/write own | same | same | same | read all | read all |
+| settings/registration | — | read | read | read | read | R/W | R/W |
 | detachments | read active | read | read | read | read | CRUD | CRUD |
-| vavsEntries | — | CRUD own (`ownerUid==auth.uid`) | R/W where `detachmentId` in scope | R/W department | — | R/W dept | R/W all |
-| vavsAuditLogs | — | read own-related? | read scope | read dept | — | read | read |
+| vavsEntries | — | CRUD own | R/W scope | R/W dept | — | R/W dept | R/W all |
+| vavsAuditLogs | — | — | read scope | read dept | — | read | read |
 | ads | — | CRUD own drafts; submit own | — | — | read submitted+; update status | full | full |
 | adBooks | — | read open books | — | — | R/W | R/W | R/W |
 | adSizes | read active | read | read | read | R/W | R/W | R/W |
-| ribbon-profiles | **current behavior** (weak) until backlog | keep | keep | keep | keep | keep | keep |
 | Storage ad-images | — | write own path; read if approved or owner | — | — | read | read | read |
 
-**Pushback:** Do **not** copy RibbonRack’s open profile reads into VAVS. VAVS hours are operational data; require Auth + rules from day one.
-
-**Ribbon:** Owner accepted PIN-as-is; rules may remain permissive temporarily — isolate that risk to `ribbon-profiles` only.
+**Pushback:** VAVS hours are operational data — require Auth + rules from day one. Do not import permissive patterns from the ribbon site.
 
 ## Totals & reporting (VAVS)
 
-Compute in client (like sample) for MVP; optional Cloud Function later for department rollups. Formulas:
+Compute in client for MVP; optional Cloud Function later. Formulas:
 
 - Sum numeric fields per worksheet.
 - In-kind VA total = sum `estimatedCost` where `recipient=='va'`.
-- Unassigned in-kind with cost > 0 → UI warning (sample behavior).
-- Print filter: activity overlapping date range; in-kind all (or period-tagged — sample used undated in-kind; **keep sample behavior** unless product changes).
+- Unassigned in-kind with cost > 0 → UI warning.
+- Print filter: activity overlapping date range; in-kind all (sample undated behavior) unless product changes.
 
 ## Hosting & deploy
 
 | Option | Pros | Cons |
 |--------|------|------|
-| **Firebase Hosting (recommended)** | SPA rewrites, same project as Auth/Firestore, custom domain easy, matches `firebase.json` already in RibbonRack | Leaves GH Pages URL for old app until redirect |
-| GitHub Pages | Familiar for RibbonRack | Static only (OK for SPA); awkward for multi-feature base-href; Auth authorized domains must include `*.github.io` |
+| **Firebase Hosting on `mcl-portal` (decided for launch)** | SPA rewrites; same project as Auth/Firestore; default URL reads as portal | Custom domain optional later |
+| GitHub Pages | Familiar elsewhere | Not preferred for this SPA; Auth authorized domains more awkward |
 
-**Recommendation:** Deploy `mcl-portal` to **Firebase Hosting** on `mcl-rack-builder`. Keep RibbonRackBuilder on GitHub Pages until Phase 3 cutover, then redirect `/RibbonRackBuilder/` → portal `/ribbons` (or banner with link).
+RibbonRackBuilder continues on GitHub Pages independently — no cutover required from this project.
 
 ### CI (inferred)
 
-GitHub Actions: install → inject firebase config secret → `ng build` → `firebase deploy --only hosting` (and optionally rules).
+GitHub Actions: install → inject firebase config secret → `ng build` → `firebase deploy --only hosting` (and optionally Firestore/Storage rules).
 
 ## Environments
 
-- `local` — emulators encouraged for VAVS rules testing.
-- `prod` — `mcl-rack-builder`.
+- `local` — emulators encouraged for rules testing.
+- `prod` — Firebase project `mcl-portal` (or recorded alternate id).
 - Staging project (**open** / recommended before broad DoF rollout).
-
-## Versioning & revert (Ribbon CSS)
-
-1. Import Bootstrap for shell/forms.
-2. Keep rack visualizer + ribbon tile CSS in `ribbon-legacy.css` initially.
-3. Tag `ribbon-chrome-pre-bootstrap` before converting chrome.
-4. Feature flag `useLegacyRibbonChrome` if needed for emergency revert.
 
 ## Out of scope for architecture MVP
 
+- Ribbon rack modules / `ribbon-profiles`
 - Multi-region tenancy
 - Payment providers
 - Native mobile apps (responsive web only)
+- Shared Auth SSO with RibbonRackBuilder

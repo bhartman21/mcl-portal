@@ -2,7 +2,7 @@
 
 ## Goal
 
-One reconciled **navy / scarlet / gold** palette for the portal shell, VAVS, and Ad Book, while **preserving Ribbon Rack visual accuracy** (ribbon PNGs + rack layout). Convert RibbonRack chrome to Bootstrap later without forcing rack tiles onto generic Bootstrap cards.
+One reconciled **navy / scarlet / gold** palette for the portal shell, VAVS, and Ad Book. Align visually with the separate [RibbonRackBuilder](https://bhartman21.github.io/RibbonRackBuilder/) site so members recognize MCL branding — **shared tokens only**, not shared CSS/code.
 
 ## Sources (research)
 
@@ -10,38 +10,36 @@ One reconciled **navy / scarlet / gold** palette for the portal shell, VAVS, and
 |--------|------|---------------|------|---------|
 | VAVS sample | `#172c40` | `#9c2938` | `#c19b57` | `#f5f4f0` |
 | Ad Studio sample | `#142c49` / `#162840` | `#b73842` / `#a62d3b` | accent `#d99b36` | `#eef1f5` |
-| RibbonRackBuilder | `#00264D` / `#001B3A` | `#CC0000` | `#CFB53B` | dark UI `#00264D` |
+| RibbonRackBuilder (related site) | `#00264D` / `#001B3A` | `#CC0000` | `#CFB53B` | dark UI `#00264D` |
 
 ## Canonical tokens (recommended)
 
-Reconciled for a **light administrative portal** (VAVS/Ad Book primary) with optional dark ribbon section.
+Reconciled for a **light administrative portal** (VAVS / Ad Book).
 
 | Token | Hex | Use |
 |-------|-----|-----|
 | `--mcl-navy` | `#142c49` | Header, primary text on light, nav |
-| `--mcl-navy-deep` | `#001B3A` | Optional dark sections / ribbon page background |
-| `--mcl-scarlet` | `#A62D3B` | Primary buttons, alerts, active tab (closer to Ad Studio / readable on white) |
-| `--mcl-scarlet-bright` | `#CC0000` | Dress-blues accent bar (ribbon header border) |
+| `--mcl-navy-deep` | `#001B3A` | Optional dark footer / emphasis sections |
+| `--mcl-scarlet` | `#A62D3B` | Primary CTAs, alerts, active tab |
+| `--mcl-scarlet-bright` | `#CC0000` | Accent bar under header (dress-blues echo) |
 | `--mcl-gold` | `#C19B57` | Accent borders, focus rings, badges |
 | `--mcl-gold-bright` | `#CFB53B` | Highlights on dark navy |
 | `--mcl-muted` | `#64717B` | Secondary text |
 | `--mcl-line` | `#DCE1E4` | Borders |
-| `--mcl-surface` | `#F5F4F0` | Page background (VAVS-like) |
-| `--mcl-surface-cool` | `#EEF1F5` | Alternate panels (Ad Studio-like) |
+| `--mcl-surface` | `#F5F4F0` | Page background |
+| `--mcl-surface-cool` | `#EEF1F5` | Alternate panels |
 | `--mcl-white` | `#FFFFFF` | Cards |
 
-**Inferred choice:** Default portal chrome = **light** (`surface` + navy header + scarlet CTAs). Ribbon builder route may keep **dark** navy background via `ribbon-legacy.css` so rack contrast is unchanged.
+**Inferred choice:** Default portal chrome = **light** (`surface` + navy header + scarlet CTAs).
 
 ## Bootstrap 5 SCSS mapping
-
-Override before importing Bootstrap (or use CSS variables if on Bootstrap 5.3+):
 
 ```scss
 // styles/_variables.scss  (illustrative)
 $primary:       #142c49;      // navy
 $secondary:     #C19B57;      // gold
-$danger:        #A62D3B;      // scarlet as “brand danger/CTA”
-$success:       #006B3F;      // inferred USMC green accent (ribbon gradients use similar)
+$danger:        #A62D3B;      // scarlet as brand CTA
+$success:       #006B3F;      // inferred USMC green accent
 $warning:       #CFB53B;
 $info:          #162840;
 $light:         #F5F4F0;
@@ -57,10 +55,8 @@ $border-color:  #DCE1E4;
 $border-radius: 0.375rem;
 
 $font-family-sans-serif: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-$headings-font-family: Georgia, "Times New Roman", serif; // matches samples’ titles
+$headings-font-family: Georgia, "Times New Roman", serif;
 ```
-
-Bootstrap CSS variables (runtime):
 
 ```css
 :root {
@@ -77,34 +73,29 @@ Bootstrap CSS variables (runtime):
 
 | UI | Guidance |
 |----|----------|
-| App header | `bg` navy `#142c49`, optional top border 4–5px scarlet; white text; gold subtitle |
-| Primary button | Scarlet `#A62D3B` (`.btn-danger` remapped **or** custom `.btn-mcl`) — **pushback:** don’t use Bootstrap default blue |
+| App header | `bg` navy `#142c49`, optional top/bottom scarlet accent; white text; gold subtitle |
+| External Ribbon Rack link | Same nav weight as internal links; open in same or new tab (**inferred** same tab); do not imply in-app route |
+| Primary button | Scarlet `#A62D3B` (custom `.btn-mcl` or remapped danger) — **don’t** ship default Bootstrap blue as primary brand |
 | Secondary button | Outline navy |
-| Cards / worksheets | White on `#F5F4F0`; gold top border optional (VAVS stat cards) |
-| Focus | Gold outline `#C19B57` / `#d99b36` |
+| Cards / worksheets | White on `#F5F4F0`; gold top border optional on stat cards |
+| Focus | Gold outline `#C19B57` |
 | Tables | Compact; sticky header on VAVS worksheets |
-| Print | Hide `.no-print` / `.d-print-none`; Letter pages for ads |
-
-## Ribbon Rack exception
-
-- **Do not** restyle `.ribbon`, star devices, or rack rows with Bootstrap utilities that change size/spacing of the rack.
-- Chrome around the rack (page header, forms, shopping list panel) **may** use Bootstrap.
-- Keep `ribbon-legacy.css` for rack + pre-Bootstrap chrome; document toggle in `features/RIBBON_RACK.md`.
+| Print | Hide `.no-print` / `.d-print-none`; Letter for ads |
 
 ## Logo / seal
 
-- VAVS sample uses DoF logo `dof-logo.png` — obtain rights/source file for portal assets (**open**).
-- RibbonRack uses ☆ emblem in header — acceptable placeholder until official MCL/DoF artwork is provided.
+- Obtain DoF / MCL logo rights for header (**open**).
+- Placeholder emblem acceptable until official artwork is provided.
 
 ## Accessibility
 
-- Min contrast for body text on `#F5F4F0`: navy `#142c49` OK.
-- Scarlet buttons: ensure white label text.
-- Touch targets ≥ 44px on mobile (Ad Studio sample did this — keep).
+- Body text navy on `#F5F4F0`: OK contrast.
+- Scarlet buttons: white label text.
+- Touch targets ≥ 44px on mobile (Ad Studio sample pattern — keep).
 
 ## Do / Don’t
 
 - **Do** use shared tokens from this file only.
-- **Do** mark temporary one-off colors in PR notes.
+- **Do** keep RibbonRackBuilder visually related via these tokens if/when that site is restyled later (in its own repo).
+- **Don’t** import RibbonRackBuilder CSS or ribbon PNG assets into this portal.
 - **Don’t** ship three different reds in the same view without reason.
-- **Don’t** replace ribbon PNGs with CSS-only approximations in production UI (gradients in data are fallbacks only).
