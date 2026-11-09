@@ -82,7 +82,12 @@ Legend: **C** create, **R** read, **U** update, **D** delete, **—** none, **ow
 ## Assignment workflow (Phase 0)
 
 1. User signs in → `users/{uid}` upserted.
-2. Default role: **`member`** for DoF rollout (**inferred** — confirm in OPEN_QUESTIONS) **or** pending until admin assigns.
+2. Default role: **`member`**, auto-granted on first sign-in (decided Nov 9, 2026).
+   - **Registration mode** (lock-down mechanism): Firestore doc `settings/registration` with `mode: 'open' | 'approval'` (default `'open'`), editable only by `departmentAdmin`/`nationalAdmin` from an admin settings page.
+   - `open`: new users get `status: 'active'`, role `member`.
+   - `approval`: new users get `status: 'pending'`, no write access; admins see a pending-users queue to approve/reject.
+   - Every user doc carries `status: 'active' | 'pending' | 'suspended'`; security rules require `status == 'active'` for all writes, so admins can also suspend individual accounts at any time.
+   - Switching mode affects only new sign-ins; existing active users are untouched.
 3. Department admin assigns `detachmentVavsRep` + `detachmentId`, or `departmentVavsRep`, or `adBookApprover`.
 4. Guards read claims or `roleAssignments` query.
 

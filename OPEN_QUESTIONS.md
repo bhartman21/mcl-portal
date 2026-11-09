@@ -6,17 +6,14 @@ Decisions still needed from Billy / DoF stakeholders. Planning docs mark interim
 
 1. ~~**Repo visibility & ownership**~~ **Decided (Nov 9, 2026):** public repo `bhartman21/mcl-portal`. Keep secrets (Firebase config, service keys) out of the repo; inject via CI secrets.
 
-2. **Canonical production URL / hosting**  
-   Accept recommendation (Firebase Hosting on `mcl-rack-builder`) or prefer custom domain (e.g. `portal.mclflorida.org` — example only)? Who controls DNS?
+2. ~~**Canonical production URL / hosting**~~ **Decided (Nov 9, 2026):** use the default Firebase Hosting address on project `mcl-rack-builder` for launch. A custom domain may be added later; keep app config domain-agnostic (no hard-coded host names).
 
-3. **Default role on first login**  
-   Auto-grant `member`, or require department admin approval before any VAVS/Ad write?
+3. ~~**Default role on first login**~~ **Decided (Nov 9, 2026):** auto-approve. New sign-ins get `member` immediately. Build a lock-down switch now (see ROLES_AND_PERMISSIONS.md, Registration mode) so admins can later require approval without code changes.
 
 4. **Ad payment (explicitly out of MVP — still need policy)**  
    How will staff know an approved ad is paid (cash/check/external)? Status field later? Honor system?
 
-5. **Detachment #54 duplicate**  
-   Which display name is correct for #54 (Morris F Dixon Jr vs S/Sgt Ted Archambault), or are both valid under different numbers? Blocks clean directory seeding.
+5. ~~**Detachment #54 duplicate**~~ **Decided (Nov 9, 2026):** #54 is the **Morris F Dixon Jr. Detachment**. S/Sgt Ted Archambault Detachment keeps its entry but its correct number is still unconfirmed: seed it with `needsVerification: true` and no number until confirmed.
 
 ## Product policy
 

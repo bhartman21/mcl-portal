@@ -37,7 +37,7 @@ Multi-user replacement for the ChatGPT **VAVS Service Tracker** sample. DoF memb
 
 - Organization label default: `Marine Corps League — Department of Florida` (editable only by admin — **inferred**; sample allowed free edit — **pushback:** free-edit org name on every client causes inconsistent exports; lock to department record).
 - Detachment selected from **data-driven** `detachments` collection (not hard-coded HTML).
-- Seed from sample list; mark duplicate **#54** with `needsVerification: true` until owner resolves (OPEN_QUESTIONS).
+- Seed from sample list; #54 = Morris F Dixon Jr.; mark S/Sgt Ted Archambault `needsVerification: true` until its number is confirmed.
 
 ### FR-V-3 Activity worksheet fields
 
@@ -122,7 +122,7 @@ See `ARCHITECTURE.md` → `vavsEntries`, `vavsPeriods`, `vavsAuditLogs`, `detach
 3. Department rep CSV includes multiple detachments for one period.
 4. Print produces Letter-friendly output with period heading and both worksheets.
 5. All 15 in-kind categories available; recipient validation warning works.
-6. Detachment picker does not merge the two #54 seed rows; verification badge visible to admins.
+6. Detachment picker shows #54 as Morris F Dixon Jr.; verification badge on Archambault visible to admins.
 7. Reporting instructions visible without leaving the app.
 8. Guest cannot read entries via client or rules.
 

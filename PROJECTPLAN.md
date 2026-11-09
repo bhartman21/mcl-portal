@@ -53,7 +53,7 @@ Runnable app on Firebase Hosting (or local `ng serve`) with login, role claims/d
 - [ ] Shared layout: header, footer, nav (VAVS, Ad Book, Ribbon Rack stubs), STYLE_GUIDE tokens mapped to Bootstrap SCSS variables.
 - [ ] Auth: email link and/or Google (**open** — default email link to match RibbonRack).
 - [ ] User profile document + role assignment model (see `ROLES_AND_PERMISSIONS.md`).
-- [ ] Seed `detachments` collection from VAVS sample list; **flag duplicate #54** as `needsVerification: true`.
+- [ ] Seed `detachments` collection from VAVS sample list; #54 = Morris F Dixon Jr. Detachment; S/Sgt Ted Archambault seeded with `needsVerification: true` (number unconfirmed).
 - [ ] Admin UI (department admin only): list users, assign roles, edit detachments.
 - [ ] Deploy pipeline (GitHub Actions → Firebase Hosting recommended).
 - [ ] README in app repo with run/deploy steps.
@@ -61,9 +61,9 @@ Runnable app on Firebase Hosting (or local `ng serve`) with login, role claims/d
 ### Acceptance criteria
 
 1. Unauthenticated user sees landing + sign-in; cannot write VAVS/Ad collections.
-2. Signed-in user without roles sees “member pending” or default `member` if auto-granted (**open**).
+2. New sign-in is auto-granted `member` while `settings/registration.mode == 'open'`; with `mode == 'approval'` the user sees a pending screen and cannot write.
 3. Department admin can assign `detachmentVavsRep` scoped to a detachment id.
-4. Detachment directory lists 43 DoF entries; UI marks #54 conflict for verification.
+4. Detachment directory lists 43 DoF entries; UI marks entries with `needsVerification` for admins.
 5. Routes `/vavs`, `/ad-book`, `/ribbons` exist as stubs with auth guards.
 6. Theme matches STYLE_GUIDE (navy/scarlet/gold).
 
@@ -96,7 +96,7 @@ Runnable app on Firebase Hosting (or local `ng serve`) with login, role claims/d
 3. Totals match sample formulas for a golden fixture dataset.
 4. Every rep edit creates an audit document with who/when/before/after (or field diffs).
 5. Print and CSV include org, detachment, period, both worksheets.
-6. Duplicate #54 does not silently merge data (separate detachment docs).
+6. Archambault entry stays separate from #54 Morris F Dixon Jr.
 
 ### Dependencies
 
@@ -166,7 +166,7 @@ Phases 0–2 preferably shipped so ribbon work does not block VAVS/Ad MVP.
 ## Phase 4 — DoF rollout polish
 
 - [ ] Training one-pager for VAVS reps and ad approvers.
-- [ ] Seed production detachment list after #54 verification.
+- [ ] Seed production detachment list after confirming the Archambault detachment number.
 - [ ] Monitoring: Auth error rates, Storage quotas.
 - [ ] Decommission ChatGPT sample links (or point them to portal).
 - [ ] Backup/export runbooks for VAVS periods.

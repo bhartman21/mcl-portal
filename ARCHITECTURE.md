@@ -126,12 +126,12 @@ Exact child paths may vary; keep feature prefixes stable.
   name: string;                // e.g. 'PFC BRUCE W CARTER'
   displayName: string;         // full label for selects
   active: boolean;
-  needsVerification?: boolean; // true for #54 duplicate until resolved
+  needsVerification?: boolean; // true for entries with unconfirmed number (e.g. S/Sgt Ted Archambault)
   notes?: string;
 }
 ```
 
-Seed from VAVS sample options; **do not** collapse the two #54 rows into one document until verified.
+Seed from VAVS sample options. #54 = Morris F Dixon Jr. Detachment (confirmed Nov 9, 2026); seed S/Sgt Ted Archambault Detachment as a separate doc with `needsVerification: true` and no number.
 
 ### `vavsPeriods/{id}`
 
