@@ -31,12 +31,14 @@ Ship a single Angular 21 + Bootstrap 5 + Firebase portal for **MCL Department of
 | Phase | Name | Outcome |
 |-------|------|---------|
 | **0** | Portal shell | Angular app, Bootstrap, Auth, roles, detachments, VAVS/Ad stub routes; external RibbonRack link optional |
-| **1** | MVP VAVS | Members log hours; reps edit scoped data with audit; CSV/print/instructions |
-| **2** | MVP Ad Book | Draft ads, sizes config, submit/approve/reject, books per event, Storage images |
+| **1** | MVP Ad Book | Draft ads, sizes config, submit/approve/reject, books per event, Storage images |
+| **2** | MVP VAVS | Members log hours; reps edit scoped data with audit; CSV/print/instructions |
 | **3** | Polish & DoF rollout | Hardening, docs, training, decommission ChatGPT sample URLs |
 | **4+** | Later enhancements | National, payments, company accounts, dashboards, etc. |
 
-**Dependency order:** 0 → (1 ∥ 2) → 3 → 4+. Prefer finishing **both MVPs** before polish.
+**Dependency order:** 0 → 1 (Ad Book) → 2 (VAVS) → 3 → 4+. Prefer finishing **both MVPs** before polish.
+
+> **Order change (Nov 13, 2026, decided by Billy):** Ad Book Studio is now Phase 1 and VAVS is Phase 2, matching the first build commit, which built Ad Book screens first. Build agents should finish the Ad Book MVP, then move to VAVS.
 
 ---
 
@@ -76,37 +78,7 @@ Runnable app on Firebase Hosting (or local `ng serve`) with login, role claims/d
 
 ---
 
-## Phase 1 — MVP VAVS
-
-**Spec:** `features/VAVS.md`
-
-### Tasks
-
-- [ ] Port Activity + In-kind field sets, categories, reporting instructions from sample.
-- [ ] Member CRUD on own entries for selected period + detachment.
-- [ ] Detachment VAVS rep: R/W entries for their detachment(s); department rep: whole department.
-- [ ] Audit log on every create/update/delete by a rep (and optionally all writes).
-- [ ] Live totals matching sample semantics (tolls, hours, cash, in-kind VA/non-VA, miles).
-- [ ] CSV export + print report (period/week/month/custom).
-- [ ] Half-year reporting periods + year.
-- [ ] Optional: import JSON backup from sample for migration testing.
-
-### Acceptance criteria
-
-1. Member A cannot edit Member B’s entries; detachment rep for A’s detachment can.
-2. Department rep can export CSV for all DoF detachments for a period.
-3. Totals match sample formulas for a golden fixture dataset.
-4. Every rep edit creates an audit document with who/when/before/after (or field diffs).
-5. Print and CSV include org, detachment, period, both worksheets.
-6. Archambault entry stays separate from #54 Morris F Dixon Jr.
-
-### Dependencies
-
-Phase 0 roles + detachments.
-
----
-
-## Phase 2 — MVP Ad Book
+## Phase 1 — MVP Ad Book
 
 **Spec:** `features/AD_BOOK.md`
 
@@ -135,6 +107,36 @@ Phase 0 auth/roles; Storage rules.
 ### Pushback
 
 Approval without payment means unpaid ads can be approved — process must be offline (cash/check). Document that risk; do not fake a payment system in MVP.
+
+---
+
+## Phase 2 — MVP VAVS
+
+**Spec:** `features/VAVS.md`
+
+### Tasks
+
+- [ ] Port Activity + In-kind field sets, categories, reporting instructions from sample.
+- [ ] Member CRUD on own entries for selected period + detachment.
+- [ ] Detachment VAVS rep: R/W entries for their detachment(s); department rep: whole department.
+- [ ] Audit log on every create/update/delete by a rep (and optionally all writes).
+- [ ] Live totals matching sample semantics (tolls, hours, cash, in-kind VA/non-VA, miles).
+- [ ] CSV export + print report (period/week/month/custom).
+- [ ] Half-year reporting periods + year.
+- [ ] Optional: import JSON backup from sample for migration testing.
+
+### Acceptance criteria
+
+1. Member A cannot edit Member B’s entries; detachment rep for A’s detachment can.
+2. Department rep can export CSV for all DoF detachments for a period.
+3. Totals match sample formulas for a golden fixture dataset.
+4. Every rep edit creates an audit document with who/when/before/after (or field diffs).
+5. Print and CSV include org, detachment, period, both worksheets.
+6. Archambault entry stays separate from #54 Morris F Dixon Jr.
+
+### Dependencies
+
+Phase 0 roles + detachments.
 
 ---
 
@@ -169,8 +171,8 @@ Department staff complete one real reporting period export and one ad book print
 | Milestone | Definition of done |
 |-----------|-------------------|
 | M0 Shell live | Phase 0 AC met on Firebase Hosting default URL |
-| M1 VAVS MVP | Phase 1 AC met; DoF pilot detachment using it |
-| M2 Ad MVP | Phase 2 AC met; one event book created |
+| M1 Ad MVP | Phase 1 AC met; one event book created |
+| M2 VAVS MVP | Phase 2 AC met; DoF pilot detachment using it |
 | M3 Production DoF | Phase 3 AC met |
 
 ## Risks (pushback)
@@ -188,8 +190,8 @@ Department staff complete one real reporting period export and one ad book print
 | Phase | Effort (rough) |
 |-------|----------------|
 | 0 | 1–2 weeks |
-| 1 | 2–3 weeks |
-| 2 | 2–4 weeks |
+| 1 (Ad Book) | 2–4 weeks |
+| 2 (VAVS) | 2–3 weeks |
 | 3 | 1 week |
 
 Adjust for volunteer availability; do not treat as a contract.

@@ -5,7 +5,7 @@
 Multi-user replacement for the ChatGPT **VAVS Service Tracker** sample. DoF members log volunteer hours, cash, and in-kind donations. Detachment and department VAVS reps monitor and edit within scope. Preserve sample fields, categories, totals, CSV, print, and reporting instructions. Add Auth, detachment directory, and **audit trail**.
 
 **Reference:** https://florida-vavs-service-tracker.exact-morel-2433.chatgpt.site/  
-**Phase:** 1 (after Phase 0 shell)  
+**Phase:** 2 (after the Ad Book MVP; reordered Nov 13, 2026)  
 **Priority:** MVP (with Ad Book)
 
 ## Actors

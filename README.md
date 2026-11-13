@@ -38,7 +38,7 @@ These docs are for coding agents and humans. Prefer implementing against the fea
 2. **VAVS Service Tracker** — volunteer hours, cash, in-kind; CSV/print; audit trail for rep edits  
 3. **Ad Book Studio** — configurable ad sizes, submit → approve/reject workflow, books per event  
 
-**Priority:** Phase 0 shell → Phase 1 MVP VAVS → Phase 2 MVP Ad Book → polish / later enhancements.
+**Priority:** Phase 0 shell → Phase 1 MVP Ad Book → Phase 2 MVP VAVS → polish / later enhancements.
 
 ## Stack (decided)
 

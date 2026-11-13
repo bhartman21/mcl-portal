@@ -5,7 +5,7 @@
 Multi-user replacement for the ChatGPT **Program Booklet Ad Studio** sample, expanded with configurable ad sizes, **event books**, Firebase Storage images, and an **approval workflow**. Payment is **out of MVP** (open policy question).
 
 **Reference:** https://booklet-ad-studio.sgtmajgna.chatgpt.site/  
-**Phase:** 2 (after Phase 0; parallelizable with VAVS)  
+**Phase:** 1 (after Phase 0 shell; reordered ahead of VAVS on Nov 13, 2026)  
 **Priority:** MVP (with VAVS)
 
 ## Actors
