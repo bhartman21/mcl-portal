@@ -36,7 +36,7 @@ Decisions still needed from Billy / DoF stakeholders. Planning docs mark interim
 
 ## Auth & identity
 
-14. Email-link only vs Google vs both? (**Inferred** default: email link.)
+14. ~~Email-link only vs Google vs both?~~ **Decided (Nov 13, 2026):** email link (passwordless) for launch. Google sign-in can be added later.
 
 15. Replace any temporary hard-coded admin bootstrap with role docs in Phase 0 (expected yes).
 

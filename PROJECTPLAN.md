@@ -54,7 +54,7 @@ Runnable app on Firebase Hosting (or local `ng serve`) with login, role claims/d
 - [ ] Create / wire **new** Firebase project (preferred id `mcl-portal`: Auth, Firestore, Storage, Hosting); config via environment/secret, not committed.
 - [ ] Shared layout: header, footer, nav (VAVS, Ad Book); optional external “Ribbon Rack” link to https://bhartman21.github.io/RibbonRackBuilder/
 - [ ] STYLE_GUIDE tokens mapped to Bootstrap SCSS variables.
-- [ ] Auth: email link and/or Google (**open** — default email link **inferred**).
+- [ ] Auth: Firebase email link (passwordless) sign-in (**decided** Nov 13, 2026; Google sign-in may be added later).
 - [ ] User profile document + role assignment model (see `ROLES_AND_PERMISSIONS.md`), including registration-mode lock-down switch.
 - [ ] Seed `detachments`: #54 = **Morris F Dixon Jr.**; S/Sgt Ted Archambault with `needsVerification: true` (number unconfirmed).
 - [ ] Admin UI: users, roles, detachments, registration mode.
