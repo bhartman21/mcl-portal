@@ -1,0 +1,192 @@
+<div class="container-xl py-4">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div>
+      <div class="mcl-eyebrow">Department Administration</div>
+      <h1 class="h2 mcl-serif mb-1">Users &amp; Role Assignments</h1>
+      <p class="mcl-muted small mb-0">
+        Approve pending registrations and assign scoped VAVS, Ad Book, and Admin roles.
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      <a routerLink="/admin/detachments" class="btn btn-sm btn-mcl-outline">Detachments</a>
+      <a routerLink="/admin/settings" class="btn btn-sm btn-mcl-outline">Registration Mode</a>
+    </div>
+  </div>
+
+  <!-- Pending Queue -->
+  @if (pendingUsers().length > 0) {
+    <div class="mcl-card mcl-card-gold p-4 mb-4">
+      <h2 class="h5 mcl-serif mb-3">
+        <i class="bi bi-hourglass-split text-warning me-2"></i>
+        Pending Approval Queue ({{ pendingUsers().length }})
+      </h2>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Member</th>
+              <th>Email</th>
+              <th>Default Detachment</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (u of pendingUsers(); track u.uid) {
+              <tr>
+                <td class="fw-semibold">{{ u.displayName || 'New Member' }}</td>
+                <td class="small">{{ u.email }}</td>
+                <td class="small">{{ detachmentLabel(u.defaultDetachmentId) }}</td>
+                <td class="text-end">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-success me-2"
+                    (click)="approveUser(u)"
+                  >
+                    <i class="bi bi-check-lg me-1"></i>Approve
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-danger"
+                    (click)="suspendUser(u)"
+                  >
+                    Suspend
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- All Users Table -->
+  <div class="mcl-card mcl-card-navy p-4">
+    <h2 class="h5 mcl-serif mb-3">Directory &amp; Roles</h2>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Member</th>
+            <th>Status</th>
+            <th>Roles &amp; Scope</th>
+            <th class="text-end">Manage</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (u of users(); track u.uid) {
+            <tr>
+              <td>
+                <div class="fw-semibold">{{ u.displayName || u.email }}</div>
+                <div class="mcl-muted small">{{ u.email }}</div>
+              </td>
+              <td>
+                <app-status-badge [variant]="u.status" [label]="u.status" />
+              </td>
+              <td>
+                <div class="d-flex flex-wrap gap-1">
+                  @for (r of u.roles; track r) {
+                    <span class="badge bg-light text-dark border">
+                      {{ roleLabel(r) }}
+                      @if (r === 'detachmentVavsRep' && u.detachmentScopes?.length) {
+                        <span class="text-danger ms-1">({{ scopeNames(u.detachmentScopes!) }})</span>
+                      }
+                    </span>
+                  }
+                </div>
+              </td>
+              <td class="text-end">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-mcl-outline me-2"
+                  (click)="startEdit(u)"
+                >
+                  Edit Roles
+                </button>
+                @if (u.status === 'active') {
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-danger"
+                    (click)="suspendUser(u)"
+                  >
+                    Suspend
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-success"
+                    (click)="approveUser(u)"
+                  >
+                    Activate
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Role Editor Panel -->
+  @if (editingUser(); as target) {
+    <div class="mcl-card mcl-card-scarlet p-4 mt-4">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 class="h5 mcl-serif mb-0">
+          Edit Roles &mdash; {{ target.displayName || target.email }}
+        </h2>
+        <button type="button" class="btn-close" aria-label="Close" (click)="editingUser.set(null)"></button>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="fw-semibold small mb-2">Assigned Roles</div>
+          @for (r of assignableRoles; track r.id) {
+            <div class="form-check mb-1">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                [id]="'role-' + r.id"
+                [checked]="draftRoles().includes(r.id)"
+                (change)="toggleRole(r.id)"
+              />
+              <label class="form-check-label small" [for]="'role-' + r.id">
+                {{ r.label }}
+              </label>
+            </div>
+          }
+        </div>
+
+        @if (draftRoles().includes('detachmentVavsRep')) {
+          <div class="col-md-6">
+            <label for="scopeDetachment" class="form-label fw-semibold small">
+              Detachment VAVS Rep Scope
+            </label>
+            <select
+              id="scopeDetachment"
+              class="form-select"
+              [(ngModel)]="draftDetachmentId"
+            >
+              @for (det of detachments(); track det.id) {
+                <option [value]="det.id">{{ det.displayName }}</option>
+              }
+            </select>
+            <div class="form-text">
+              Detachment VAVS Reps can read/edit entries only within their assigned detachment(s).
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="mt-4 d-flex gap-2">
+        <button type="button" class="btn btn-mcl px-4" (click)="saveRoles()">
+          Save Role Assignment
+        </button>
+        <button type="button" class="btn btn-mcl-outline" (click)="editingUser.set(null)">
+          Cancel
+        </button>
+      </div>
+    </div>
+  }
+</div>
+

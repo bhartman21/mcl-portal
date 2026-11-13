@@ -1,0 +1,123 @@
+<div class="container-xl py-4">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div>
+      <div class="mcl-eyebrow">Ad Book Configuration</div>
+      <h1 class="h2 mcl-serif mb-1">Configurable Ad Sizes</h1>
+      <p class="mcl-muted small mb-0">
+        Add custom ad sizes or toggle active availability in the Ad Editor.
+      </p>
+    </div>
+    <a routerLink="/ad-book" class="btn btn-sm btn-mcl-outline">
+      <i class="bi bi-arrow-left me-1"></i>Back to Ad Book Studio
+    </a>
+  </div>
+
+  <!-- Add Custom Size -->
+  <div class="mcl-card mcl-card-gold p-4 mb-4">
+    <h2 class="h5 mcl-serif mb-3">Add Custom Size</h2>
+    <form (ngSubmit)="addSize()" class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label for="sizeLabel" class="form-label small fw-semibold">Label</label>
+        <input
+          id="sizeLabel"
+          name="label"
+          type="text"
+          class="form-control"
+          placeholder="e.g. Two-Thirds Page"
+          [(ngModel)]="label"
+          required
+        />
+      </div>
+      <div class="col-md-2">
+        <label for="sizeWidth" class="form-label small fw-semibold">Width (in)</label>
+        <input
+          id="sizeWidth"
+          name="widthIn"
+          type="number"
+          step="0.125"
+          class="form-control"
+          [(ngModel)]="widthIn"
+          required
+        />
+      </div>
+      <div class="col-md-2">
+        <label for="sizeHeight" class="form-label small fw-semibold">Height (in)</label>
+        <input
+          id="sizeHeight"
+          name="heightIn"
+          type="number"
+          step="0.125"
+          class="form-control"
+          [(ngModel)]="heightIn"
+          required
+        />
+      </div>
+      <div class="col-md-2">
+        <label for="sizeSlots" class="form-label small fw-semibold">Slots / Page</label>
+        <input
+          id="sizeSlots"
+          name="slotsPerPage"
+          type="number"
+          min="1"
+          class="form-control"
+          [(ngModel)]="slotsPerPage"
+          required
+        />
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-mcl w-100" [disabled]="!label.trim()">
+          <i class="bi bi-plus-lg"></i>Add Size
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Sizes Table -->
+  <div class="mcl-card mcl-card-navy p-4">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Label</th>
+            <th>Dimensions</th>
+            <th>Slots / Page</th>
+            <th>Status</th>
+            <th class="text-end">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of adBook.adSizes(); track s.id) {
+            <tr>
+              <td class="fw-semibold">
+                {{ s.label }}
+                @if (s.inferredDimensions) {
+                  <span class="badge bg-light text-dark border ms-1" style="font-size: 0.7rem;">
+                    Inferred
+                  </span>
+                }
+              </td>
+              <td class="small">{{ s.widthIn }}&Prime; &times; {{ s.heightIn }}&Prime;</td>
+              <td class="small">{{ s.slotsPerPage }}</td>
+              <td>
+                <app-status-badge
+                  [variant]="s.active ? 'active' : 'suspended'"
+                  [label]="s.active ? 'Active' : 'Inactive'"
+                />
+              </td>
+              <td class="text-end">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-mcl-outline"
+                  (click)="adBook.toggleAdSizeActive(s.id)"
+                >
+                  {{ s.active ? 'Deactivate' : 'Activate' }}
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+

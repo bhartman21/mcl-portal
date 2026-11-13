@@ -1,0 +1,229 @@
+<div class="container-xl py-4">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div>
+      <div class="mcl-eyebrow">Ad Book Studio</div>
+      <h1 class="h2 mcl-serif mb-1">Convention &amp; Event Ad Books</h1>
+      <p class="mcl-muted small mb-0">
+        Design, preview, and submit ads for Department of Florida program booklets.
+      </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      @if (adBook.canApprove()) {
+        <a routerLink="/ad-book/queue" class="btn btn-mcl-outline">
+          <i class="bi bi-inbox"></i>Approval Queue
+          @if (adBook.submittedQueue().length > 0) {
+            <span class="badge text-bg-danger ms-1">{{ adBook.submittedQueue().length }}</span>
+          }
+        </a>
+        <a routerLink="/admin/ad-sizes" class="btn btn-mcl-outline">
+          <i class="bi bi-aspect-ratio"></i>Ad Sizes
+        </a>
+      }
+      <a routerLink="/ad-book/ads/new" class="btn btn-mcl">
+        <i class="bi bi-plus-circle"></i>Create New Ad
+      </a>
+    </div>
+  </div>
+
+  @if (notice()) {
+    <div class="alert alert-success small mb-4" role="alert">
+      <i class="bi bi-check-circle me-1"></i>{{ notice() }}
+    </div>
+  }
+  @if (errorMsg()) {
+    <div class="alert alert-danger small mb-4" role="alert">
+      {{ errorMsg() }}
+    </div>
+  }
+
+  <!-- My Ads Section -->
+  <section class="mb-5">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h2 class="h4 mcl-serif mb-0">My Ads ({{ adBook.myAds().length }})</h2>
+    </div>
+
+    @if (adBook.myAds().length === 0) {
+      <div class="mcl-card p-4 text-center py-5">
+        <i class="bi bi-journal-plus text-warning display-5 mb-3 d-block"></i>
+        <h3 class="h5 mcl-serif mb-2">No Ads Created Yet</h3>
+        <p class="mcl-muted small mx-auto mb-3" style="max-width: 30rem;">
+          Create a Full Page, Half Page, Quarter Page, or Business Card ad with your artwork and submit it for review.
+        </p>
+        <a routerLink="/ad-book/ads/new" class="btn btn-mcl px-4">
+          <i class="bi bi-plus-circle"></i>Create Your First Ad
+        </a>
+      </div>
+    } @else {
+      <div class="row g-4">
+        @for (ad of adBook.myAds(); track ad.id) {
+          <div class="col-md-6 col-lg-4">
+            <div class="mcl-card mcl-card-gold h-100 p-3 d-flex flex-column">
+              <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+                <div>
+                  <h3 class="h6 fw-bold mb-0">{{ ad.title }}</h3>
+                  <div class="mcl-muted small">{{ sizeLabel(ad.sizeId) }}</div>
+                </div>
+                <span class="badge rounded-pill" [class]="statusBadgeClass(ad.status)">
+                  {{ ad.status }}
+                </span>
+              </div>
+
+              <!-- Mini Preview -->
+              <div class="mcl-ad-thumb-wrap my-2">
+                @if (ad.imageUrl) {
+                  <img
+                    [src]="ad.imageUrl"
+                    [alt]="ad.title"
+                    class="mcl-ad-thumb-img"
+                    [style.object-fit]="ad.fit"
+                    [style.object-position]="ad.position.x + '% ' + ad.position.y + '%'"
+                  />
+                } @else {
+                  <div class="mcl-muted small text-center p-3">
+                    <i class="bi bi-image d-block fs-4 mb-1"></i>No image uploaded
+                  </div>
+                }
+              </div>
+
+              @if (ad.status === 'rejected' && ad.rejectionNotes) {
+                <div class="alert alert-danger py-2 px-3 small mb-2">
+                  <strong>Revision Requested:</strong> {{ ad.rejectionNotes }}
+                </div>
+              }
+
+              <div class="mt-auto pt-2 d-flex flex-wrap gap-2">
+                @if (ad.status === 'draft' || ad.status === 'rejected') {
+                  <a [routerLink]="['/ad-book/ads', ad.id]" class="btn btn-sm btn-mcl-outline flex-grow-1">
+                    <i class="bi bi-pencil me-1"></i>Edit
+                  </a>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-mcl flex-grow-1"
+                    (click)="submitAd(ad.id)"
+                  >
+                    <i class="bi bi-send me-1"></i>Submit
+                  </button>
+                  @if (ad.status === 'draft') {
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-danger"
+                      title="Delete draft"
+                      (click)="deleteAd(ad.id)"
+                    >
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  }
+                } @else {
+                  <a [routerLink]="['/ad-book/ads', ad.id]" class="btn btn-sm btn-mcl-outline flex-grow-1">
+                    <i class="bi bi-eye me-1"></i>View
+                  </a>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary"
+                    (click)="recallAd(ad.id)"
+                  >
+                    Recall to Draft
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </section>
+
+  <!-- Event Books Section -->
+  <section>
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+      <div>
+        <h2 class="h4 mcl-serif mb-0">Event Program Books</h2>
+        <p class="mcl-muted small mb-0">
+          Open books accept approved ads for Letter-size print assembly. Payment is handled offline.
+        </p>
+      </div>
+      @if (adBook.canApprove()) {
+        <button
+          type="button"
+          class="btn btn-sm btn-mcl-outline"
+          (click)="showNewBookForm.set(!showNewBookForm())"
+        >
+          <i class="bi bi-journal-plus me-1"></i>New Event Book
+        </button>
+      }
+    </div>
+
+    @if (showNewBookForm() && adBook.canApprove()) {
+      <div class="mcl-card mcl-card-navy p-4 mb-4">
+        <h3 class="h6 fw-bold mb-3">Create Event Book</h3>
+        <form (ngSubmit)="createBook()" class="row g-3 align-items-end">
+          <div class="col-md-5">
+            <label for="bookTitle" class="form-label small fw-semibold">Book Title</label>
+            <input
+              id="bookTitle"
+              name="title"
+              type="text"
+              class="form-control"
+              placeholder="e.g. 2026 Fall Conference Program"
+              [(ngModel)]="newBookTitle"
+              required
+            />
+          </div>
+          <div class="col-md-4">
+            <label for="bookEvent" class="form-label small fw-semibold">Event Name</label>
+            <input
+              id="bookEvent"
+              name="eventName"
+              type="text"
+              class="form-control"
+              placeholder="e.g. DoF Fall Conference"
+              [(ngModel)]="newBookEvent"
+              required
+            />
+          </div>
+          <div class="col-md-3">
+            <button
+              type="submit"
+              class="btn btn-mcl w-100"
+              [disabled]="!newBookTitle.trim() || !newBookEvent.trim()"
+            >
+              Create Book
+            </button>
+          </div>
+        </form>
+      </div>
+    }
+
+    <div class="row g-4">
+      @for (book of adBook.adBooks(); track book.id) {
+        <div class="col-md-6">
+          <div class="mcl-card mcl-card-scarlet p-4 h-100 d-flex flex-column">
+            <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+              <div>
+                <h3 class="h5 mcl-serif mb-1">{{ book.title }}</h3>
+                <div class="mcl-muted small">
+                  <i class="bi bi-calendar-event me-1"></i>{{ book.eventName }}
+                  @if (book.eventDate) {
+                    &bull; {{ book.eventDate }}
+                  }
+                </div>
+              </div>
+              <span class="badge text-bg-dark text-uppercase">{{ book.status }}</span>
+            </div>
+
+            <div class="small mcl-muted my-3">
+              <strong>{{ book.adIds.length }}</strong> placed ad(s) &bull; Letter (8.5 &times; 11 in)
+            </div>
+
+            <div class="mt-auto">
+              <a [routerLink]="['/ad-book/books', book.id]" class="btn btn-mcl-outline w-100">
+                <i class="bi bi-printer me-1"></i>Open Book &amp; Print Preview
+              </a>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+</div>
+

@@ -1,0 +1,54 @@
+<div class="container-xl py-4">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div>
+      <div class="mcl-eyebrow">Phase 1 Workspace</div>
+      <h1 class="h2 mcl-serif mb-1">VAVS Service Tracker</h1>
+      <p class="mcl-muted small mb-0">
+        Department of Florida volunteer hours, mileage, cash, and in-kind donations.
+      </p>
+    </div>
+    <span class="badge bg-light text-dark border px-3 py-2">
+      <i class="bi bi-person-badge me-1"></i>{{ auth.primaryRoleLabel() }}
+    </span>
+  </div>
+
+  <!-- Period & Detachment Picker Shell -->
+  <div class="mcl-card mcl-card-scarlet p-4 mb-4">
+    <div class="row g-3 align-items-end">
+      <div class="col-md-5">
+        <label for="vavsDetachment" class="form-label fw-semibold small">Detachment</label>
+        <select
+          id="vavsDetachment"
+          class="form-select"
+          [(ngModel)]="selectedDetachmentId"
+        >
+          @for (det of activeDetachments(); track det.id) {
+            <option [value]="det.id">{{ det.displayName }}</option>
+          }
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label for="vavsPeriod" class="form-label fw-semibold small">Reporting Period</label>
+        <select id="vavsPeriod" class="form-select" [(ngModel)]="selectedPeriod">
+          <option value="2026-h2">2026 H2 (Jul 1 &ndash; Dec 31, 2026)</option>
+          <option value="2026-h1">2026 H1 (Jan 1 &ndash; Jun 30, 2026)</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <button type="button" class="btn btn-mcl w-100" disabled>
+          <i class="bi bi-plus-circle"></i>New Entry (Phase 1)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="mcl-card p-4 text-center py-5">
+    <i class="bi bi-clipboard2-pulse text-danger display-5 mb-3 d-block"></i>
+    <h2 class="h4 mcl-serif mb-2">VAVS Module Ready for Phase 1</h2>
+    <p class="mcl-muted mx-auto mb-0" style="max-width: 34rem;">
+      This route is protected by <code>authGuard</code> and <code>activeUserGuard</code>.
+      Activity &amp; In-Kind worksheets, rep audit trails, and CSV/print exports will be built here in Phase 1.
+    </p>
+  </div>
+</div>
+

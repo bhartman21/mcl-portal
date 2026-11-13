@@ -1,0 +1,93 @@
+<div class="container-xl py-4">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div>
+      <div class="mcl-eyebrow">Ad Book Approver</div>
+      <h1 class="h2 mcl-serif mb-1">Ad Approval Queue</h1>
+      <p class="mcl-muted small mb-0">
+        Review submitted member ads. Approved ads become eligible for placement in open event books.
+      </p>
+    </div>
+    <a routerLink="/ad-book" class="btn btn-sm btn-mcl-outline">
+      <i class="bi bi-arrow-left me-1"></i>Back to Ad Book Studio
+    </a>
+  </div>
+
+  @if (notice()) {
+    <div class="alert alert-success small mb-4" role="alert">
+      <i class="bi bi-check-circle me-1"></i>{{ notice() }}
+    </div>
+  }
+  @if (errorMsg()) {
+    <div class="alert alert-danger small mb-4" role="alert">
+      {{ errorMsg() }}
+    </div>
+  }
+
+  @if (adBook.submittedQueue().length === 0) {
+    <div class="mcl-card p-5 text-center">
+      <i class="bi bi-check2-circle text-success display-5 d-block mb-3"></i>
+      <h2 class="h4 mcl-serif mb-2">Queue Clear</h2>
+      <p class="mcl-muted small mb-0">
+        There are no submitted ads awaiting review right now.
+      </p>
+    </div>
+  } @else {
+    <div class="row g-4">
+      @for (ad of adBook.submittedQueue(); track ad.id) {
+        <div class="col-lg-6">
+          <div class="mcl-card mcl-card-scarlet p-4 h-100 d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+              <div>
+                <h2 class="h5 mcl-serif mb-1">{{ ad.title }}</h2>
+                <div class="mcl-muted small">
+                  By {{ ad.createdByName || 'Member' }}
+                  @if (ad.companyName) {
+                    &bull; {{ ad.companyName }}
+                  }
+                </div>
+                <div class="small fw-semibold mt-1">{{ sizeLabel(ad.sizeId) }}</div>
+              </div>
+              <span class="badge text-bg-primary">Submitted</span>
+            </div>
+
+            <div class="p-3 rounded border bg-light d-flex justify-content-center align-items-center mb-3" style="min-height: 220px;">
+              @if (ad.imageUrl) {
+                <img
+                  [src]="ad.imageUrl"
+                  [alt]="ad.title"
+                  style="max-width: 100%; max-height: 240px;"
+                  [style.object-fit]="ad.fit"
+                  [style.object-position]="ad.position.x + '% ' + ad.position.y + '%'"
+                />
+              }
+            </div>
+
+            <div class="mb-3">
+              <label [for]="'notes-' + ad.id" class="form-label small fw-semibold">
+                Rejection Notes (required if rejecting, min 5 chars)
+              </label>
+              <input
+                [id]="'notes-' + ad.id"
+                type="text"
+                class="form-control form-control-sm"
+                placeholder="e.g. Logo resolution too low for full-page print"
+                [ngModel]="notesMap()[ad.id] || ''"
+                (ngModelChange)="setNotes(ad.id, $event)"
+              />
+            </div>
+
+            <div class="mt-auto d-flex gap-2">
+              <button type="button" class="btn btn-success flex-grow-1" (click)="approve(ad.id)">
+                <i class="bi bi-check-lg me-1"></i>Approve
+              </button>
+              <button type="button" class="btn btn-outline-danger flex-grow-1" (click)="reject(ad.id)">
+                <i class="bi bi-x-lg me-1"></i>Reject with Notes
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+

@@ -160,6 +160,7 @@ Department staff complete one real reporting period export and one ad book print
 - Dashboards (hours by detachment, ad fill rate)
 - Server-side PDF generation
 - Offline PWA for VAVS
+- **Guarded AI Image / Asset Assistant (reusable)**: Reusable Angular component + Firebase Cloud Function proxy (e.g. Gemini free tier / provider-agnostic) accepting 1–2 reference photos and structured, topic-locked prompts with per-user rate limits. Initially for Ad Book Studio artwork, designed cleanly so other portal features can reuse it later.
 
 ---
 

@@ -1,0 +1,143 @@
+<div class="container-xl py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      @if (auth.isPending()) {
+        <div class="mcl-card mcl-card-gold p-4 p-md-5 text-center">
+          <i class="bi bi-hourglass-split text-warning display-4 mb-3 d-block"></i>
+          <h1 class="h3 mcl-serif mb-2">Registration Pending Approval</h1>
+          <p class="mcl-muted mb-4">
+            Signed in as <strong>{{ auth.user()?.email }}</strong>. Department registration is currently
+            set to <strong>Approval Required</strong>. A Department Administrator will activate your
+            member access shortly.
+          </p>
+          <button type="button" class="btn btn-mcl-outline px-4" (click)="auth.signOut()">
+            Sign Out
+          </button>
+        </div>
+      } @else if (auth.isSuspended()) {
+        <div class="mcl-card mcl-card-scarlet p-4 p-md-5 text-center">
+          <i class="bi bi-shield-x text-danger display-4 mb-3 d-block"></i>
+          <h1 class="h3 mcl-serif mb-2">Account Suspended</h1>
+          <p class="mcl-muted mb-4">
+            Please contact your Department of Florida Administrator for assistance.
+          </p>
+          <button type="button" class="btn btn-mcl-outline px-4" (click)="auth.signOut()">
+            Sign Out
+          </button>
+        </div>
+      } @else {
+        <div class="mcl-card mcl-card-scarlet p-4 p-md-5">
+          <div class="text-center mb-4">
+            <app-mcl-crest [size]="56" />
+            <div class="mcl-eyebrow mt-3">Marine Corps League &bull; DoF</div>
+            <h1 class="h3 mcl-serif mt-1 mb-1">Member Sign In</h1>
+            <p class="mcl-muted small mb-0">
+              Access VAVS Service Tracker, Ad Book Studio, and Detachment tools.
+            </p>
+          </div>
+
+          @if (errorMsg()) {
+            <div class="alert alert-danger small" role="alert">
+              {{ errorMsg() }}
+            </div>
+          }
+
+          @if (linkSent()) {
+            <div class="alert alert-success small" role="alert">
+              <i class="bi bi-envelope-check me-1"></i>
+              Sign-in link sent to <strong>{{ email }}</strong>. Check your inbox and click the link on this device.
+            </div>
+          }
+
+          <form (ngSubmit)="sendEmailLink()" class="mb-3">
+            <label for="signInEmail" class="form-label fw-semibold small">
+              Email Address
+            </label>
+            <div class="input-group mb-3">
+              <input
+                id="signInEmail"
+                name="email"
+                type="email"
+                class="form-control"
+                placeholder="marine@example.com"
+                [(ngModel)]="email"
+                required
+              />
+              <button
+                type="submit"
+                class="btn btn-mcl px-4"
+                [disabled]="busy() || !email.trim()"
+              >
+                Send Sign-In Link
+              </button>
+            </div>
+          </form>
+
+          <div class="d-flex align-items-center my-3">
+            <hr class="flex-grow-1" />
+            <span class="px-3 small mcl-muted">or</span>
+            <hr class="flex-grow-1" />
+          </div>
+
+          <button
+            type="button"
+            class="btn btn-mcl-outline w-100 mb-3"
+            (click)="signInGoogle()"
+            [disabled]="busy()"
+          >
+            <i class="bi bi-google me-1"></i>Continue with Google
+          </button>
+
+          @if (auth.isDemoMode()) {
+            <div class="mt-4 p-3 rounded border bg-light">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="fw-bold small text-uppercase mcl-eyebrow-dark">
+                  <i class="bi bi-laptop me-1 text-warning"></i>Local Preview Sign-In
+                </span>
+                <span class="badge bg-secondary-subtle text-dark">
+                  Reg Mode: {{ auth.registrationMode() }}
+                </span>
+              </div>
+              <p class="mcl-muted small mb-3">
+                Firebase credentials are not configured yet. Choose a role below to preview the portal shell, guards, and admin controls:
+              </p>
+              <div class="d-grid gap-2">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-mcl-outline text-start"
+                  (click)="demoLogin('member')"
+                >
+                  <i class="bi bi-person me-2"></i><strong>MCL Member</strong>
+                  <span class="ms-1 opacity-75">(respects registration mode)</span>
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-mcl-outline text-start"
+                  (click)="demoLogin('detachmentVavsRep')"
+                >
+                  <i class="bi bi-clipboard2-check me-2"></i><strong>Detachment VAVS Rep</strong>
+                  <span class="ms-1 opacity-75">(Detachment #54)</span>
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-mcl-outline text-start"
+                  (click)="demoLogin('adBookApprover')"
+                >
+                  <i class="bi bi-journal-check me-2"></i><strong>Ad Book Approver</strong>
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-mcl text-start"
+                  (click)="demoLogin('departmentAdmin')"
+                >
+                  <i class="bi bi-shield-lock me-2"></i><strong>Department Admin</strong>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>
+

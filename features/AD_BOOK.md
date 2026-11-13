@@ -110,6 +110,7 @@ See `ARCHITECTURE.md` → `ads`, `adBooks`, `adSizes`, Storage `ad-images/...`.
 - Company self-registration
 - Drag-and-drop multi-ad page designer beyond simple ordering
 - Bleed/crop marks for commercial press (may note in print footer)
+- **Guarded AI Ad Assistant (Phase 4+ backlog)**: Reusable prompt-guarded image generator accepting 1–2 reference photos via a Firebase Cloud Function proxy (e.g. Google Gemini free tier or equivalent), locked to MCL Ad Book aspect ratios and subject matter.
 
 ## Implementation notes for agents
 

@@ -1,0 +1,17 @@
+.mcl-ad-thumb-wrap {
+  height: 150px;
+  border-radius: 0.375rem;
+  border: 1px solid var(--mcl-border);
+  background-color: var(--mcl-panel-bg);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mcl-ad-thumb-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+

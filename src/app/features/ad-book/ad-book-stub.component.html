@@ -1,0 +1,54 @@
+<div class="container-xl py-4">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div>
+      <div class="mcl-eyebrow">Phase 2 Workspace</div>
+      <h1 class="h2 mcl-serif mb-1">Ad Book Studio</h1>
+      <p class="mcl-muted small mb-0">
+        Prepare, submit, and assemble Department convention &amp; event program books.
+      </p>
+    </div>
+    <span class="badge bg-light text-dark border px-3 py-2">
+      <i class="bi bi-person-badge me-1"></i>{{ auth.primaryRoleLabel() }}
+    </span>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-md-4">
+      <div class="mcl-card mcl-card-gold p-4 h-100">
+        <div class="mcl-eyebrow mb-1">Standard Sizes</div>
+        <h2 class="h5 mcl-serif mb-2">Configurable Layouts</h2>
+        <p class="mcl-muted small mb-0">
+          Full Page, Half Page, Quarter Page, and Business Card templates sized for Letter print.
+        </p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="mcl-card mcl-card-scarlet p-4 h-100">
+        <div class="mcl-eyebrow mb-1">Workflow</div>
+        <h2 class="h5 mcl-serif mb-2">Draft &rarr; Approval</h2>
+        <p class="mcl-muted small mb-0">
+          Members submit drafts with Storage-backed artwork; Ad Book Approvers review and approve.
+        </p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="mcl-card mcl-card-navy p-4 h-100">
+        <div class="mcl-eyebrow mb-1">Print Output</div>
+        <h2 class="h5 mcl-serif mb-2">Event Program Books</h2>
+        <p class="mcl-muted small mb-0">
+          Assemble approved ads into convention books with clean Letter-size print / PDF export.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="mcl-card p-4 text-center py-5">
+    <i class="bi bi-journal-richtext text-warning display-5 mb-3 d-block"></i>
+    <h2 class="h4 mcl-serif mb-2">Ad Book Studio Ready for Phase 2</h2>
+    <p class="mcl-muted mx-auto mb-0" style="max-width: 34rem;">
+      This route is protected by <code>authGuard</code> and <code>activeUserGuard</code>.
+      Ad drafting, Storage image uploads, and the approver queue will be built here in Phase 2.
+    </p>
+  </div>
+</div>
+

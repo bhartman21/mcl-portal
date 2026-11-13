@@ -1,0 +1,162 @@
+<header class="mcl-header d-print-none">
+  <nav class="navbar navbar-expand-lg navbar-dark mcl-navbar py-2" aria-label="Primary Navigation">
+    <div class="container-xl">
+      <!-- Brand Lockup -->
+      <a class="navbar-brand d-flex align-items-center gap-3 py-1" routerLink="/">
+        <app-mcl-crest [size]="44" />
+        <div class="d-flex flex-column lh-sm">
+          <span class="mcl-brand-title mcl-serif">Marine Corps League</span>
+          <span class="mcl-brand-subtitle">Department of Florida &bull; Member Portal</span>
+        </div>
+      </a>
+
+      <!-- Mobile Toggle -->
+      <button
+        class="navbar-toggler border-secondary"
+        type="button"
+        (click)="menuOpen.set(!menuOpen())"
+        [attr.aria-expanded]="menuOpen()"
+        aria-label="Toggle navigation"
+      >
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <!-- Nav Links -->
+      <div class="collapse navbar-collapse" [class.show]="menuOpen()">
+        <ul class="navbar-nav me-auto ms-lg-4 gap-lg-1 mt-3 mt-lg-0">
+          <li class="nav-item">
+            <a
+              class="nav-link mcl-nav-link"
+              routerLink="/"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              (click)="menuOpen.set(false)"
+            >
+              <i class="bi bi-house-door me-1"></i>Home
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link mcl-nav-link"
+              routerLink="/vavs"
+              routerLinkActive="active"
+              (click)="menuOpen.set(false)"
+            >
+              <i class="bi bi-clipboard2-pulse me-1"></i>VAVS Tracker
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link mcl-nav-link"
+              routerLink="/ad-book"
+              routerLinkActive="active"
+              (click)="menuOpen.set(false)"
+            >
+              <i class="bi bi-journal-richtext me-1"></i>Ad Book Studio
+            </a>
+          </li>
+
+          @if (auth.isAdmin()) {
+            <li class="nav-item dropdown">
+              <button
+                class="nav-link mcl-nav-link dropdown-toggle bg-transparent border-0"
+                type="button"
+                (click)="adminOpen.set(!adminOpen())"
+                [attr.aria-expanded]="adminOpen()"
+              >
+                <i class="bi bi-shield-lock me-1"></i>Admin
+              </button>
+              <ul class="dropdown-menu mcl-dropdown" [class.show]="adminOpen()">
+                <li>
+                  <a class="dropdown-item" routerLink="/admin/users" (click)="closeMenus()">
+                    <i class="bi bi-people me-2"></i>Users &amp; Roles
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" routerLink="/admin/detachments" (click)="closeMenus()">
+                    <i class="bi bi-building me-2"></i>Detachment Directory
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" routerLink="/admin/settings" (click)="closeMenus()">
+                    <i class="bi bi-sliders me-2"></i>Registration Settings
+                  </a>
+                </li>
+              </ul>
+            </li>
+          }
+
+          <!-- External Link to RibbonRackBuilder (separate site/repo) -->
+          <li class="nav-item">
+            <a
+              class="nav-link mcl-nav-link"
+              [href]="ribbonRackUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Opens RibbonRackBuilder in a new tab"
+            >
+              <i class="bi bi-award me-1"></i>Ribbon Rack
+              <i class="bi bi-box-arrow-up-right ms-1 small opacity-75"></i>
+            </a>
+          </li>
+        </ul>
+
+        <!-- Auth / User Status & Theme Switcher -->
+        <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-2 mt-3 mt-lg-0 pb-2 pb-lg-0">
+          <!-- 3-Theme Switcher: Light / Dark / Fun -->
+          <div class="mcl-theme-switcher" role="group" aria-label="Theme selection">
+            @for (opt of themeService.options; track opt.id) {
+              <button
+                type="button"
+                class="mcl-theme-btn"
+                [class.active]="themeService.theme() === opt.id"
+                [title]="opt.description"
+                (click)="themeService.setTheme(opt.id)"
+              >
+                <i class="bi" [class]="opt.icon"></i>
+                <span>{{ opt.label }}</span>
+              </button>
+            }
+          </div>
+
+          @if (auth.isDemoMode()) {
+            <span class="badge bg-dark border border-secondary text-warning small py-2 px-2">
+              <i class="bi bi-laptop me-1"></i>Local Preview
+            </span>
+          }
+
+          @if (auth.user(); as user) {
+            <div class="d-flex align-items-center gap-2 text-white bg-dark bg-opacity-25 rounded px-3 py-1 border border-secondary border-opacity-50">
+              <div class="d-flex flex-column lh-sm">
+                <span class="small fw-semibold">
+                  {{ user.displayName || user.email }}
+                </span>
+                <span class="mcl-user-role">
+                  {{ auth.primaryRoleLabel() }}
+                </span>
+              </div>
+              @if (user.status === 'pending') {
+                <app-status-badge variant="pending" label="Pending" />
+              } @else if (user.status === 'suspended') {
+                <app-status-badge variant="suspended" label="Suspended" />
+              }
+            </div>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-light px-3 py-2"
+              (click)="signOut()"
+            >
+              <i class="bi bi-box-arrow-right me-1"></i>Sign Out
+            </button>
+          } @else {
+            <a routerLink="/sign-in" class="btn btn-mcl px-3" (click)="menuOpen.set(false)">
+              <i class="bi bi-person-badge me-1"></i>Member Sign In
+            </a>
+          }
+        </div>
+      </div>
+    </div>
+  </nav>
+  <!-- Signature USMC Dress Blues Blood Stripe -->
+  <div class="mcl-blood-stripe" aria-hidden="true"></div>
+</header>

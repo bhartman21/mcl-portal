@@ -1,0 +1,168 @@
+@use './styles/variables' as *;
+@use './styles/themes';
+
+// Bootstrap 5 SCSS
+@import 'bootstrap/scss/bootstrap';
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+
+:root {
+  --mcl-navy: #142c49;
+  --mcl-navy-deep: #001b3a;
+  --mcl-scarlet: #a62d3b;
+  --mcl-scarlet-hover: #88232f;
+  --mcl-scarlet-bright: #cc0000;
+  --mcl-gold: #c19b57;
+  --mcl-gold-bright: #cfb53b;
+  --mcl-green: #006b3f;
+}
+
+html,
+body {
+  height: 100%;
+  background-color: var(--mcl-bg);
+  color: var(--mcl-text);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--mcl-heading);
+}
+
+// Dress-blues "Blood Stripe" (or rainbow crayon stripe in Fun theme)
+.mcl-blood-stripe {
+  height: 4px;
+  background: var(--mcl-stripe);
+  border-bottom: 1px solid var(--mcl-stripe-border);
+}
+
+// Primary Scarlet CTA
+.btn-mcl {
+  background-color: var(--mcl-scarlet);
+  border-color: var(--mcl-scarlet);
+  color: #ffffff;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover,
+  &:active {
+    background-color: var(--mcl-scarlet-hover);
+    border-color: var(--mcl-scarlet-hover);
+    color: #ffffff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mcl-gold);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 0.25rem rgba(193, 155, 87, 0.4);
+  }
+}
+
+.btn-mcl-outline {
+  background-color: transparent;
+  border: 1.5px solid var(--mcl-outline-color);
+  color: var(--mcl-outline-color);
+  font-weight: 600;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  transition: background-color 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background-color: var(--mcl-outline-hover-bg);
+    color: var(--mcl-outline-hover-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mcl-gold);
+    outline-offset: 2px;
+  }
+}
+
+.btn-mcl-gold {
+  background-color: var(--mcl-gold);
+  border-color: var(--mcl-gold);
+  color: var(--mcl-navy-deep);
+  font-weight: 600;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+
+  &:hover {
+    background-color: var(--mcl-gold-bright);
+    border-color: var(--mcl-gold-bright);
+    color: var(--mcl-navy-deep);
+  }
+}
+
+// Cards with ceremonial MCL polish
+.mcl-card {
+  background-color: var(--mcl-card-bg);
+  color: var(--mcl-text);
+  border: 1px solid var(--mcl-border);
+  border-radius: 0.5rem;
+  box-shadow: var(--mcl-card-shadow);
+}
+
+.mcl-card-gold {
+  border-top: 3px solid var(--mcl-card-accent-2);
+}
+
+.mcl-card-scarlet {
+  border-top: 3px solid var(--mcl-card-accent-1);
+}
+
+.mcl-card-navy {
+  border-top: 3px solid var(--mcl-card-accent-3);
+}
+
+.mcl-muted {
+  color: var(--mcl-muted);
+}
+
+.mcl-serif {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.mcl-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--mcl-eyebrow-color);
+}
+
+// Focus ring consistency
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--mcl-gold);
+  outline-offset: 2px;
+}
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #142c49 !important;
+  }
+  .d-print-none,
+  .no-print {
+    display: none !important;
+  }
+}

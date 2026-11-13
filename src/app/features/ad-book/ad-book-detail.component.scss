@@ -1,0 +1,69 @@
+.mcl-letter-page {
+  width: 8.5in;
+  min-height: 11in;
+  max-width: 100%;
+  background: #ffffff;
+  color: #142c49;
+  padding: 0.5in;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  page-break-after: always;
+}
+
+.mcl-page-grid {
+  display: grid;
+  gap: 0.25in;
+  flex: 1 1 auto;
+  align-content: start;
+}
+
+.mcl-grid-full {
+  grid-template-columns: 1fr;
+}
+
+.mcl-grid-horizontal-split {
+  grid-template-columns: 1fr;
+}
+
+.mcl-grid-grid {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.mcl-book-slot {
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  background: #ffffff;
+  width: 100%;
+}
+
+.mcl-slot-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+@media print {
+  @page {
+    size: letter;
+    margin: 0.5in;
+  }
+
+  .mcl-print-sheets {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+
+  .mcl-letter-page {
+    width: auto;
+    min-height: auto;
+    padding: 0;
+    margin: 0 !important;
+    border: none;
+    box-shadow: none;
+  }
+}
+

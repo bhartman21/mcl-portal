@@ -1,0 +1,183 @@
+<div class="container-xl py-4 d-print-none">
+  @if (book(); as b) {
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+      <div>
+        <div class="mcl-eyebrow">Event Program Book</div>
+        <h1 class="h2 mcl-serif mb-1">{{ b.title }}</h1>
+        <p class="mcl-muted small mb-0">
+          {{ b.eventName }}
+          @if (b.eventDate) {
+            &bull; {{ b.eventDate }}
+          }
+          &bull; Status: <strong class="text-uppercase">{{ b.status }}</strong>
+        </p>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <a routerLink="/ad-book" class="btn btn-sm btn-mcl-outline">
+          <i class="bi bi-arrow-left me-1"></i>Back
+        </a>
+        <button type="button" class="btn btn-sm btn-mcl" (click)="printBook()">
+          <i class="bi bi-printer me-1"></i>Print / Save PDF
+        </button>
+      </div>
+    </div>
+
+    @if (errorMsg()) {
+      <div class="alert alert-danger small mb-4">{{ errorMsg() }}</div>
+    }
+
+    @if (adBook.canApprove()) {
+      <div class="row g-4 mb-4">
+        <!-- Book Status & Add Approved Ad -->
+        <div class="col-lg-5">
+          <div class="mcl-card mcl-card-gold p-4 h-100">
+            <h2 class="h6 fw-bold mb-3">Book Controls</h2>
+            <div class="btn-group w-100 mb-4" role="group" aria-label="Book status">
+              <button
+                type="button"
+                class="btn btn-sm"
+                [class.btn-mcl]="b.status === 'open'"
+                [class.btn-mcl-outline]="b.status !== 'open'"
+                (click)="setStatus('open')"
+              >
+                Open
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm"
+                [class.btn-mcl]="b.status === 'locked'"
+                [class.btn-mcl-outline]="b.status !== 'locked'"
+                (click)="setStatus('locked')"
+              >
+                Locked
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm"
+                [class.btn-mcl]="b.status === 'printed'"
+                [class.btn-mcl-outline]="b.status !== 'printed'"
+                (click)="setStatus('printed')"
+              >
+                Printed
+              </button>
+            </div>
+
+            <h3 class="h6 fw-bold mb-2">Place Approved Ad</h3>
+            @if (b.status !== 'open') {
+              <p class="mcl-muted small mb-0">
+                This book is <strong>{{ b.status }}</strong>. Reopen it to add or reorder ads.
+              </p>
+            } @else if (availableApprovedAds().length === 0) {
+              <p class="mcl-muted small mb-0">
+                No unplaced approved ads available. Approve submitted ads in the Approval Queue first.
+              </p>
+            } @else {
+              <div class="input-group">
+                <select class="form-select form-select-sm" [(ngModel)]="selectedAdToAdd">
+                  @for (ad of availableApprovedAds(); track ad.id) {
+                    <option [value]="ad.id">{{ ad.title }} ({{ sizeLabel(ad.sizeId) }})</option>
+                  }
+                </select>
+                <button type="button" class="btn btn-sm btn-mcl" (click)="addSelectedAd()">
+                  Add
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Ordered Placements -->
+        <div class="col-lg-7">
+          <div class="mcl-card mcl-card-navy p-4 h-100">
+            <h2 class="h6 fw-bold mb-3">Placed Ads ({{ placedAds().length }})</h2>
+            @if (placedAds().length === 0) {
+              <p class="mcl-muted small mb-0">No ads placed in this book yet.</p>
+            } @else {
+              <div class="list-group list-group-flush">
+                @for (item of placedAds(); track item.ad.id; let idx = $index) {
+                  <div class="list-group-item d-flex align-items-center justify-content-between gap-2 px-0 bg-transparent">
+                    <div>
+                      <div class="fw-semibold small">{{ idx + 1 }}. {{ item.ad.title }}</div>
+                      <div class="mcl-muted" style="font-size: 0.75rem;">
+                        {{ item.size.label }} ({{ item.size.widthIn }}&Prime; &times; {{ item.size.heightIn }}&Prime;)
+                      </div>
+                    </div>
+                    @if (b.status === 'open') {
+                      <div class="btn-group btn-group-sm">
+                        <button
+                          type="button"
+                          class="btn btn-outline-secondary"
+                          title="Move up"
+                          (click)="adBook.moveAdInBook(b.id, item.ad.id, -1)"
+                        >
+                          <i class="bi bi-arrow-up"></i>
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn-outline-secondary"
+                          title="Move down"
+                          (click)="adBook.moveAdInBook(b.id, item.ad.id, 1)"
+                        >
+                          <i class="bi bi-arrow-down"></i>
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn-outline-danger"
+                          title="Remove from book"
+                          (click)="adBook.removeAdFromBook(b.id, item.ad.id)"
+                        >
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  } @else {
+    <div class="alert alert-warning">Event book not found.</div>
+  }
+</div>
+
+<!-- Letter-Size Print Preview / Output -->
+@if (book(); as b) {
+  <div class="mcl-print-sheets container-xl pb-5">
+    @if (pages().length === 0) {
+      <div class="mcl-card p-5 text-center d-print-none">
+        <p class="mcl-muted mb-0">Place approved ads above to preview Letter-size booklet pages.</p>
+      </div>
+    } @else {
+      @for (page of pages(); track $index; let pageIdx = $index) {
+        <div class="mcl-letter-page mx-auto mb-4">
+          <div class="mcl-page-grid" [class]="'mcl-grid-' + page.layoutHint">
+            @for (slot of page.slots; track slot.ad.id) {
+              <div
+                class="mcl-book-slot"
+                [style.aspect-ratio]="slot.size.widthIn + ' / ' + slot.size.heightIn"
+              >
+                @if (slot.ad.imageUrl) {
+                  <img
+                    [src]="slot.ad.imageUrl"
+                    [alt]="slot.ad.title"
+                    class="mcl-slot-img"
+                    [style.object-fit]="slot.ad.fit"
+                    [style.object-position]="slot.ad.position.x + '% ' + slot.ad.position.y + '%'"
+                  />
+                }
+              </div>
+            }
+          </div>
+          <div class="mcl-page-footer d-flex justify-content-between small text-muted mt-2">
+            <span>{{ b.title }}</span>
+            <span>Page {{ pageIdx + 1 }}</span>
+          </div>
+        </div>
+      }
+    }
+  </div>
+}
+

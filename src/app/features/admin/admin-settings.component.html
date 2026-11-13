@@ -1,0 +1,94 @@
+<div class="container-xl py-4">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div>
+      <div class="mcl-eyebrow">Department Administration</div>
+      <h1 class="h2 mcl-serif mb-1">Portal Registration Settings</h1>
+      <p class="mcl-muted small mb-0">
+        Control whether new sign-ins are auto-approved as MCL Members or held for admin review.
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      <a routerLink="/admin/users" class="btn btn-sm btn-mcl-outline">Users &amp; Roles</a>
+      <a routerLink="/admin/detachments" class="btn btn-sm btn-mcl-outline">Detachments</a>
+    </div>
+  </div>
+
+  @if (savedNotice()) {
+    <div class="alert alert-success small mb-4" role="alert">
+      <i class="bi bi-check-circle me-1"></i>Registration mode updated to
+      <strong>{{ auth.registrationMode() }}</strong>.
+    </div>
+  }
+
+  <div class="mcl-card mcl-card-scarlet p-4">
+    <h2 class="h5 mcl-serif mb-3">New Sign-In Registration Mode</h2>
+    <p class="mcl-muted small mb-4">
+      Switching modes affects only <strong>new sign-ins</strong>. Existing active members are untouched.
+    </p>
+
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div
+          class="p-4 rounded border h-100"
+          [class.border-danger]="auth.registrationMode() === 'open'"
+          [class.bg-light]="auth.registrationMode() === 'open'"
+        >
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <h3 class="h6 fw-bold mb-0">
+              <i class="bi bi-unlock me-2 text-success"></i>Open (Auto-Approve)
+            </h3>
+            @if (auth.registrationMode() === 'open') {
+              <span class="badge text-bg-success">Active</span>
+            }
+          </div>
+          <p class="mcl-muted small mb-3">
+            New sign-ins are immediately granted <code>status: 'active'</code> and the
+            <code>member</code> role.
+          </p>
+          <button
+            type="button"
+            class="btn btn-sm"
+            [class.btn-mcl]="auth.registrationMode() !== 'open'"
+            [class.btn-mcl-outline]="auth.registrationMode() === 'open'"
+            [disabled]="auth.registrationMode() === 'open'"
+            (click)="setMode('open')"
+          >
+            Use Open Registration
+          </button>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div
+          class="p-4 rounded border h-100"
+          [class.border-warning]="auth.registrationMode() === 'approval'"
+          [class.bg-light]="auth.registrationMode() === 'approval'"
+        >
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <h3 class="h6 fw-bold mb-0">
+              <i class="bi bi-shield-lock me-2 text-warning"></i>Approval Required (Lock-Down)
+            </h3>
+            @if (auth.registrationMode() === 'approval') {
+              <span class="badge text-bg-warning text-dark">Active</span>
+            }
+          </div>
+          <p class="mcl-muted small mb-3">
+            New sign-ins receive <code>status: 'pending'</code> with no write access until
+            approved by an Administrator.
+          </p>
+          <button
+            type="button"
+            class="btn btn-sm"
+            [class.btn-mcl]="auth.registrationMode() !== 'approval'"
+            [class.btn-mcl-outline]="auth.registrationMode() === 'approval'"
+            [disabled]="auth.registrationMode() === 'approval'"
+            (click)="setMode('approval')"
+          >
+            Enable Lock-Down Mode
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

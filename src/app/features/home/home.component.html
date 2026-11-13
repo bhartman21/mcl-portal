@@ -1,0 +1,178 @@
+<!-- Hero Banner -->
+<section class="mcl-hero text-white py-5">
+  <div class="container-xl py-lg-3">
+    <div class="row align-items-center gy-4">
+      <div class="col-lg-8">
+        <div class="mcl-eyebrow mb-2">
+          Marine Corps League &bull; Department of Florida
+        </div>
+        <h1 class="display-5 fw-bold text-white mcl-serif mb-3">
+          Member &amp; Staff Operations Portal
+        </h1>
+        <p class="lead text-white-50 mb-4 mcl-hero-lead">
+          A unified workspace for Florida Detachments to record VAVS volunteer service,
+          prepare convention Ad Books, and coordinate Department administration.
+        </p>
+
+        @if (auth.isPending()) {
+          <div class="alert alert-warning d-flex align-items-center gap-3 mb-4" role="alert">
+            <i class="bi bi-hourglass-split fs-4"></i>
+            <div>
+              <strong>Account Pending Approval.</strong> Your registration has been received and is awaiting review by a Department Administrator.
+            </div>
+          </div>
+        }
+
+        <div class="d-flex flex-wrap gap-3">
+          @if (auth.isActive()) {
+            <a routerLink="/vavs" class="btn btn-mcl px-4">
+              <i class="bi bi-clipboard2-pulse"></i>Open VAVS Tracker
+            </a>
+            <a routerLink="/ad-book" class="btn btn-mcl-gold px-4">
+              <i class="bi bi-journal-richtext"></i>Open Ad Book Studio
+            </a>
+          } @else if (!auth.isAuthenticated()) {
+            <a routerLink="/sign-in" class="btn btn-mcl px-4">
+              <i class="bi bi-person-badge"></i>Member Sign In
+            </a>
+            <a
+              [href]="ribbonRackUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn btn-outline-light d-inline-flex align-items-center gap-2 px-4"
+            >
+              <i class="bi bi-award"></i>Ribbon Rack Builder
+              <i class="bi bi-box-arrow-up-right small"></i>
+            </a>
+          }
+        </div>
+      </div>
+
+      <div class="col-lg-4 d-none d-lg-flex justify-content-center">
+        <div class="mcl-hero-crest-wrap p-4 rounded-circle">
+          <app-mcl-crest [size]="150" />
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Main Portal Modules -->
+<section class="py-5">
+  <div class="container-xl">
+    <div class="row g-4">
+      <!-- VAVS Card -->
+      <div class="col-md-4">
+        <div class="mcl-card mcl-card-scarlet h-100 p-4 d-flex flex-column">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <span class="mcl-icon-box mcl-icon-scarlet">
+              <i class="bi bi-clipboard2-pulse fs-4"></i>
+            </span>
+            <span class="badge bg-light text-dark border">Phase 1</span>
+          </div>
+          <h2 class="h4 mcl-serif mb-2">VAVS Service Tracker</h2>
+          <p class="mcl-muted small flex-grow-1 mb-4">
+            Log VA &amp; veteran volunteer hours, mileage, tolls, cash, and in-kind donations.
+            Supports Detachment &amp; Department VAVS Rep review, audit trails, and CSV/print reporting.
+          </p>
+          <a routerLink="/vavs" class="btn btn-mcl-outline w-100">
+            Go to VAVS Tracker
+          </a>
+        </div>
+      </div>
+
+      <!-- Ad Book Card -->
+      <div class="col-md-4">
+        <div class="mcl-card mcl-card-gold h-100 p-4 d-flex flex-column">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <span class="mcl-icon-box mcl-icon-gold">
+              <i class="bi bi-journal-richtext fs-4"></i>
+            </span>
+            <span class="badge bg-light text-dark border">Phase 2</span>
+          </div>
+          <h2 class="h4 mcl-serif mb-2">Ad Book Studio</h2>
+          <p class="mcl-muted small flex-grow-1 mb-4">
+            Create and submit Full, Half, Quarter, and Business Card ads for Department
+            conventions and events. Includes approver queue and Letter-size print assembly.
+          </p>
+          <a routerLink="/ad-book" class="btn btn-mcl-outline w-100">
+            Go to Ad Book Studio
+          </a>
+        </div>
+      </div>
+
+      <!-- Ribbon Rack Card -->
+      <div class="col-md-4">
+        <div class="mcl-card mcl-card-navy h-100 p-4 d-flex flex-column">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <span class="mcl-icon-box mcl-icon-navy">
+              <i class="bi bi-award fs-4"></i>
+            </span>
+            <span class="badge bg-light text-dark border">External Tool</span>
+          </div>
+          <h2 class="h4 mcl-serif mb-2">Ribbon Rack Builder</h2>
+          <p class="mcl-muted small flex-grow-1 mb-4">
+            Build and preview your Marine Corps League ribbon rack on our companion standalone site.
+            Opens in a separate browser tab with its own saved profiles.
+          </p>
+          <a
+            [href]="ribbonRackUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-mcl-outline w-100"
+          >
+            Open RibbonRackBuilder
+            <i class="bi bi-box-arrow-up-right ms-1 small"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Florida Detachments Directory Preview -->
+<section class="pb-5">
+  <div class="container-xl">
+    <div class="mcl-card p-4">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div>
+          <div class="mcl-eyebrow">Department Directory</div>
+          <h2 class="h4 mcl-serif mb-0">Active Florida Detachments</h2>
+        </div>
+        @if (auth.isAdmin()) {
+          <a routerLink="/admin/detachments" class="btn btn-sm btn-mcl-outline">
+            <i class="bi bi-gear me-1"></i>Manage Detachments
+          </a>
+        }
+      </div>
+
+      <div class="row g-2">
+        @for (det of activeDetachments(); track det.id) {
+          <div class="col-md-6 col-lg-4">
+            <div class="p-3 rounded border bg-light bg-opacity-50 h-100 d-flex align-items-start justify-content-between gap-2">
+              <div>
+                <div class="fw-semibold small">
+                  @if (det.number) {
+                    <span class="text-danger me-1">#{{ det.number }}</span>
+                  }
+                  {{ det.name }}
+                </div>
+                @if (det.city) {
+                  <div class="mcl-muted mcl-det-city">
+                    <i class="bi bi-geo-alt me-1"></i>{{ det.city }}
+                  </div>
+                }
+              </div>
+              @if (det.needsVerification) {
+                <span class="badge bg-warning-subtle text-dark border border-warning mcl-unverified-badge">
+                  Unverified #
+                </span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</section>
+

@@ -1,0 +1,99 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isActiveUser() {
+      return isSignedIn() && userDoc().status == 'active';
+    }
+
+    function hasRole(role) {
+      return isActiveUser() && role in userDoc().roles;
+    }
+
+    function isAdmin() {
+      return hasRole('departmentAdmin') || hasRole('nationalAdmin');
+    }
+
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['roles', 'status']));
+      allow delete: if isAdmin();
+    }
+
+    match /settings/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /detachments/{detachmentId} {
+      allow read: if resource.data.active == true || isActiveUser();
+      allow write: if isAdmin();
+    }
+
+    match /vavsPeriods/{periodId} {
+      allow read: if isActiveUser();
+      allow write: if isAdmin() || hasRole('departmentVavsRep');
+    }
+
+    match /vavsEntries/{entryId} {
+      allow read: if isActiveUser() && (
+        resource.data.ownerUid == request.auth.uid ||
+        hasRole('departmentVavsRep') ||
+        isAdmin() ||
+        (hasRole('detachmentVavsRep') && resource.data.detachmentId in userDoc().detachmentScopes)
+      );
+      allow create: if isActiveUser() && request.resource.data.ownerUid == request.auth.uid;
+      allow update, delete: if isActiveUser() && (
+        resource.data.ownerUid == request.auth.uid ||
+        hasRole('departmentVavsRep') ||
+        isAdmin() ||
+        (hasRole('detachmentVavsRep') && resource.data.detachmentId in userDoc().detachmentScopes)
+      );
+    }
+
+    match /vavsAuditLogs/{logId} {
+      allow read: if isActiveUser() && (
+        hasRole('detachmentVavsRep') ||
+        hasRole('departmentVavsRep') ||
+        isAdmin()
+      );
+      allow create: if isActiveUser();
+      allow update, delete: if false;
+    }
+
+    match /adSizes/{sizeId} {
+      allow read: if resource.data.active == true || isActiveUser();
+      allow write: if isAdmin() || hasRole('adBookApprover');
+    }
+
+    match /adBooks/{bookId} {
+      allow read: if isActiveUser();
+      allow write: if isAdmin() || hasRole('adBookApprover');
+    }
+
+    match /ads/{adId} {
+      allow read: if isActiveUser() && (
+        resource.data.createdBy == request.auth.uid ||
+        hasRole('adBookApprover') ||
+        isAdmin()
+      );
+      allow create: if isActiveUser() && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isActiveUser() && (
+        (resource.data.createdBy == request.auth.uid && resource.data.status in ['draft', 'rejected']) ||
+        hasRole('adBookApprover') ||
+        isAdmin()
+      );
+      allow delete: if isAdmin() || (isActiveUser() && resource.data.createdBy == request.auth.uid && resource.data.status == 'draft');
+    }
+  }
+}
+

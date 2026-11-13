@@ -1,0 +1,45 @@
+.mcl-hero {
+  background: var(--mcl-hero-bg);
+  border-bottom: 3px solid var(--mcl-stripe-border);
+}
+
+.mcl-hero-lead {
+  max-width: 40rem;
+}
+
+.mcl-hero-crest-wrap {
+  background: radial-gradient(circle, rgba(193, 155, 87, 0.16) 0%, rgba(0, 27, 58, 0) 72%);
+  border: 1px solid rgba(193, 155, 87, 0.25);
+}
+
+.mcl-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mcl-icon-scarlet {
+  background-color: rgba(166, 45, 59, 0.1);
+  color: var(--mcl-scarlet);
+}
+
+.mcl-icon-gold {
+  background-color: rgba(193, 155, 87, 0.16);
+  color: #8c6a2b;
+}
+
+.mcl-icon-navy {
+  background-color: rgba(20, 44, 73, 0.1);
+  color: var(--mcl-navy);
+}
+
+.mcl-det-city {
+  font-size: 0.78rem;
+}
+
+.mcl-unverified-badge {
+  font-size: 0.68rem;
+}
