@@ -20,7 +20,7 @@ Decisions still needed from Billy / DoF stakeholders. Planning docs mark interim
 
 ## Product policy
 
-7. ~~May unauthenticated users create ad drafts?~~ **Decided (Nov 14, 2026):** sign-in required. Members sign in with their email address and a one-time code emailed to them (see question 14).
+7. ~~May unauthenticated users create ad drafts?~~ **Decided (Nov 14, 2026):** sign-in required. Members sign in with their email address and a sign-in link emailed to them (see question 14).
 
 8. When companies are allowed: same Auth provider, or invite-only accounts?
 
@@ -36,8 +36,7 @@ Decisions still needed from Billy / DoF stakeholders. Planning docs mark interim
 
 ## Auth & identity
 
-14. ~~Email-link only vs Google vs both?~~ **Decided (Nov 13, 2026), revised (Nov 14, 2026):** passwordless **email + one-time code** (6 digits emailed to the member). Firebase has no built-in email-code sign-in, so this needs a Cloud Function (Blaze billing plan) plus an email-sending service. Fallback if that is not approved: Firebase's built-in email link. Google sign-in may be added later.
-15a. **New (open):** OK to put the `mcl-portal` Firebase project on the Blaze (pay-as-you-go) plan with a budget alert, and which email service to use (e.g. Resend, SendGrid, or the Firebase Trigger Email extension with an SMTP account)?
+14. ~~Email-link only vs Google vs both?~~ **Decided (Nov 14, 2026, final):** Firebase's built-in, free **email sign-in link** (passwordless). The emailed one-time-code idea was dropped because it needs Cloud Functions, the Blaze plan, and a paid email service. Google sign-in may be added later.
 
 15. Replace any temporary hard-coded admin bootstrap with role docs in Phase 0 (expected yes).
 

@@ -11,7 +11,7 @@ Single **Angular 21** SPA with **Bootstrap 5**, backed by **Firebase Auth + Fire
 ```
 Browser (Angular SPA + Bootstrap)
     │
-    ├─ Firebase Auth (email + one-time code via Cloud Functions custom token; Google possible later)  [project: mcl-portal]
+    ├─ Firebase Auth (email sign-in link, free; Google possible later)  [project: mcl-portal]
     ├─ Firestore (users, roles, detachments, settings, vavs*, adBooks, ads, audits)
     └─ Storage (ad-images/{uid}/{adId}/...)
 ```
