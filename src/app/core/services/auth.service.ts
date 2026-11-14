@@ -199,7 +199,8 @@ export class AuthService {
         updatedAt: new Date().toISOString(),
       });
       await this.loadRegistrationModeFromFirestore();
-      await this.ensureRegistrationSettings();
+      // Fire-and-forget: never hold up auth readiness on the one-time settings seed.
+      void this.ensureRegistrationSettings();
       return;
     }
 
