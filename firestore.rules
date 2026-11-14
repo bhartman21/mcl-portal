@@ -31,11 +31,11 @@ service cloud.firestore {
       return isActiveUser() && role in userDoc().roles;
     }
 
-    // Roles that count as "department or national admin" in the docs. siteAdmin is included
-    // there too (ROLES_AND_PERMISSIONS.md, Nov 14 2026): add it to this one list when the role
-    // model lands.
+    // Roles that count as "department or national admin" in the docs. siteAdmin counts there too
+    // (ROLES_AND_PERMISSIONS.md, decided Nov 14, 2026): lock reset, self-approval, undo review,
+    // the audit log, and self-approval notification recipients.
     function adminRoles() {
-      return ['departmentAdmin', 'nationalAdmin'];
+      return ['departmentAdmin', 'nationalAdmin', 'siteAdmin'];
     }
 
     function isDeptOrHigherAdmin() {
@@ -44,6 +44,55 @@ service cloud.firestore {
 
     function isAdmin() {
       return isDeptOrHigherAdmin();
+    }
+
+    // ---------- admin grant hierarchy (ROLES_AND_PERMISSIONS.md "Admin role grants") ----------
+    function nonAdminRoles() {
+      return ['member', 'companyAdvertiser', 'detachmentVavsRep', 'departmentVavsRep', 'adBookApprover'];
+    }
+
+    // Roles the signed-in admin may grant AND revoke (revoke follows the grant table; inferred).
+    function grantableRoles() {
+      return hasRole('siteAdmin')
+        ? nonAdminRoles().concat(['departmentAdmin', 'nationalAdmin', 'siteAdmin'])
+        : hasRole('nationalAdmin')
+          ? nonAdminRoles().concat(['departmentAdmin', 'nationalAdmin'])
+          : hasRole('departmentAdmin')
+            ? nonAdminRoles().concat(['departmentAdmin'])
+            : [];
+    }
+
+    function auditPath(auditId) {
+      return /databases/$(database)/documents/audits/$(auditId);
+    }
+
+    function rolesOrScopesChanged() {
+      return request.resource.data.get('roles', []) != resource.data.get('roles', [])
+        || request.resource.data.get('detachmentScopes', []) != resource.data.get('detachmentScopes', []);
+    }
+
+    // A roles/scopes change must carry a fresh roleAuditId whose audits/{id} doc is written in the
+    // same batch (contents are validated by the audits create rule).
+    function roleChangeAudited(uid) {
+      let auditId = request.resource.data.get('roleAuditId', '');
+      return auditId is string
+        && auditId != ''
+        && auditId != resource.data.get('roleAuditId', '')
+        && !exists(auditPath(auditId))
+        && existsAfter(auditPath(auditId))
+        && getAfter(auditPath(auditId)).data.targetUid == uid;
+    }
+
+    // An audits/{id} roleChange entry is valid only alongside the matching users/{target} write.
+    function roleAuditMatchesUserWrite(auditId, a) {
+      let before = get(userPath(a.targetUid)).data;
+      let after = getAfter(userPath(a.targetUid)).data;
+      return after.get('roleAuditId', '') == auditId
+        && before.get('roleAuditId', '') != auditId
+        && a.beforeRoles == before.get('roles', [])
+        && a.afterRoles == after.get('roles', [])
+        && a.beforeScopes == before.get('detachmentScopes', [])
+        && a.afterScopes == after.get('detachmentScopes', []);
     }
 
     function userScopes() {
@@ -85,13 +134,47 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['displayName', 'memberNumber', 'defaultDetachmentId', 'updatedAt']);
 
-      // Department / national admins manage roles, scopes, and status (approve, suspend).
+      // Admins manage other users' roles, scopes, and status (approve, suspend) per the grant table:
+      // - never their own doc (nobody raises, or accidentally drops, their own roles);
+      // - only targets whose current roles are all grantable by the actor (no demoting/suspending
+      //   someone above you; inferred), and only to roles the actor may grant;
+      // - every roles/scopes change is audited in audits/{roleAuditId} in the same batch.
       allow update: if isAdmin()
-        && request.resource.data.uid == resource.data.uid
+        && request.auth.uid != uid
+        && resource.data.get('roles', []).hasOnly(grantableRoles())
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+             ['roles', 'detachmentScopes', 'status', 'roleAuditId', 'updatedAt',
+              'displayName', 'memberNumber', 'defaultDetachmentId'])
         && request.resource.data.status in ['active', 'pending', 'suspended']
-        && request.resource.data.roles is list;
+        && request.resource.data.roles is list
+        && request.resource.data.roles.size() > 0
+        && request.resource.data.roles.hasOnly(grantableRoles())
+        && request.resource.data.get('detachmentScopes', []) is list
+        && (!rolesOrScopesChanged() || roleChangeAudited(uid));
 
-      allow delete: if isAdmin();
+      allow delete: if isAdmin()
+        && request.auth.uid != uid
+        && resource.data.get('roles', []).hasOnly(grantableRoles());
+    }
+
+    // ---------- audits (role grants/revokes; immutable, unforgeable) ----------
+    match /audits/{auditId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(
+             ['action', 'actorUid', 'actorRoles', 'targetUid', 'at',
+              'beforeRoles', 'afterRoles', 'beforeScopes', 'afterScopes'])
+        && request.resource.data.keys().hasAll(
+             ['action', 'actorUid', 'actorRoles', 'targetUid', 'at',
+              'beforeRoles', 'afterRoles', 'beforeScopes', 'afterScopes'])
+        && request.resource.data.action == 'roleChange'
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.actorRoles == userDoc().roles
+        && request.resource.data.at == request.time
+        && request.resource.data.targetUid is string
+        && request.resource.data.targetUid != request.auth.uid
+        && roleAuditMatchesUserWrite(auditId, request.resource.data);
+      allow update, delete: if false;
     }
 
     // ---------- settings (registration lock-down switch) ----------
@@ -153,7 +236,7 @@ service cloud.firestore {
         && request.resource.data.at == request.time
         && request.resource.data.actorRole in userDoc().roles
         && (
-          (request.resource.data.actorRole in ['departmentAdmin', 'nationalAdmin'] && isAdmin()) ||
+          (request.resource.data.actorRole in ['departmentAdmin', 'nationalAdmin', 'siteAdmin'] && isAdmin()) ||
           (request.resource.data.actorRole == 'departmentVavsRep' && hasRole('departmentVavsRep')) ||
           (request.resource.data.actorRole == 'detachmentVavsRep'
             && inDetachmentScope(request.resource.data.detachmentId))
@@ -167,8 +250,15 @@ service cloud.firestore {
       allow write: if isAdmin() || hasRole('adBookApprover');
     }
 
+    // Members read open books only; approvers and admins read every book (ARCHITECTURE.md
+    // security outline: members "read open books", approvers/admins R/W). Member queries must
+    // filter on status == 'open'.
     match /adBooks/{bookId} {
-      allow read: if isActiveUser();
+      allow read: if isActiveUser() && (
+        resource.data.status == 'open' ||
+        hasRole('adBookApprover') ||
+        isAdmin()
+      );
       allow write: if isAdmin() || hasRole('adBookApprover');
     }
 
