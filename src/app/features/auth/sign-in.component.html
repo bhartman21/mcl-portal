@@ -51,8 +51,13 @@
           @if (needsEmailConfirm()) {
             <div class="alert alert-info small" role="status">
               <i class="bi bi-envelope-open me-1"></i>
-              It looks like you opened your sign-in link on a different device or browser.
-              Please re-enter your email address to finish signing in.
+              @if (confirmReason() === 'mismatch') {
+                We couldn't finish signing in with the email address saved on this device. Check
+                the address below (it must be the one the link was sent to) and try again.
+              } @else {
+                It looks like you opened your sign-in link on a different device or browser.
+                Please re-enter your email address to finish signing in.
+              }
             </div>
             <form (ngSubmit)="confirmEmailAndFinish()" class="mb-3">
               <label for="confirmSignInEmail" class="form-label fw-semibold small">

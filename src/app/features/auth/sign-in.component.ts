@@ -19,8 +19,12 @@ export class SignInComponent implements OnInit {
   readonly busy = signal(false);
   readonly linkSent = signal(false);
   readonly errorMsg = signal<string | null>(null);
-  /** The page was opened from an email sign-in link on a device with no stored email. */
+  /**
+   * The page was opened from an email sign-in link and the user must type their email: either
+   * none is stored on this device ('missing'), or the stored one didn't work ('mismatch', #14).
+   */
   readonly needsEmailConfirm = signal(false);
+  readonly confirmReason = signal<'missing' | 'mismatch'>('missing');
   confirmEmail = '';
 
   async ngOnInit(): Promise<void> {
@@ -28,12 +32,23 @@ export class SignInComponent implements OnInit {
     const url = window.location.href;
     if (!this.auth.isEmailSignInLink(url)) return;
 
-    if (!this.auth.storedSignInEmail()) {
+    const stored = this.auth.storedSignInEmail();
+    if (!stored) {
       // Link opened on a different device/browser: ask the user to re-enter their email.
+      this.confirmReason.set('missing');
       this.needsEmailConfirm.set(true);
       return;
     }
-    await this.finishEmailLink();
+    const ok = await this.finishEmailLink();
+    // The stored email didn't complete the link (wrong address or typo): fall back to the
+    // confirm form, prefilled so the user can correct it. Not when sign-in itself succeeded
+    // but the profile failed to load (auth.authError), which re-typing can't fix.
+    if (!ok && !this.auth.authError()) {
+      this.auth.clearStoredSignInEmail();
+      this.confirmEmail = stored;
+      this.confirmReason.set('mismatch');
+      this.needsEmailConfirm.set(true);
+    }
   }
 
   async confirmEmailAndFinish(): Promise<void> {
@@ -41,7 +56,8 @@ export class SignInComponent implements OnInit {
     await this.finishEmailLink(this.confirmEmail.trim());
   }
 
-  private async finishEmailLink(email?: string): Promise<void> {
+  /** Returns false when completing the link threw. */
+  private async finishEmailLink(email?: string): Promise<boolean> {
     this.errorMsg.set(null);
     this.busy.set(true);
     try {
@@ -52,8 +68,10 @@ export class SignInComponent implements OnInit {
           await this.navigateAfterSignIn();
         }
       }
+      return true;
     } catch (err) {
       this.errorMsg.set(err instanceof Error ? err.message : 'Unable to complete sign-in.');
+      return false;
     } finally {
       this.busy.set(false);
     }
