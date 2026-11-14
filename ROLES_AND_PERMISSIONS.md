@@ -19,12 +19,27 @@
 | `adBookApprover` | Ad book editor / approver | Staff who build books | department (MVP) |
 | `departmentAdmin` | Department admin | DoF staff admins | department `dof` |
 | `nationalAdmin` | National admin | National staff (later) | national |
+| `siteAdmin` | Site administrator | Billy (only one at launch) | everything (above national) |
 
 **Inferred:** A user may hold multiple roles (e.g. member + detachmentVavsRep).
 
 **Decided:** Members log their own VAVS hours; reps monitor/modify for their detachment or department.
 
 **Decided:** Anyone may build ads today (members); companies later with approval. MVP: authenticated users create ads; approval required before inclusion in a book.
+
+## Admin role grants (decided Nov 14, 2026)
+
+| Granting role | Can grant / revoke |
+|---------------|--------------------|
+| `siteAdmin` | Any role, including `siteAdmin`, `nationalAdmin`, `departmentAdmin` |
+| `nationalAdmin` | `nationalAdmin`, `departmentAdmin`, and all non-admin roles |
+| `departmentAdmin` | `departmentAdmin` (own department) and non-admin roles in scope; **not** `nationalAdmin` or `siteAdmin` |
+
+- Billy is the only `siteAdmin` at launch, set by the one-time first-admin bootstrap; he assigns the other admins.
+- **Decided (Nov 14, 2026):** revoking follows the same table as granting. `siteAdmin` can revoke any admin level, `nationalAdmin` can revoke `nationalAdmin` and `departmentAdmin`, and `departmentAdmin` can revoke `departmentAdmin` only, so no one can revoke or demote a role above their own. Every grant and revoke is written to `audits`.
+- **Inferred (confirm):** nobody, `siteAdmin` included, can change their own roles or status (prevents accidental self-lockout).
+- `siteAdmin` has every power of `nationalAdmin`; wherever this repo says "department or national admin" (ad lock reset, admin self-approval, undo review), `siteAdmin` is included.
+- Enforced in Firestore rules with emulator tests, not only in the UI.
 
 ## Permission matrix
 
@@ -37,13 +52,15 @@ Legend: **C** create, **R** read, **U** update, **D** delete, **—** none, **ow
 | View landing | R | R | R | R | R | R | R | R |
 | Sign in | C | — | — | — | — | — | — | — |
 | Edit own user profile | — | U | U | U | U | U | U | U |
-| Assign roles | — | — | — | — | — | — | CUD scope | CUD |
-| Manage detachments | — | R | R | R | R | R | CRUD | CRUD |
+| Assign roles | — | — | — | — | — | — | CUD scope (see grant table) | CUD (see grant table) |
+| Manage detachments | R (active only) | R | R | R | R | R | CRUD | CRUD |
 | Manage ad sizes | — | R | R | — | — | RU | CRUD | CRUD |
 | Toggle registration mode | — | — | — | — | — | — | U | U |
 | Approve pending users | — | — | — | — | — | — | U | U |
 
 \*companyAdvertiser = post-MVP; treat as member-like for ads until then.
+
+`siteAdmin` has every permission in the national admin column. The detachment directory is publicly readable, including by signed-out visitors, but only `active` entries (decided Nov 14, 2026).
 
 ### VAVS
 
