@@ -82,7 +82,7 @@ See `features/RIBBON_RACK.md` and PROJECTPLAN “Future / optional”.
 | Firebase project | **New** `mcl-portal` recommended (not `mcl-rack-builder`) |
 | Hosting | Firebase Hosting default URL |
 | Repo | Public `bhartman21/mcl-portal` |
-| Priority | Shell → VAVS MVP → Ad Book MVP → polish |
+| Priority | Shell → Ad Book MVP (Phase 1) → VAVS MVP (Phase 2) → polish (reordered Nov 13, 2026) |
 | Registration | Auto-approve members + lock-down switch |
 | #54 | Morris F Dixon Jr.; Archambault needs verification |
 | Ad layouts | Expand beyond full/half; configurable sizes |
