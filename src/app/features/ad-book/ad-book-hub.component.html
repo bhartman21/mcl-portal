@@ -117,13 +117,15 @@
                   <a [routerLink]="['/ad-book/ads', ad.id]" class="btn btn-sm btn-mcl-outline flex-grow-1">
                     <i class="bi bi-eye me-1"></i>View
                   </a>
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-outline-secondary"
-                    (click)="recallAd(ad.id)"
-                  >
-                    Recall to Draft
-                  </button>
+                  @if (ad.status === 'submitted') {
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-secondary"
+                      (click)="recallAd(ad.id)"
+                    >
+                      Withdraw to Draft
+                    </button>
+                  }
                 }
               </div>
             </div>

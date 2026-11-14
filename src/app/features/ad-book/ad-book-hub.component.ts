@@ -53,8 +53,13 @@ export class AdBookHubComponent {
 
   recallAd(id: string): void {
     this.errorMsg.set(null);
-    this.adBook.recallToDraft(id);
-    this.notice.set('Ad recalled to draft.');
+    this.notice.set(null);
+    try {
+      this.adBook.recallToDraft(id);
+      this.notice.set('Ad withdrawn to draft. This does not give back a submission.');
+    } catch (err) {
+      this.errorMsg.set(err instanceof Error ? err.message : 'Unable to withdraw ad.');
+    }
   }
 
   deleteAd(id: string): void {

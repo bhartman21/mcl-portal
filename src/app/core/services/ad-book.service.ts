@@ -293,30 +293,24 @@ export class AdBookService {
     return updated;
   }
 
+  /**
+   * Owner withdraws a submitted ad back to draft (AD_BOOK.md FR-A-3, AC 10). Only `submitted`
+   * ads can be withdrawn, only by their owner; the submission attempt is not refunded.
+   */
   recallToDraft(id: string): AdItem {
     const ad = this.getAdById(id);
     if (!ad) throw new Error('Ad not found.');
+    if (!this.isOwnAd(ad)) throw new Error('Only the ad owner can withdraw it.');
+    if (ad.status !== 'submitted') {
+      throw new Error('Only submitted ads can be withdrawn to draft.');
+    }
 
     const updated: AdItem = {
       ...ad,
       status: 'draft',
-      reviewedBy: undefined,
-      reviewedAt: undefined,
       updatedAt: new Date().toISOString(),
     };
-
-    // Remove from any open books since approval was cleared
-    this._adBooks.update((books) =>
-      books.map((b) =>
-        b.status === 'locked' || b.status === 'printed'
-          ? b
-          : { ...b, adIds: b.adIds.filter((x) => x !== id) }
-      )
-    );
-    this.saveBooks();
-
-    this._ads.update((list) => list.map((a) => (a.id === id ? updated : a)));
-    this.saveAds();
+    this.replaceAd(updated);
     return updated;
   }
 
