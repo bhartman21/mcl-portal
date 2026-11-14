@@ -98,12 +98,24 @@ Manual deploy from a workstation: `npx firebase login`, then `npm run config:env
 
 ## First admin bootstrap (one time)
 
-There are no hard-coded admin emails. Roles live in `users/{uid}` and only an existing department/national admin can change them, so the very first admin is promoted by hand:
+There are no hard-coded admin emails. Roles live in `users/{uid}` and only an existing admin can change them, so the very first admin, the **site administrator** (`siteAdmin`, Billy at launch), is promoted by hand once:
 
 1. Open the deployed site and sign in with the email link. This creates `users/{your uid}` with `roles: ['member']`.
-2. In Firebase console → Firestore → `users` → your document, edit `roles` to `["member", "departmentAdmin"]` (or add `nationalAdmin`) and make sure `status` is `"active"`.
+2. In Firebase console → Firestore → `users` → your document, edit `roles` to `["member", "siteAdmin"]` and make sure `status` is `"active"`. (The console bypasses security rules; this is the only time roles are edited outside the app.)
 3. Reload the portal. On first admin load the app writes `settings/registration` (`mode: 'open'`) and seeds the DoF `detachments` directory (#54 = Morris F. Dixon Jr.; S/Sgt Ted Archambault with `needsVerification: true` and no number). If the directory is still empty, use **Admin → Detachments → Seed DoF Detachments**.
-4. From then on, promote other users from **Admin → Users & Roles**.
+4. From then on, assign every other admin from **Admin → Users & Roles**. Each grant or revoke is written to `audits` (who, when, target user, before/after roles).
+
+### Admin grant hierarchy (decided Nov 14, 2026)
+
+| Signed-in admin | May grant and revoke |
+|-----------------|----------------------|
+| `siteAdmin` | every role, including `siteAdmin`, `nationalAdmin`, `departmentAdmin` |
+| `nationalAdmin` | `nationalAdmin`, `departmentAdmin`, and all non-admin roles |
+| `departmentAdmin` | `departmentAdmin` and all non-admin roles |
+
+- `siteAdmin` has every permission of `nationalAdmin` (admin pages, settings, detachments, ad sizes, Ad Book review, VAVS).
+- Nobody can change their own roles or status, and an admin cannot edit, suspend, or delete a user who holds a role they could not grant (revoke rules are **inferred**, see OPEN_QUESTIONS #17).
+- A role or scope change is a batched write of `users/{uid}` (with a new `roleAuditId`) plus `audits/{roleAuditId}`; `firestore.rules` rejects either half on its own, so audits cannot be skipped or forged.
 
 ## Implementation notes
 
