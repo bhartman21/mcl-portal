@@ -262,6 +262,9 @@ Required when actor is a VAVS rep editing another member’s data; recommended f
   title: string;
   status: 'draft' | 'submitted' | 'approved' | 'rejected';
   rejectionNotes?: string;
+  submissionCount: number;      // max 3; only increased by submit, never lowered by owner
+  maxSubmissions: number;       // default 3; approver/admin may raise by 1 (audited)
+  locked?: boolean;             // true after 3rd rejection
   createdBy: string;
   createdByType: 'member' | 'company' | 'guest';
   companyName?: string;
