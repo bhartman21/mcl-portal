@@ -93,7 +93,7 @@ Runnable app on Firebase Hosting (or local `ng serve`) with login, role claims/d
 - [ ] Ad draft editor (photo/layout inspired by sample; Storage for images — not only base64 in Firestore).
 - [ ] Workflow: `draft` → `submitted` → `approved` | `rejected` (with notes).
 - [ ] `adBooks` per event/convention with status and page assembly.
-- [ ] Approver queue for staff roles.
+- [ ] Approver queue for staff roles. Approvers cannot approve or reject their own ads (different approver required, decided Nov 14, 2026; enforced in rules).
 - [ ] Print / Save PDF via browser print for book preview (MVP).
 - [ ] Signed-in users can create drafts (**decided** Nov 14, 2026; company accounts later).
 - [ ] **Ad data on Firestore + Storage** (added Nov 14, 2026): the first build saves ads only in browser localStorage, so approvers on other computers can't see them. All ad, book, and size data must live in Firestore, with images in Storage. Remove localStorage as the source of truth.

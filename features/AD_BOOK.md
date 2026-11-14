@@ -94,7 +94,7 @@ See `ARCHITECTURE.md` → `ads`, `adBooks`, `adSizes`, Storage `ad-images/...`.
 ## Acceptance criteria (MVP)
 
 1. Authenticated user creates ads in all four seed sizes; image stored in Storage; metadata in Firestore.
-2. Submit → appears in approver queue; owner cannot approve own ad unless also approver (**inferred** allow if dual-role — document).
+2. Submit → appears in approver queue; no one can approve or reject their own ad, even if they hold an approver or admin role (decided Nov 14, 2026); it needs a different approver. Enforced in UI and Firestore rules (`reviewedBy != createdBy`).
 3. Reject with notes returns ad to editable state; notes visible to owner.
 4. Approve enables placement into an `open` book; `locked` book rejects new placements.
 5. Print preview of a book shows Letter pages without app chrome.
