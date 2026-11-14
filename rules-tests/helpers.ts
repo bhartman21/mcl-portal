@@ -60,6 +60,7 @@ export const USERS = {
   adApprover: { status: 'active', roles: ['member', 'adBookApprover'] },
   deptAdmin: { status: 'active', roles: ['member', 'departmentAdmin'] },
   nationalAdmin: { status: 'active', roles: ['member', 'nationalAdmin'] },
+  siteAdmin: { status: 'active', roles: ['member', 'siteAdmin'] },
 } satisfies Record<string, UserFixture>;
 
 export function emailFor(uid: string): string {

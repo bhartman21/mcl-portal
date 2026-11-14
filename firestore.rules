@@ -31,11 +31,11 @@ service cloud.firestore {
       return isActiveUser() && role in userDoc().roles;
     }
 
-    // Roles that count as "department or national admin" in the docs. siteAdmin is included
-    // there too (ROLES_AND_PERMISSIONS.md, Nov 14 2026): add it to this one list when the role
-    // model lands.
+    // Roles that count as "department or national admin" in the docs. siteAdmin counts there too
+    // (ROLES_AND_PERMISSIONS.md, decided Nov 14, 2026): lock reset, self-approval, undo review,
+    // the audit log, and self-approval notification recipients.
     function adminRoles() {
-      return ['departmentAdmin', 'nationalAdmin'];
+      return ['departmentAdmin', 'nationalAdmin', 'siteAdmin'];
     }
 
     function isDeptOrHigherAdmin() {
@@ -302,7 +302,7 @@ service cloud.firestore {
         && absent('selfApproved')
         && absent('selfApprovalReason');
 
-      // A department or national admin self-approves only with a reason; audited (AC 12).
+      // A department, national, or site admin self-approves only with a reason; audited (AC 12).
       allow update: if oldStatus() == 'submitted' && newStatus() == 'approved'
         && isOwner() && isDeptOrHigherAdmin()
         && request.resource.data.reviewedBy == request.auth.uid

@@ -6,7 +6,8 @@ export type RoleId =
   | 'departmentVavsRep'
   | 'adBookApprover'
   | 'departmentAdmin'
-  | 'nationalAdmin';
+  | 'nationalAdmin'
+  | 'siteAdmin';
 
 export type UserStatus = 'active' | 'pending' | 'suspended';
 
@@ -52,7 +53,14 @@ export const ROLE_LABELS: Record<RoleId, string> = {
   adBookApprover: 'Ad Book Approver',
   departmentAdmin: 'Department Admin',
   nationalAdmin: 'National Admin',
+  siteAdmin: 'Site Administrator',
 };
+
+/** Roles that open the admin area. siteAdmin has every power of nationalAdmin. */
+export const ADMIN_ROLES: RoleId[] = ['departmentAdmin', 'nationalAdmin', 'siteAdmin'];
+
+/** Ad Book reviewers: approvers plus every admin level. */
+export const AD_REVIEWER_ROLES: RoleId[] = ['adBookApprover', ...ADMIN_ROLES];
 
 export const ASSIGNABLE_ROLES: { id: RoleId; label: string; requiresDetachmentScope: boolean }[] = [
   { id: 'member', label: 'MCL Member', requiresDetachmentScope: false },

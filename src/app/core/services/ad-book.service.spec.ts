@@ -33,6 +33,7 @@ describe('AdBookService review rules (#3)', () => {
       profile('admin', ['member', 'departmentAdmin']),
       profile('admin2', ['member', 'departmentAdmin']),
       profile('natAdmin', ['member', 'nationalAdmin']),
+      profile('site', ['member', 'siteAdmin']),
       profile('approver', ['member', 'adBookApprover']),
       profile('alice'),
     ]);
@@ -119,8 +120,8 @@ describe('AdBookService review rules (#3)', () => {
       service.approveAd(id);
     });
 
-    it('requires a department or national admin and a reason', () => {
-      expect(() => service.undoReview(id, 'oops')).toThrow(/department or national admin/);
+    it('requires a department, national, or site admin and a reason', () => {
+      expect(() => service.undoReview(id, 'oops')).toThrow(/department, national, or site admin/);
       auth.signInAs('admin', ['member', 'departmentAdmin']);
       expect(() => service.undoReview(id, '  ')).toThrow(/reason is required/);
     });
@@ -236,7 +237,7 @@ describe('AdBookService review rules (#3)', () => {
       service.submitAd(id);
       auth.signInAs('approver', ['member', 'adBookApprover']);
       service.rejectAd(id, 'Still blurry');
-      expect(() => service.resetLock(id, 'x')).toThrow(/department or national admin/);
+      expect(() => service.resetLock(id, 'x')).toThrow(/department, national, or site admin/);
 
       auth.signInAs('admin', ['member', 'departmentAdmin']);
       const ad = service.resetLock(id, 'New artwork coming');
@@ -289,6 +290,62 @@ describe('AdBookService review rules (#3)', () => {
       auth.signInAs('approver', ['member', 'adBookApprover']);
       expect(() => service.deleteAd(id)).toThrow(/owner/);
       expect(service.getAdById(id)).toBeDefined();
+    });
+  });
+
+  // ROLES_AND_PERMISSIONS.md (main ca46777): siteAdmin counts wherever the docs say department or
+  // national admin. Pairs with PR #18.
+  describe('siteAdmin', () => {
+    const asSite = () => auth.signInAs('site', ['member', 'siteAdmin']);
+
+    it('self-approves with a reason, audited, and notifies every other admin', () => {
+      asSite();
+      const id = createAd('site');
+      expect(service.isDeptOrHigherAdmin()).toBe(true);
+      expect(service.canSelfApprove(service.getAdById(id)!)).toBe(true);
+      expect(() => service.approveAd(id)).toThrow(/reason is required/);
+      const ad = service.approveAd(id, { selfApprovalReason: 'Deadline' });
+      expect(ad.selfApproved).toBe(true);
+      expect(service.audits()[0]).toMatchObject({ action: 'selfApprove', actorUid: 'site' });
+      for (const uid of ['admin', 'admin2', 'natAdmin']) {
+        auth.signInAs(uid, ['member', 'departmentAdmin']);
+        expect(notifications.myNotifications()[0]).toMatchObject({ adId: id, actorUid: 'site' });
+      }
+    });
+
+    it('is notified when another admin self-approves', () => {
+      auth.signInAs('admin', ['member', 'departmentAdmin']);
+      const id = createAd('admin');
+      service.approveAd(id, { selfApprovalReason: 'Deadline' });
+      asSite();
+      expect(notifications.unreadCount()).toBe(1);
+      expect(notifications.myNotifications()[0]).toMatchObject({ adId: id, actorUid: 'admin' });
+    });
+
+    it('cannot self-reject', () => {
+      asSite();
+      const id = createAd('site');
+      expect(() => service.rejectAd(id, 'Logo too low-res')).toThrow(/Withdraw/);
+    });
+
+    it('undoes a review and resets a lock', () => {
+      auth.signInAs('alice');
+      const id = createAd('alice');
+      auth.signInAs('approver', ['member', 'adBookApprover']);
+      service.approveAd(id);
+      asSite();
+      expect(service.canUndoReview(service.getAdById(id)!)).toBe(true);
+      expect(service.undoReview(id, 'Wrong version').status).toBe('submitted');
+
+      for (let i = 0; i < 3; i++) {
+        auth.signInAs('approver', ['member', 'adBookApprover']);
+        service.rejectAd(id, 'Please fix the logo');
+        auth.signInAs('alice');
+        if (i < 2) service.submitAd(id);
+      }
+      expect(service.getAdById(id)!.locked).toBe(true);
+      asSite();
+      expect(service.resetLock(id)).toMatchObject({ status: 'draft', submissionCount: 0, locked: false });
     });
   });
 });

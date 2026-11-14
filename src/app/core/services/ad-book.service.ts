@@ -11,6 +11,7 @@ import {
   SEED_AD_BOOKS,
   SEED_AD_SIZES,
 } from '../models/ad-book.model';
+import { AD_REVIEWER_ROLES, ADMIN_ROLES } from '../models/user.model';
 import { AdminService } from './admin.service';
 import { AuthService } from './auth.service';
 import { NotificationService } from './notification.service';
@@ -20,7 +21,6 @@ const STORAGE_BOOKS_KEY = 'mcl_portal_ad_books_v1';
 const STORAGE_ADS_KEY = 'mcl_portal_ads_v1';
 const STORAGE_AUDITS_KEY = 'mcl_portal_audits_v1';
 
-const ADMIN_ROLES = ['departmentAdmin', 'nationalAdmin'] as const;
 
 function newId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -61,11 +61,11 @@ export class AdBookService {
   );
 
   readonly canApprove = computed(() =>
-    this.auth.hasAnyRole(['adBookApprover', 'departmentAdmin', 'nationalAdmin'])
+    this.auth.hasAnyRole(AD_REVIEWER_ROLES)
   );
 
-  /** Department or national admin (AD_BOOK.md: self-approval, undo review). */
-  readonly isDeptOrHigherAdmin = computed(() => this.auth.hasAnyRole([...ADMIN_ROLES]));
+  /** Department, national, or site admin (AD_BOOK.md: self-approval, undo review). */
+  readonly isDeptOrHigherAdmin = computed(() => this.auth.hasAnyRole(ADMIN_ROLES));
 
   /** Approved or rejected ads an admin may undo (AC 13). */
   readonly reviewedAds = computed(() =>
@@ -172,7 +172,7 @@ export class AdBookService {
     return entry;
   }
 
-  /** Every other active department/national admin (self-approval notification recipients). */
+  /** Every other active department/national/site admin (self-approval notification recipients). */
   private otherAdminUids(): string[] {
     const me = this.auth.user()?.uid;
     const users = this.injector.get(AdminService).users();
@@ -181,7 +181,7 @@ export class AdBookService {
         (u) =>
           u.uid !== me &&
           u.status === 'active' &&
-          u.roles.some((r) => (ADMIN_ROLES as readonly string[]).includes(r))
+          u.roles.some((r) => ADMIN_ROLES.includes(r))
       )
       .map((u) => u.uid);
   }
@@ -341,7 +341,7 @@ export class AdBookService {
 
   /**
    * Approve a submitted ad. Approvers and admins approve other members' ads. An approver can
-   * never approve their own ad; a department or national admin may self-approve only with a
+   * never approve their own ad; a department, national, or site admin may self-approve only with a
    * reason, which is audited and notifies every other admin (AD_BOOK.md AC 2, 12).
    */
   approveAd(id: string, opts: { selfApprovalReason?: string } = {}): AdItem {
@@ -436,7 +436,7 @@ export class AdBookService {
    */
   undoReview(id: string, reason: string): AdItem {
     if (!this.isDeptOrHigherAdmin()) {
-      throw new Error('Only a department or national admin can undo a review.');
+      throw new Error('Only a department, national, or site admin can undo a review.');
     }
     const ad = this.getAdById(id);
     if (!ad) throw new Error('Ad not found.');
@@ -482,7 +482,7 @@ export class AdBookService {
    */
   resetLock(id: string, reason = ''): AdItem {
     if (!this.isDeptOrHigherAdmin()) {
-      throw new Error('Only a department or national admin can reset a locked ad.');
+      throw new Error('Only a department, national, or site admin can reset a locked ad.');
     }
     const ad = this.getAdById(id);
     if (!ad) throw new Error('Ad not found.');

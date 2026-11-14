@@ -1,5 +1,5 @@
 import { assertFails, assertSucceeds, RulesTestEnvironment } from '@firebase/rules-unit-testing';
-import { getBytes, ref, uploadBytes } from 'firebase/storage';
+import { deleteObject, getBytes, ref, uploadBytes } from 'firebase/storage';
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
 import { asGuest, asUser, getTestEnv, resetEnv, seed, seedUsers, USERS } from './helpers';
 
@@ -60,5 +60,18 @@ describe('storage: ad-images', () => {
 
     await seed(env, { 'ads/ad1': { createdBy: 'alice', status: 'approved' } });
     await assertSucceeds(getBytes(ref(asUser(env, 'bob').storage(), path)));
+  });
+});
+
+// siteAdmin counts as an admin for ad images (pairs with PR #18).
+describe('storage: siteAdmin on ad-images', () => {
+  it('reads and deletes an image on a submitted ad', async () => {
+    await seedUsers(env, { siteAdmin: USERS.siteAdmin });
+    const path = 'ad-images/alice/ad1/a.png';
+    await seedImage(path);
+    await seed(env, { 'ads/ad1': { createdBy: 'alice', status: 'submitted' } });
+    const st = asUser(env, 'siteAdmin').storage();
+    await assertSucceeds(getBytes(ref(st, path)));
+    await assertSucceeds(deleteObject(ref(st, path)));
   });
 });
