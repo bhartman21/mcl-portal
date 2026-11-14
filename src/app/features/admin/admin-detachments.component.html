@@ -69,6 +69,22 @@
     </form>
   </div>
 
+  @if (detachmentService.error()) {
+    <div class="alert alert-danger" role="alert">{{ detachmentService.error() }}</div>
+  }
+
+  @if (!detachmentService.loading() && detachments().length === 0) {
+    <div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4" role="status">
+      <div>
+        The detachment directory is empty. Load the Department of Florida starter list
+        (#54 = Morris F. Dixon Jr.; S/Sgt Ted Archambault marked Needs Verification).
+      </div>
+      <button type="button" class="btn btn-sm btn-mcl" [disabled]="seeding()" (click)="seedDefaults()">
+        <i class="bi bi-database-add me-1"></i>Seed DoF Detachments
+      </button>
+    </div>
+  }
+
   <!-- Directory Table -->
   <div class="mcl-card mcl-card-navy p-4">
     <div class="table-responsive">
@@ -84,64 +100,129 @@
         </thead>
         <tbody>
           @for (det of detachments(); track det.id) {
-            <tr>
-              <td class="fw-bold">
-                @if (det.number) {
-                  #{{ det.number }}
-                } @else {
-                  <span class="mcl-muted">&mdash;</span>
-                }
-              </td>
-              <td>
-                <div class="fw-semibold">{{ det.name }}</div>
-                @if (det.notes) {
-                  <div class="mcl-muted small">{{ det.notes }}</div>
-                }
-              </td>
-              <td class="small">{{ det.city || '—' }}</td>
-              <td>
-                <div class="d-flex flex-wrap gap-1">
-                  <app-status-badge
-                    [variant]="det.active ? 'active' : 'suspended'"
-                    [label]="det.active ? 'Active' : 'Inactive'"
+            @if (editingId() === det.id) {
+              <tr class="table-warning">
+                <td>
+                  <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    style="width: 80px;"
+                    aria-label="Detachment number"
+                    placeholder="Det #"
+                    [(ngModel)]="editDraft.number"
                   />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    class="form-control form-control-sm mb-1"
+                    aria-label="Detachment name"
+                    [(ngModel)]="editDraft.name"
+                    required
+                  />
+                  <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    aria-label="Notes"
+                    placeholder="Notes (optional)"
+                    [(ngModel)]="editDraft.notes"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    aria-label="City or area"
+                    [(ngModel)]="editDraft.city"
+                  />
+                </td>
+                <td>
                   @if (det.needsVerification) {
-                    <app-status-badge
-                      variant="needsVerification"
-                      label="Needs Verification"
-                    />
+                    <app-status-badge variant="needsVerification" label="Needs Verification" />
                   }
-                </div>
-              </td>
-              <td class="text-end">
-                @if (det.needsVerification) {
-                  <div class="d-inline-flex align-items-center gap-1 me-2">
-                    <input
-                      type="text"
-                      class="form-control form-control-sm"
-                      style="width: 80px;"
-                      placeholder="Det #"
-                      [ngModel]="verifyInputs()[det.id] || ''"
-                      (ngModelChange)="setVerifyInput(det.id, $event)"
+                </td>
+                <td class="text-end text-nowrap">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-mcl me-1"
+                    [disabled]="!editDraft.name.trim()"
+                    (click)="saveEdit(det)"
+                  >
+                    Save
+                  </button>
+                  <button type="button" class="btn btn-sm btn-mcl-outline" (click)="cancelEdit()">
+                    Cancel
+                  </button>
+                </td>
+              </tr>
+            } @else {
+              <tr>
+                <td class="fw-bold">
+                  @if (det.number) {
+                    #{{ det.number }}
+                  } @else {
+                    <span class="mcl-muted">&mdash;</span>
+                  }
+                </td>
+                <td>
+                  <div class="fw-semibold">{{ det.name }}</div>
+                  @if (det.notes) {
+                    <div class="mcl-muted small">{{ det.notes }}</div>
+                  }
+                </td>
+                <td class="small">{{ det.city || '—' }}</td>
+                <td>
+                  <div class="d-flex flex-wrap gap-1">
+                    <app-status-badge
+                      [variant]="det.active ? 'active' : 'suspended'"
+                      [label]="det.active ? 'Active' : 'Inactive'"
                     />
-                    <button
-                      type="button"
-                      class="btn btn-sm btn-success"
-                      (click)="verifyNumber(det)"
-                    >
-                      Verify
-                    </button>
+                    @if (det.needsVerification) {
+                      <app-status-badge
+                        variant="needsVerification"
+                        label="Needs Verification"
+                      />
+                    }
                   </div>
-                }
-                <button
-                  type="button"
-                  class="btn btn-sm btn-mcl-outline"
-                  (click)="detachmentService.toggleActive(det)"
-                >
-                  {{ det.active ? 'Deactivate' : 'Activate' }}
-                </button>
-              </td>
-            </tr>
+                </td>
+                <td class="text-end">
+                  @if (det.needsVerification) {
+                    <div class="d-inline-flex align-items-center gap-1 me-2">
+                      <input
+                        type="text"
+                        class="form-control form-control-sm"
+                        style="width: 80px;"
+                        aria-label="Verified detachment number"
+                        placeholder="Det #"
+                        [ngModel]="verifyInputs()[det.id] || ''"
+                        (ngModelChange)="setVerifyInput(det.id, $event)"
+                      />
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-success"
+                        (click)="verifyNumber(det)"
+                      >
+                        Verify
+                      </button>
+                    </div>
+                  }
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-mcl-outline me-1"
+                    (click)="startEdit(det)"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-mcl-outline"
+                    (click)="detachmentService.toggleActive(det)"
+                  >
+                    {{ det.active ? 'Deactivate' : 'Activate' }}
+                  </button>
+                </td>
+              </tr>
+            }
           }
         </tbody>
       </table>
