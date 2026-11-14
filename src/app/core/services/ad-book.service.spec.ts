@@ -182,4 +182,85 @@ describe('AdBookService review rules (#3)', () => {
       expect(() => service.recallToDraft(id)).toThrow(/Only submitted/);
     });
   });
+
+  describe('submission limit and lock reset (#5)', () => {
+    function cycle(id: string, times: number): void {
+      for (let i = 0; i < times; i++) {
+        auth.signInAs('approver', ['member', 'adBookApprover']);
+        service.rejectAd(id, 'Please fix the logo');
+        auth.signInAs('alice');
+        if (i < times - 1) service.submitAd(id);
+      }
+    }
+
+    it('new ads start at 0 of 3 and each submit adds one', () => {
+      auth.signInAs('alice');
+      const id = createAd('alice');
+      const ad = service.getAdById(id)!;
+      expect(ad.submissionCount).toBe(1);
+      expect(ad.maxSubmissions).toBe(3);
+      expect(ad.locked).toBe(false);
+    });
+
+    it('locks after the 3rd rejection and blocks a 4th submission and edits', () => {
+      auth.signInAs('alice');
+      const id = createAd('alice');
+      cycle(id, 2);
+      expect(service.getAdById(id)!.locked).toBe(false);
+      service.submitAd(id);
+      expect(service.getAdById(id)!.submissionCount).toBe(3);
+      auth.signInAs('approver', ['member', 'adBookApprover']);
+      service.rejectAd(id, 'Still blurry');
+      auth.signInAs('alice');
+      const ad = service.getAdById(id)!;
+      expect(ad.locked).toBe(true);
+      expect(service.canSubmit(ad)).toBe(false);
+      expect(() => service.submitAd(id)).toThrow(/Submission limit reached/);
+      expect(() => service.updateAd(id, { title: 'x' })).toThrow(/Submission limit reached/);
+    });
+
+    it('a withdraw does not refund a submission', () => {
+      auth.signInAs('alice');
+      const id = createAd('alice');
+      service.recallToDraft(id);
+      service.submitAd(id);
+      expect(service.getAdById(id)!.submissionCount).toBe(2);
+    });
+
+    it('only an admin resets a lock: draft, count 0, unlocked, audited', () => {
+      auth.signInAs('alice');
+      const id = createAd('alice');
+      cycle(id, 1);
+      service.submitAd(id);
+      cycle(id, 1);
+      service.submitAd(id);
+      auth.signInAs('approver', ['member', 'adBookApprover']);
+      service.rejectAd(id, 'Still blurry');
+      expect(() => service.resetLock(id, 'x')).toThrow(/department or national admin/);
+
+      auth.signInAs('admin', ['member', 'departmentAdmin']);
+      const ad = service.resetLock(id, 'New artwork coming');
+      expect(ad).toMatchObject({ status: 'draft', submissionCount: 0, locked: false });
+      expect(ad.lockResets?.length).toBe(1);
+      expect(service.audits()[0]).toMatchObject({ action: 'lockReset', reason: 'New artwork coming', entityId: id });
+      expect(() => service.resetLock(id)).toThrow(/not locked/);
+
+      auth.signInAs('alice');
+      expect(service.canSubmit(service.getAdById(id)!)).toBe(true);
+    });
+
+    it('undoing the locking rejection unlocks but keeps the count', () => {
+      auth.signInAs('alice');
+      const id = createAd('alice');
+      cycle(id, 1);
+      service.submitAd(id);
+      cycle(id, 1);
+      service.submitAd(id);
+      auth.signInAs('approver', ['member', 'adBookApprover']);
+      service.rejectAd(id, 'Still blurry');
+      auth.signInAs('admin', ['member', 'departmentAdmin']);
+      const ad = service.undoReview(id, 'Rejected by mistake');
+      expect(ad).toMatchObject({ status: 'submitted', submissionCount: 3, locked: false });
+    });
+  });
 });

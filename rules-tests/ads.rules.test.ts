@@ -207,7 +207,11 @@ describe('#3 ads: owner edits and submit', () => {
     await assertFails(updateDoc(adRef(db('bob')), { status: 'submitted' }));
     await assertFails(updateDoc(adRef(db('approver')), { status: 'submitted' }));
     await assertSucceeds(
-      updateDoc(adRef(db('alice')), { status: 'submitted', submittedAt: '2026-11-14T00:30:00Z' })
+      updateDoc(adRef(db('alice')), {
+        status: 'submitted',
+        submittedAt: '2026-11-14T00:30:00Z',
+        submissionCount: 1,
+      })
     );
   });
 
@@ -454,5 +458,136 @@ describe('#6 ads: owner withdraws a submitted ad to draft', () => {
   it('approved ads cannot be withdrawn by the owner (admin undo is the path)', async () => {
     await seedAd('alice', 'approved', { reviewedBy: 'approver' });
     await assertFails(updateDoc(adRef(db('alice')), { status: 'draft' }));
+  });
+});
+
+describe('#5 ads: 3-submission limit, lock, and admin lock reset', () => {
+  const submit = (uid: string, count: number, extra: Record<string, unknown> = {}) =>
+    updateDoc(adRef(db(uid)), { status: 'submitted', submissionCount: count, ...extra });
+
+  function resetBatch(uid: string, opts: { audit?: boolean; reason?: string; extra?: Record<string, unknown> } = {}) {
+    const fs = db(uid);
+    const batch = writeBatch(fs);
+    const auditId = nextAuditId('audit-reset');
+    batch.update(adRef(fs), {
+      status: 'draft',
+      submissionCount: 0,
+      locked: false,
+      lastAuditId: auditId,
+      updatedAt: '2026-11-14T06:00:00Z',
+      ...opts.extra,
+    });
+    if (opts.audit !== false) {
+      const audit: Record<string, unknown> = {
+        entityType: 'ad',
+        entityId: 'ad1',
+        action: 'lockReset',
+        actorUid: uid,
+        at: serverTimestamp(),
+        fromStatus: 'rejected',
+        toStatus: 'draft',
+      };
+      if (opts.reason !== undefined) audit['reason'] = opts.reason;
+      batch.set(doc(fs, 'audits', auditId), audit);
+    }
+    return batch.commit();
+  }
+
+  it('new ads start at 0 of 3 submissions, unlocked', async () => {
+    await assertSucceeds(
+      setDoc(adRef(db('alice')), ad('alice', 'draft', { submissionCount: 0, maxSubmissions: 3, locked: false }))
+    );
+    await assertFails(setDoc(doc(db('alice'), 'ads/ad2'), ad('alice', 'draft', { submissionCount: -5 })));
+    await assertFails(setDoc(doc(db('alice'), 'ads/ad3'), ad('alice', 'draft', { maxSubmissions: 99 })));
+    await assertFails(setDoc(doc(db('alice'), 'ads/ad4'), ad('alice', 'draft', { locked: true })));
+  });
+
+  it('each submit adds exactly one to submissionCount', async () => {
+    await seedAd('alice', 'draft', { submissionCount: 0, maxSubmissions: 3 });
+    await assertFails(submit('alice', 0));
+    await assertFails(submit('alice', 2));
+    await assertFails(updateDoc(adRef(db('alice')), { status: 'submitted' }));
+    await assertSucceeds(submit('alice', 1));
+  });
+
+  it('the 4th submission is denied (issue #5 repro)', async () => {
+    await seedAd('alice', 'rejected', { submissionCount: 2, maxSubmissions: 3 });
+    await assertSucceeds(submit('alice', 3));
+    // Even if an ad were somehow unlocked at 3, a 4th submit is denied.
+    await seedAd('alice', 'rejected', { submissionCount: 3, maxSubmissions: 3, locked: false });
+    await assertFails(submit('alice', 4));
+  });
+
+  it('the owner cannot lower submissionCount, raise maxSubmissions, or clear locked', async () => {
+    await seedAd('alice', 'rejected', { submissionCount: 3, maxSubmissions: 3, locked: true });
+    const ref = adRef(db('alice'));
+    await assertFails(updateDoc(ref, { submissionCount: 0 }));
+    await assertFails(updateDoc(ref, { locked: false }));
+    await assertFails(updateDoc(ref, { maxSubmissions: 10 }));
+    await assertFails(updateDoc(ref, { status: 'draft', locked: false, submissionCount: 0 }));
+    await seedAd('alice', 'draft', { submissionCount: 2, maxSubmissions: 3 });
+    await assertFails(updateDoc(adRef(db('alice')), { submissionCount: 1 }));
+    await assertFails(submit('alice', 1));
+  });
+
+  it('a locked ad cannot be edited or submitted', async () => {
+    await seedAd('alice', 'rejected', { submissionCount: 3, maxSubmissions: 3, locked: true });
+    await assertFails(updateDoc(adRef(db('alice')), { title: 'Try again' }));
+    await assertFails(submit('alice', 4));
+  });
+
+  it('the rejection of the 3rd submission must lock the ad; earlier ones must not', async () => {
+    await seedAd('alice', 'submitted', { submissionCount: 2, maxSubmissions: 3 });
+    await assertFails(reject('approver', 'Logo too low-res', { locked: true }));
+    await assertSucceeds(reject('approver', 'Logo too low-res'));
+    await seedAd('alice', 'submitted', { submissionCount: 3, maxSubmissions: 3 });
+    await assertFails(reject('approver'));
+    await assertSucceeds(reject('approver', 'Logo too low-res', { locked: true }));
+  });
+
+  it('approvers cannot change the counter or lock', async () => {
+    await seedAd('alice', 'submitted', { submissionCount: 3, maxSubmissions: 3 });
+    await assertFails(approve('approver', { submissionCount: 0 }));
+    await seedAd('alice', 'rejected', { submissionCount: 3, maxSubmissions: 3, locked: true });
+    await assertFails(resetBatch('approver'));
+  });
+
+  it('only a department or national admin resets a locked ad, with an audit (AC 11)', async () => {
+    await seedAd('alice', 'rejected', { submissionCount: 3, maxSubmissions: 3, locked: true });
+    await assertFails(resetBatch('alice'));
+    await assertFails(resetBatch('admin', { audit: false }));
+    await assertSucceeds(resetBatch('admin', { reason: 'Member called; new artwork coming' }));
+    await seedAd('alice', 'rejected', { submissionCount: 3, maxSubmissions: 3, locked: true });
+    // Reason is optional for a reset (OPEN_QUESTIONS.md item 9).
+    await assertSucceeds(resetBatch('natAdmin'));
+  });
+
+  it('a reset must clear the lock, zero the count, return to draft, and change nothing else', async () => {
+    await seedAd('alice', 'rejected', { submissionCount: 3, maxSubmissions: 3, locked: true });
+    await assertFails(resetBatch('admin', { extra: { submissionCount: 1 } }));
+    await assertFails(resetBatch('admin', { extra: { status: 'submitted' } }));
+    await assertFails(resetBatch('admin', { extra: { title: 'Admin edit' } }));
+    await assertFails(resetBatch('admin', { extra: { maxSubmissions: 5 } }));
+    await assertSucceeds(
+      resetBatch('admin', { extra: { lockResets: [{ by: 'admin', at: 'now', reason: 'ok' }] } })
+    );
+  });
+
+  it('an unlocked ad cannot be "reset"', async () => {
+    await seedAd('alice', 'rejected', { submissionCount: 2, maxSubmissions: 3 });
+    await assertFails(resetBatch('admin'));
+  });
+
+  it('undoing the locking rejection unlocks the ad but keeps the count', async () => {
+    await seedAd('alice', 'rejected', {
+      submissionCount: 3,
+      maxSubmissions: 3,
+      locked: true,
+      reviewedBy: 'approver',
+      rejectionNotes: 'Logo too low-res',
+    });
+    await assertFails(undoBatch('admin'));
+    await assertFails(undoBatch('admin', { extra: { locked: false, submissionCount: 2 } }));
+    await assertSucceeds(undoBatch('admin', { extra: { locked: false } }));
   });
 });

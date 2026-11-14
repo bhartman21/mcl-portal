@@ -70,6 +70,17 @@ export class AdBookQueueComponent {
     );
   }
 
+  resetLock(adId: string): void {
+    this.run(
+      () => {
+        this.adBook.resetLock(adId, this.reasonFor(`reset-${adId}`));
+        this.setReason(`reset-${adId}`, '');
+      },
+      'Lock reset. The ad is back in draft and the member can submit up to 3 more times.',
+      'Unable to reset the lock.'
+    );
+  }
+
   undo(adId: string): void {
     this.run(
       () => {

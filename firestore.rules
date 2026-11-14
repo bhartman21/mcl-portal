@@ -214,6 +214,20 @@ service cloud.firestore {
         return !(key in request.resource.data);
       }
 
+      // Submission limit (AD_BOOK.md FR-A-3, AC 9, 11): max 3 submissions; maxSubmissions is
+      // fixed at create and never changes.
+      function submissionsUsed() {
+        return resource.data.get('submissionCount', 0);
+      }
+
+      function maxSubmissions() {
+        return resource.data.get('maxSubmissions', 3);
+      }
+
+      function isLocked() {
+        return resource.data.get('locked', false) == true;
+      }
+
       // The write must be paired (same batch) with a new audits/{lastAuditId} doc for this ad,
       // written by the caller for the given action.
       function auditedAs(action) {
@@ -248,33 +262,40 @@ service cloud.firestore {
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.status == 'draft'
         && request.resource.data.get('createdByType', 'member') == 'member'
+        && request.resource.data.get('submissionCount', 0) == 0
+        && request.resource.data.get('maxSubmissions', 3) == 3
+        && request.resource.data.get('locked', false) == false
         && request.resource.data.keys().hasOnly(
-             contentKeys().concat(['id', 'departmentId', 'status', 'createdBy', 'createdByType', 'createdAt']));
+             contentKeys().concat(['id', 'departmentId', 'status', 'createdBy', 'createdByType', 'createdAt',
+                                   'submissionCount', 'maxSubmissions', 'locked']));
 
       // Owner edits a draft or rejected ad (editing a rejected ad returns it to draft).
-      allow update: if isActiveUser() && isOwner()
-        && oldStatus() in ['draft', 'rejected']
+      // A locked ad (3rd rejection) can't be edited until an admin resets it.
+      allow update: if oldStatus() in ['draft', 'rejected'] && newStatus() in ['draft', 'rejected']
+        && isOwner() && isActiveUser()
+        && !isLocked()
         && (newStatus() == oldStatus() || (oldStatus() == 'rejected' && newStatus() == 'draft'))
         && changedKeys().hasOnly(contentKeys().concat(['status']));
 
       // Owner submits a draft or rejected ad (may save content in the same write; clears notes).
-      allow update: if isActiveUser() && isOwner()
-        && oldStatus() in ['draft', 'rejected']
-        && newStatus() == 'submitted'
-        && changedKeys().hasOnly(contentKeys().concat(['status', 'submittedAt', 'rejectionNotes']))
+      // Each submit adds exactly 1 to submissionCount; the 4th submit is denied.
+      allow update: if oldStatus() in ['draft', 'rejected'] && newStatus() == 'submitted'
+        && isOwner() && isActiveUser()
+        && !isLocked()
+        && request.resource.data.get('submissionCount', 0) == submissionsUsed() + 1
+        && request.resource.data.get('submissionCount', 0) <= maxSubmissions()
+        && changedKeys().hasOnly(contentKeys().concat(['status', 'submittedAt', 'rejectionNotes', 'submissionCount']))
         && absent('rejectionNotes');
 
       // Owner withdraws a submitted ad back to draft (AD_BOOK.md FR-A-3, AC 10). Status only:
       // the submission attempt is not refunded.
-      allow update: if isActiveUser() && isOwner()
-        && oldStatus() == 'submitted'
-        && newStatus() == 'draft'
+      allow update: if oldStatus() == 'submitted' && newStatus() == 'draft'
+        && isOwner() && isActiveUser()
         && changedKeys().hasOnly(['status', 'updatedAt']);
 
       // A different approver or admin approves a submitted ad.
-      allow update: if canReview() && !isOwner()
-        && oldStatus() == 'submitted'
-        && newStatus() == 'approved'
+      allow update: if oldStatus() == 'submitted' && newStatus() == 'approved'
+        && !isOwner() && canReview()
         && request.resource.data.reviewedBy == request.auth.uid
         && changedKeys().hasOnly(reviewKeys().concat(['selfApproved', 'selfApprovalReason']))
         && absent('rejectionNotes')
@@ -282,9 +303,8 @@ service cloud.firestore {
         && absent('selfApprovalReason');
 
       // A department or national admin self-approves only with a reason; audited (AC 12).
-      allow update: if isDeptOrHigherAdmin() && isOwner()
-        && oldStatus() == 'submitted'
-        && newStatus() == 'approved'
+      allow update: if oldStatus() == 'submitted' && newStatus() == 'approved'
+        && isOwner() && isDeptOrHigherAdmin()
         && request.resource.data.reviewedBy == request.auth.uid
         && request.resource.data.selfApproved == true
         && nonBlank(request.resource.data.selfApprovalReason)
@@ -293,24 +313,37 @@ service cloud.firestore {
         && auditedAs('selfApprove');
 
       // A different approver or admin rejects with notes (min 5 chars). Nobody self-rejects.
-      allow update: if canReview() && !isOwner()
-        && oldStatus() == 'submitted'
-        && newStatus() == 'rejected'
+      allow update: if oldStatus() == 'submitted' && newStatus() == 'rejected'
+        && !isOwner() && canReview()
         && request.resource.data.reviewedBy == request.auth.uid
         && request.resource.data.rejectionNotes is string
         && request.resource.data.rejectionNotes.trim().size() >= 5
-        && changedKeys().hasOnly(reviewKeys());
+        // The rejection of the last allowed submission locks the ad.
+        && request.resource.data.get('locked', false) == (submissionsUsed() >= maxSubmissions())
+        && changedKeys().hasOnly(reviewKeys().concat(['locked']));
 
       // Admin undoes an approval or rejection with a reason (AC 13): back to submitted, review
       // fields cleared, submissionCount untouched, audited; not while placed in a locked book.
-      allow update: if isDeptOrHigherAdmin()
-        && oldStatus() in ['approved', 'rejected']
-        && newStatus() == 'submitted'
-        && changedKeys().hasOnly(reviewKeys().concat(['selfApproved', 'selfApprovalReason', 'lastAuditId']))
+      allow update: if oldStatus() in ['approved', 'rejected'] && newStatus() == 'submitted'
+        && isDeptOrHigherAdmin()
+        && changedKeys().hasOnly(reviewKeys().concat(['selfApproved', 'selfApprovalReason', 'lastAuditId', 'locked']))
+        && request.resource.data.get('locked', false) == false
         && absent('reviewedBy') && absent('reviewedByName') && absent('reviewedAt')
         && absent('rejectionNotes') && absent('selfApproved') && absent('selfApprovalReason')
         && auditedAs('undoReview')
         && !placedInLockedBook();
+
+      // Admin lock reset (AD_BOOK.md FR-A-3, AC 11): clears locked, submissionCount = 0, back to
+      // draft, audited (who, when, reason).
+      allow update: if isLocked() && newStatus() == 'draft'
+        && isDeptOrHigherAdmin()
+        && request.resource.data.submissionCount == 0
+        && request.resource.data.locked == false
+        && changedKeys().hasOnly(['status', 'submissionCount', 'locked', 'lockResets', 'lastAuditId', 'updatedAt'])
+        && (!changedKeys().hasAny(['lockResets'])
+            || (request.resource.data.lockResets is list
+                && request.resource.data.lockResets.size() == resource.data.get('lockResets', []).size() + 1))
+        && auditedAs('lockReset');
 
       allow delete: if isDeptOrHigherAdmin() || (isActiveUser() && resource.data.createdBy == request.auth.uid && resource.data.status == 'draft');
     }
@@ -322,13 +355,15 @@ service cloud.firestore {
       allow create: if isDeptOrHigherAdmin()
         && request.resource.data.keys().hasOnly(
              ['entityType', 'entityId', 'action', 'actorUid', 'actorName', 'at', 'reason', 'fromStatus', 'toStatus'])
-        && request.resource.data.keys().hasAll(['entityType', 'entityId', 'action', 'actorUid', 'at', 'reason'])
+        && request.resource.data.keys().hasAll(['entityType', 'entityId', 'action', 'actorUid', 'at'])
         && request.resource.data.entityType == 'ad'
-        && request.resource.data.action in ['selfApprove', 'undoReview']
+        && request.resource.data.action in ['selfApprove', 'undoReview', 'lockReset']
         && request.resource.data.actorUid == request.auth.uid
         && request.resource.data.at == request.time
-        && request.resource.data.reason is string
-        && request.resource.data.reason.trim().size() > 0
+        && request.resource.data.get('reason', '') is string
+        // Reason is required for self-approval and undo; optional for a lock reset.
+        && (request.resource.data.action == 'lockReset'
+            || request.resource.data.get('reason', '').trim().size() > 0)
         && getAfter(/databases/$(database)/documents/ads/$(request.resource.data.entityId))
              .data.get('lastAuditId', null) == auditId;
       allow update, delete: if false;

@@ -7,6 +7,7 @@ import {
   AppNotification,
   AuditAction,
   AuditEntry,
+  MAX_AD_SUBMISSIONS,
   SEED_AD_BOOKS,
   SEED_AD_SIZES,
 } from '../models/ad-book.model';
@@ -70,6 +71,26 @@ export class AdBookService {
   readonly reviewedAds = computed(() =>
     this._ads().filter((a) => a.status === 'approved' || a.status === 'rejected')
   );
+
+  /** Locked ads an admin may reset (AC 11). */
+  readonly lockedAds = computed(() => this._ads().filter((a) => a.locked));
+
+  submissionsUsed(ad: AdItem): number {
+    return ad.submissionCount ?? 0;
+  }
+
+  maxSubmissions(ad: AdItem): number {
+    return ad.maxSubmissions ?? MAX_AD_SUBMISSIONS;
+  }
+
+  /** Owner may submit: draft/rejected, not locked, and under the limit (AC 9). */
+  canSubmit(ad: AdItem): boolean {
+    return (
+      (ad.status === 'draft' || ad.status === 'rejected') &&
+      !ad.locked &&
+      this.submissionsUsed(ad) < this.maxSubmissions(ad)
+    );
+  }
 
   isOwnAd(ad: AdItem): boolean {
     return !!this.auth.user() && ad.createdBy === this.auth.user()?.uid;
@@ -142,7 +163,7 @@ export class AdBookService {
       actorUid: this.auth.user()?.uid ?? '',
       actorName: this.actorName(),
       at,
-      reason,
+      ...(reason ? { reason } : {}),
       fromStatus: ad.status,
       toStatus,
     };
@@ -219,6 +240,9 @@ export class AdBookService {
       imageName: input.imageName,
       fit: input.fit,
       position: { ...input.position },
+      submissionCount: 0,
+      maxSubmissions: MAX_AD_SUBMISSIONS,
+      locked: false,
       createdAt: now,
       updatedAt: now,
     };
@@ -241,7 +265,10 @@ export class AdBookService {
     if (!existing) throw new Error('Ad not found.');
 
     if (existing.status === 'approved' || existing.status === 'submitted') {
-      throw new Error('Recall the ad to draft before editing.');
+      throw new Error('Withdraw the ad to draft before editing.');
+    }
+    if (existing.locked) {
+      throw new Error('Submission limit reached. An administrator must reset this ad before it can be edited.');
     }
 
     const updated: AdItem = {
@@ -262,6 +289,15 @@ export class AdBookService {
     if (!ad.title.trim()) throw new Error('Ad title is required before submitting.');
     if (!ad.imageUrl) throw new Error('Please upload an ad image before submitting.');
 
+    if (ad.status !== 'draft' && ad.status !== 'rejected') {
+      throw new Error('Only draft or rejected ads can be submitted.');
+    }
+    if (ad.locked || this.submissionsUsed(ad) >= this.maxSubmissions(ad)) {
+      throw new Error(
+        `Submission limit reached (${this.maxSubmissions(ad)} of ${this.maxSubmissions(ad)}). An administrator must reset this ad.`
+      );
+    }
+
     const size = this.getSizeById(ad.sizeId);
     if (!size || !size.active) {
       throw new Error('Please select an active ad size.');
@@ -271,6 +307,7 @@ export class AdBookService {
     const updated: AdItem = {
       ...ad,
       status: 'submitted',
+      submissionCount: this.submissionsUsed(ad) + 1,
       rejectionNotes: undefined,
       submittedAt: now,
       updatedAt: now,
@@ -380,6 +417,8 @@ export class AdBookService {
       ...ad,
       status: 'rejected',
       rejectionNotes: cleanNotes,
+      // The rejection of the last allowed submission locks the ad (AC 9).
+      locked: this.submissionsUsed(ad) >= this.maxSubmissions(ad),
       reviewedBy: this.auth.user()?.uid,
       reviewedByName: this.actorName(),
       reviewedAt: now,
@@ -422,6 +461,7 @@ export class AdBookService {
       rejectionNotes: undefined,
       selfApproved: undefined,
       selfApprovalReason: undefined,
+      locked: false,
       lastAuditId: audit.id,
       updatedAt: now,
     };
@@ -432,6 +472,35 @@ export class AdBookService {
       )
     );
     this.saveBooks();
+    this.replaceAd(updated);
+    return updated;
+  }
+
+  /**
+   * Admin lock reset (AD_BOOK.md FR-A-3, AC 11): clears `locked`, sets `submissionCount` to 0,
+   * returns the ad to draft, and audits who, when, and the (optional) reason.
+   */
+  resetLock(id: string, reason = ''): AdItem {
+    if (!this.isDeptOrHigherAdmin()) {
+      throw new Error('Only a department or national admin can reset a locked ad.');
+    }
+    const ad = this.getAdById(id);
+    if (!ad) throw new Error('Ad not found.');
+    if (!ad.locked) throw new Error('This ad is not locked.');
+
+    const now = new Date().toISOString();
+    const cleanReason = reason.trim();
+    const audit = this.writeAudit('lockReset', ad, cleanReason, 'draft', now);
+    const entry = { by: this.auth.user()?.uid ?? '', at: now, ...(cleanReason ? { reason: cleanReason } : {}) };
+    const updated: AdItem = {
+      ...ad,
+      status: 'draft',
+      submissionCount: 0,
+      locked: false,
+      lockResets: [...(ad.lockResets ?? []), entry],
+      lastAuditId: audit.id,
+      updatedAt: now,
+    };
     this.replaceAd(updated);
     return updated;
   }

@@ -21,6 +21,8 @@ export class AdminActivityComponent {
         return 'Self-approved own ad';
       case 'undoReview':
         return 'Undid review';
+      case 'lockReset':
+        return 'Reset submission lock';
       default:
         return action;
     }
