@@ -16,6 +16,7 @@ import {
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
 import {
   asGuest,
+  auditedRoleChange,
   asUser,
   emailFor,
   getTestEnv,
@@ -202,10 +203,13 @@ describe('users: self-service limits and admin role management', () => {
   it('AC3: department admin can assign detachmentVavsRep scoped to a detachment', async () => {
     const db = asUser(env, 'admin').firestore();
     await assertSucceeds(
-      updateDoc(doc(db, 'users/bob'), {
-        roles: ['member', 'detachmentVavsRep'],
-        detachmentScopes: ['dof-054'],
-        updatedAt: serverTimestamp(),
+      auditedRoleChange(db, {
+        actorUid: 'admin',
+        actorRoles: USERS.deptAdmin.roles,
+        targetUid: 'bob',
+        beforeRoles: ['member'],
+        afterRoles: ['member', 'detachmentVavsRep'],
+        afterScopes: ['dof-054'],
       })
     );
     // The new scope is honored: bob can now read and edit entries in dof-054 only.

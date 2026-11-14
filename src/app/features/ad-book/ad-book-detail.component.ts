@@ -26,7 +26,7 @@ export class AdBookDetailComponent {
   private readonly route = inject(ActivatedRoute);
 
   readonly bookId = signal(this.route.snapshot.paramMap.get('bookId') || '');
-  readonly book = computed(() => this.adBook.getBookById(this.bookId()));
+  readonly book = computed(() => this.adBook.getVisibleBookById(this.bookId()));
   readonly errorMsg = signal<string | null>(null);
 
   selectedAdToAdd = '';
