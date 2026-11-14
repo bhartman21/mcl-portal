@@ -1,5 +1,5 @@
 import { assertFails, assertSucceeds, RulesTestEnvironment } from '@firebase/rules-unit-testing';
-import { getBytes, ref, uploadBytes } from 'firebase/storage';
+import { deleteObject, getBytes, ref, uploadBytes } from 'firebase/storage';
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
 import { asGuest, asUser, getTestEnv, resetEnv, seed, seedUsers, USERS } from './helpers';
 
@@ -60,5 +60,67 @@ describe('storage: ad-images', () => {
 
     await seed(env, { 'ads/ad1': { createdBy: 'alice', status: 'approved' } });
     await assertSucceeds(getBytes(ref(asUser(env, 'bob').storage(), path)));
+  });
+});
+
+// Issue #24: once an ad is submitted, the reviewed image is frozen. The owner may only add, replace,
+// or delete it while the ad is editable (AD_BOOK.md workflow: draft, or rejected and not locked),
+// or before the ad doc exists (first upload of a new ad).
+describe('storage: ad-images are frozen after submit (#24)', () => {
+  const path = 'ad-images/alice/ad1/a.png';
+  const ad = (fields: Record<string, unknown>) => ({ 'ads/ad1': { createdBy: 'alice', ...fields } });
+
+  beforeEach(async () => {
+    await seedUsers(env, { deptAdmin: USERS.deptAdmin });
+  });
+
+  it('owner can upload, replace, and delete while the ad is a draft', async () => {
+    await seed(env, ad({ status: 'draft' }));
+    const st = asUser(env, 'alice').storage();
+    await assertSucceeds(uploadBytes(ref(st, path), png, meta));
+    await assertSucceeds(uploadBytes(ref(st, path), png, meta));
+    await assertSucceeds(deleteObject(ref(st, path)));
+  });
+
+  it('owner can upload the first image before the ad doc exists', async () => {
+    await assertSucceeds(uploadBytes(ref(asUser(env, 'alice').storage(), path), png, meta));
+  });
+
+  it('owner can replace the image on a rejected ad that is not locked (editing returns it to draft)', async () => {
+    await seedImage(path);
+    await seed(env, ad({ status: 'rejected', locked: false }));
+    const st = asUser(env, 'alice').storage();
+    await assertSucceeds(uploadBytes(ref(st, path), png, meta));
+    await assertSucceeds(deleteObject(ref(st, path)));
+  });
+
+  for (const status of ['submitted', 'approved']) {
+    it(`owner cannot replace or delete the image once the ad is ${status}`, async () => {
+      await seedImage(path);
+      await seed(env, ad({ status }));
+      const st = asUser(env, 'alice').storage();
+      await assertFails(uploadBytes(ref(st, path), png, meta));
+      await assertFails(uploadBytes(ref(st, 'ad-images/alice/ad1/b.png'), png, meta));
+      await assertFails(deleteObject(ref(st, path)));
+    });
+  }
+
+  it('owner cannot replace or delete the image on a locked rejected ad', async () => {
+    await seedImage(path);
+    await seed(env, ad({ status: 'rejected', locked: true }));
+    const st = asUser(env, 'alice').storage();
+    await assertFails(uploadBytes(ref(st, path), png, meta));
+    await assertFails(deleteObject(ref(st, path)));
+  });
+
+  it("a member cannot write under their own uid for someone else's ad id", async () => {
+    await seed(env, { 'ads/ad1': { createdBy: 'bob', status: 'draft' } });
+    await assertFails(uploadBytes(ref(asUser(env, 'alice').storage(), path), png, meta));
+  });
+
+  it('admins can still delete an image on a submitted ad (moderation cleanup)', async () => {
+    await seedImage(path);
+    await seed(env, ad({ status: 'submitted' }));
+    await assertSucceeds(deleteObject(ref(asUser(env, 'deptAdmin').storage(), path)));
   });
 });
