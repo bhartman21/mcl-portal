@@ -93,6 +93,14 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'activity',
+        canActivate: [roleGuard(['departmentAdmin', 'nationalAdmin'])],
+        loadComponent: () =>
+          import('./features/admin/admin-activity.component').then(
+            (m) => m.AdminActivityComponent
+          ),
+      },
+      {
         path: 'settings',
         canActivate: [roleGuard(ADMIN_ROLES)],
         loadComponent: () =>

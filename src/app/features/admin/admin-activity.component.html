@@ -1,0 +1,87 @@
+<div class="container-xl py-4">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div>
+      <div class="mcl-eyebrow">Department Administration</div>
+      <h1 class="h2 mcl-serif mb-1">Notifications &amp; Audit Log</h1>
+      <p class="mcl-muted small mb-0">
+        In-app alerts for other admins' self-approvals, and a log of audited Ad Book actions.
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      <a routerLink="/admin/users" class="btn btn-sm btn-mcl-outline">Users &amp; Roles</a>
+      <a routerLink="/ad-book/queue" class="btn btn-sm btn-mcl-outline">Approval Queue</a>
+    </div>
+  </div>
+
+  <section class="mcl-card mcl-card-scarlet p-4 mb-4" aria-labelledby="notif-heading">
+    <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+      <h2 id="notif-heading" class="h5 mcl-serif mb-0">
+        Notifications
+        @if (notifications.unreadCount() > 0) {
+          <span class="badge text-bg-danger ms-1">{{ notifications.unreadCount() }} new</span>
+        }
+      </h2>
+      @if (notifications.unreadCount() > 0) {
+        <button type="button" class="btn btn-sm btn-mcl-outline" (click)="notifications.markAllRead()">
+          Mark all read
+        </button>
+      }
+    </div>
+    @if (notifications.myNotifications().length === 0) {
+      <p class="mcl-muted small mb-0">No notifications.</p>
+    } @else {
+      <ul class="list-group">
+        @for (n of notifications.myNotifications(); track n.id) {
+          <li class="list-group-item d-flex justify-content-between align-items-start gap-3" [class.fw-semibold]="!n.read">
+            <div>
+              <div>
+                {{ n.actorName || 'An admin' }} approved their own ad "{{ n.adTitle || n.adId }}".
+              </div>
+              <div class="small"><span class="mcl-muted">Reason:</span> {{ n.reason }}</div>
+              <div class="small mcl-muted">{{ n.createdAt | date: 'medium' }}</div>
+            </div>
+            @if (!n.read) {
+              <button type="button" class="btn btn-sm btn-outline-secondary text-nowrap" (click)="notifications.markRead(n.id)">
+                Mark read
+              </button>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
+  <section class="mcl-card p-4" aria-labelledby="audit-heading">
+    <h2 id="audit-heading" class="h5 mcl-serif mb-3">Ad Book Audit Log</h2>
+    @if (adBook.audits().length === 0) {
+      <p class="mcl-muted small mb-0">No audited actions yet.</p>
+    } @else {
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th scope="col">When</th>
+              <th scope="col">Who</th>
+              <th scope="col">Action</th>
+              <th scope="col">Ad</th>
+              <th scope="col">Status</th>
+              <th scope="col">Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of adBook.audits(); track a.id) {
+              <tr>
+                <td class="small text-nowrap">{{ a.at | date: 'short' }}</td>
+                <td class="small">{{ a.actorName || a.actorUid }}</td>
+                <td class="small">{{ actionLabel(a.action) }}</td>
+                <td class="small">{{ adTitle(a.entityId) }}</td>
+                <td class="small text-nowrap">{{ a.fromStatus }} &rarr; {{ a.toStatus }}</td>
+                <td class="small">{{ a.reason || '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</div>

@@ -47,10 +47,48 @@ export interface AdItem {
   fit: 'cover' | 'contain';
   position: { x: number; y: number };
   submittedAt?: string;
+  /** uid of the approver/admin who approved or rejected the ad. */
   reviewedBy?: string;
+  reviewedByName?: string;
   reviewedAt?: string;
+  /** Admin approved their own ad (AD_BOOK.md AC 12); always paired with selfApprovalReason. */
+  selfApproved?: boolean;
+  selfApprovalReason?: string;
+  /** Id of the audits/{id} doc written with the last audited change (self-approve, undo). */
+  lastAuditId?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export type AuditAction = 'selfApprove' | 'undoReview';
+
+/** `audits/{id}`: audited Ad Book actions (AD_BOOK.md FR-A-3, AC 12, 13). */
+export interface AuditEntry {
+  id: string;
+  entityType: 'ad';
+  entityId: string;
+  action: AuditAction;
+  actorUid: string;
+  actorName?: string;
+  at: string;
+  reason: string;
+  fromStatus?: AdStatus;
+  toStatus?: AdStatus;
+}
+
+/** `notifications/{id}`: in-app notification for one recipient (no email). */
+export interface AppNotification {
+  id: string;
+  recipientUid: string;
+  type: 'adSelfApproved';
+  adId: string;
+  adTitle?: string;
+  actorUid: string;
+  actorName?: string;
+  reason: string;
+  createdAt: string;
+  read: boolean;
+  readAt?: string;
 }
 
 export const SEED_AD_SIZES: AdSize[] = [
