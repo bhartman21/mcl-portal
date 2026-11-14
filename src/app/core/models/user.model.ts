@@ -69,5 +69,6 @@ export const ASSIGNABLE_ROLES: { id: RoleId; label: string; requiresDetachmentSc
   { id: 'adBookApprover', label: 'Ad Book Approver', requiresDetachmentScope: false },
   { id: 'departmentAdmin', label: 'Department Admin', requiresDetachmentScope: false },
   { id: 'nationalAdmin', label: 'National Admin', requiresDetachmentScope: false },
+  { id: 'siteAdmin', label: 'Site Administrator', requiresDetachmentScope: false },
 ];
 

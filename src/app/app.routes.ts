@@ -70,7 +70,7 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'users' },
       {
         path: 'users',
-        canActivate: [roleGuard(['departmentAdmin', 'nationalAdmin'])],
+        canActivate: [roleGuard(ADMIN_ROLES)],
         loadComponent: () =>
           import('./features/admin/admin-users.component').then(
             (m) => m.AdminUsersComponent
@@ -78,7 +78,7 @@ export const routes: Routes = [
       },
       {
         path: 'detachments',
-        canActivate: [roleGuard(['departmentAdmin', 'nationalAdmin'])],
+        canActivate: [roleGuard(ADMIN_ROLES)],
         loadComponent: () =>
           import('./features/admin/admin-detachments.component').then(
             (m) => m.AdminDetachmentsComponent
@@ -102,7 +102,7 @@ export const routes: Routes = [
       },
       {
         path: 'settings',
-        canActivate: [roleGuard(['departmentAdmin', 'nationalAdmin'])],
+        canActivate: [roleGuard(ADMIN_ROLES)],
         loadComponent: () =>
           import('./features/admin/admin-settings.component').then(
             (m) => m.AdminSettingsComponent

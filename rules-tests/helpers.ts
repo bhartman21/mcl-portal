@@ -14,7 +14,15 @@ import {
 } from '@firebase/rules-unit-testing';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { doc, setDoc, Timestamp } from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  Firestore,
+  serverTimestamp,
+  setDoc,
+  Timestamp,
+  writeBatch,
+} from 'firebase/firestore';
 
 export const PROJECT_ID = 'demo-mcl-portal';
 
@@ -23,20 +31,29 @@ let env: RulesTestEnvironment | undefined;
 export async function getTestEnv(): Promise<RulesTestEnvironment> {
   if (env) return env;
   const root = process.cwd();
+  // `firebase emulators:exec` exports the emulator addresses; fall back to firebase.json defaults.
+  const [fsHost, fsPort] = hostPort(process.env['FIRESTORE_EMULATOR_HOST'], 8080);
+  const [stHost, stPort] = hostPort(process.env['FIREBASE_STORAGE_EMULATOR_HOST'], 9199);
   env = await initializeTestEnvironment({
     projectId: PROJECT_ID,
     firestore: {
       rules: readFileSync(resolve(root, 'firestore.rules'), 'utf8'),
-      host: '127.0.0.1',
-      port: 8080,
+      host: fsHost,
+      port: fsPort,
     },
     storage: {
       rules: readFileSync(resolve(root, 'storage.rules'), 'utf8'),
-      host: '127.0.0.1',
-      port: 9199,
+      host: stHost,
+      port: stPort,
     },
   });
   return env;
+}
+
+function hostPort(value: string | undefined, defaultPort: number): [string, number] {
+  if (!value) return ['127.0.0.1', defaultPort];
+  const i = value.lastIndexOf(':');
+  return [value.slice(0, i) || '127.0.0.1', Number(value.slice(i + 1)) || defaultPort];
 }
 
 export async function resetEnv(e: RulesTestEnvironment): Promise<void> {
@@ -113,4 +130,50 @@ export async function setRegistrationMode(
   mode: 'open' | 'approval'
 ): Promise<void> {
   await seed(e, { 'settings/registration': { mode } });
+}
+
+export interface RoleChange {
+  actorUid: string;
+  actorRoles: string[];
+  targetUid: string;
+  beforeRoles: string[];
+  afterRoles: string[];
+  beforeScopes?: string[];
+  afterScopes?: string[];
+  /** Override fields of the audit doc (forgery tests). */
+  audit?: Record<string, unknown>;
+  /** Override fields of the users update (forgery tests). */
+  user?: Record<string, unknown>;
+  /** Fixed audit id (reuse tests); random by default. */
+  auditId?: string;
+}
+
+/**
+ * The batched write AdminService.updateUserRoles performs: users/{target} gets the new roles plus
+ * a fresh roleAuditId, and audits/{roleAuditId} records who/when/target/before/after.
+ */
+export function auditedRoleChange(db: Firestore, c: RoleChange): Promise<void> {
+  const auditRef = c.auditId ? doc(db, 'audits', c.auditId) : doc(collection(db, 'audits'));
+  const afterScopes = c.afterScopes ?? [];
+  const batch = writeBatch(db);
+  batch.update(doc(db, 'users', c.targetUid), {
+    roles: c.afterRoles,
+    detachmentScopes: afterScopes,
+    roleAuditId: auditRef.id,
+    updatedAt: serverTimestamp(),
+    ...c.user,
+  });
+  batch.set(auditRef, {
+    action: 'roleChange',
+    actorUid: c.actorUid,
+    actorRoles: c.actorRoles,
+    targetUid: c.targetUid,
+    at: serverTimestamp(),
+    beforeRoles: c.beforeRoles,
+    afterRoles: c.afterRoles,
+    beforeScopes: c.beforeScopes ?? [],
+    afterScopes,
+    ...c.audit,
+  });
+  return batch.commit();
 }
