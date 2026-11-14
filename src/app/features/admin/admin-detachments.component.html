@@ -111,6 +111,9 @@
                     placeholder="Det #"
                     [(ngModel)]="editDraft.number"
                   />
+                  @if (det.needsVerification) {
+                    <div class="form-text small">Saving a new number marks it verified.</div>
+                  }
                 </td>
                 <td>
                   <input

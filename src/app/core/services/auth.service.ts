@@ -14,6 +14,7 @@ import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { environment } from '../../../environments/environment';
 import { buildNewUserProfile, normalizeRegistrationMode } from '../auth/registration';
 import {
+  ADMIN_ROLES,
   RegistrationMode,
   ROLE_LABELS,
   RoleId,
@@ -50,14 +51,13 @@ export class AuthService {
   readonly isPending = computed(() => this._user()?.status === 'pending');
   readonly isSuspended = computed(() => this._user()?.status === 'suspended');
 
-  readonly isAdmin = computed(() =>
-    this.hasAnyRole(['departmentAdmin', 'nationalAdmin'])
-  );
+  readonly isAdmin = computed(() => this.hasAnyRole(ADMIN_ROLES));
 
   readonly primaryRoleLabel = computed(() => {
     const roles = this._user()?.roles ?? [];
     if (roles.length === 0) return ROLE_LABELS.guest;
     const priority: RoleId[] = [
+      'siteAdmin',
       'nationalAdmin',
       'departmentAdmin',
       'adBookApprover',
@@ -227,7 +227,7 @@ export class AuthService {
   hasDetachmentScope(detachmentId: string): boolean {
     const u = this._user();
     if (!u || u.status !== 'active') return false;
-    if (this.hasAnyRole(['departmentAdmin', 'nationalAdmin', 'departmentVavsRep'])) {
+    if (this.hasAnyRole([...ADMIN_ROLES, 'departmentVavsRep'])) {
       return true;
     }
     if (u.roles.includes('detachmentVavsRep')) {
@@ -256,6 +256,11 @@ export class AuthService {
   /** Email saved when the link was requested on this device (absent when opened on another device). */
   storedSignInEmail(): string | null {
     return localStorage.getItem(STORAGE_EMAIL_LINK_KEY);
+  }
+
+  /** Forget the stored sign-in email (e.g. it didn't match the link and the user must re-enter it). */
+  clearStoredSignInEmail(): void {
+    localStorage.removeItem(STORAGE_EMAIL_LINK_KEY);
   }
 
   /**

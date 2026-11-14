@@ -13,6 +13,10 @@
     </div>
   </div>
 
+  @if (errorMessage(); as msg) {
+    <div class="alert alert-danger" role="alert">{{ msg }}</div>
+  }
+
   <!-- Pending Queue -->
   @if (pendingUsers().length > 0) {
     <div class="mcl-card mcl-card-gold p-4 mb-4">
@@ -37,20 +41,22 @@
                 <td class="small">{{ u.email }}</td>
                 <td class="small">{{ detachmentLabel(u.defaultDetachmentId) }}</td>
                 <td class="text-end">
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-success me-2"
-                    (click)="approveUser(u)"
-                  >
-                    <i class="bi bi-check-lg me-1"></i>Approve
-                  </button>
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-outline-danger"
-                    (click)="suspendUser(u)"
-                  >
-                    Suspend
-                  </button>
+                  @if (canManage(u)) {
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-success me-2"
+                      (click)="approveUser(u)"
+                    >
+                      <i class="bi bi-check-lg me-1"></i>Approve
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-danger"
+                      (click)="suspendUser(u)"
+                    >
+                      Suspend
+                    </button>
+                  }
                 </td>
               </tr>
             }
@@ -89,36 +95,44 @@
                     <span class="badge bg-light text-dark border">
                       {{ roleLabel(r) }}
                       @if (r === 'detachmentVavsRep' && u.detachmentScopes?.length) {
-                        <span class="text-danger ms-1">({{ scopeNames(u.detachmentScopes!) }})</span>
+                        <span class="text-danger ms-1"
+                          >({{ scopeNames(u.detachmentScopes!) }})</span
+                        >
                       }
                     </span>
                   }
                 </div>
               </td>
               <td class="text-end">
-                <button
-                  type="button"
-                  class="btn btn-sm btn-mcl-outline me-2"
-                  (click)="startEdit(u)"
-                >
-                  Edit Roles
-                </button>
-                @if (u.status === 'active') {
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-outline-danger"
-                    (click)="suspendUser(u)"
-                  >
-                    Suspend
-                  </button>
+                @if (isSelf(u)) {
+                  <span class="mcl-muted small">You (another admin must change your roles)</span>
+                } @else if (!canManage(u)) {
+                  <span class="mcl-muted small">Higher admin level</span>
                 } @else {
                   <button
                     type="button"
-                    class="btn btn-sm btn-outline-success"
-                    (click)="approveUser(u)"
+                    class="btn btn-sm btn-mcl-outline me-2"
+                    (click)="startEdit(u)"
                   >
-                    Activate
+                    Edit Roles
                   </button>
+                  @if (u.status === 'active') {
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-danger"
+                      (click)="suspendUser(u)"
+                    >
+                      Suspend
+                    </button>
+                  } @else {
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-success"
+                      (click)="approveUser(u)"
+                    >
+                      Activate
+                    </button>
+                  }
                 }
               </td>
             </tr>
@@ -135,13 +149,18 @@
         <h2 class="h5 mcl-serif mb-0">
           Edit Roles &mdash; {{ target.displayName || target.email }}
         </h2>
-        <button type="button" class="btn-close" aria-label="Close" (click)="editingUser.set(null)"></button>
+        <button
+          type="button"
+          class="btn-close"
+          aria-label="Close"
+          (click)="editingUser.set(null)"
+        ></button>
       </div>
 
       <div class="row g-3">
         <div class="col-md-6">
           <div class="fw-semibold small mb-2">Assigned Roles</div>
-          @for (r of assignableRoles; track r.id) {
+          @for (r of assignableRoles(); track r.id) {
             <div class="form-check mb-1">
               <input
                 class="form-check-input"
@@ -162,11 +181,7 @@
             <label for="scopeDetachment" class="form-label fw-semibold small">
               Detachment VAVS Rep Scope
             </label>
-            <select
-              id="scopeDetachment"
-              class="form-select"
-              [(ngModel)]="draftDetachmentId"
-            >
+            <select id="scopeDetachment" class="form-select" [(ngModel)]="draftDetachmentId">
               @for (det of detachments(); track det.id) {
                 <option [value]="det.id">{{ det.displayName }}</option>
               }
@@ -189,4 +204,3 @@
     </div>
   }
 </div>
-

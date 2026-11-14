@@ -40,7 +40,7 @@ service firebase.storage {
       // Owner, approvers/admins, or any active user once the ad is approved.
       allow read: if isActiveUser() && (
         request.auth.uid == uid ||
-        hasAnyRole(['adBookApprover', 'departmentAdmin', 'nationalAdmin']) ||
+        hasAnyRole(['adBookApprover', 'departmentAdmin', 'nationalAdmin', 'siteAdmin']) ||
         isApproved(adId)
       );
       // Write own path only, and only while the ad is editable (#24).
@@ -52,7 +52,7 @@ service firebase.storage {
       // Owner deletes only while the ad is editable (#24); admins may still remove an image.
       allow delete: if isActiveUser() && (
         (request.auth.uid == uid && ownerMayChangeImage(uid, adId))
-        || hasAnyRole(['departmentAdmin', 'nationalAdmin'])
+        || hasAnyRole(['departmentAdmin', 'nationalAdmin', 'siteAdmin'])
       );
     }
   }

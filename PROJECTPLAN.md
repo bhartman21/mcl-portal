@@ -58,6 +58,8 @@ Runnable app on Firebase Hosting (or local `ng serve`) with login, role claims/d
 - [ ] STYLE_GUIDE tokens mapped to Bootstrap SCSS variables.
 - [ ] Auth: Firebase built-in **email sign-in link** (passwordless, free Spark plan; **decided** Nov 14, 2026). No Cloud Functions or paid email service. Google sign-in may be added later.
 - [ ] User profile document + role assignment model (see `ROLES_AND_PERMISSIONS.md`), including registration-mode lock-down switch.
+- [ ] `siteAdmin` role and admin grant rules (siteAdmin grants any level; nationalAdmin grants national/department; departmentAdmin grants department only), enforced in rules with emulator tests; one-time first-admin bootstrap makes Billy siteAdmin (decided Nov 14, 2026).
+- [ ] Detachment directory publicly readable (active entries only), including signed out.
 - [ ] Seed `detachments`: #54 = **Morris F Dixon Jr.**; S/Sgt Ted Archambault with `needsVerification: true` (number unconfirmed).
 - [ ] Admin UI: users, roles, detachments (create, edit, deactivate), registration mode.
 - [ ] Email-link sign-in completes on a different device: prompt for the email with a visible input.
