@@ -156,8 +156,15 @@ service cloud.firestore {
       allow write: if isAdmin() || hasRole('adBookApprover');
     }
 
+    // Members read open books only; approvers and admins read every book (ARCHITECTURE.md
+    // security outline: members "read open books", approvers/admins R/W). Member queries must
+    // filter on status == 'open'.
     match /adBooks/{bookId} {
-      allow read: if isActiveUser();
+      allow read: if isActiveUser() && (
+        resource.data.status == 'open' ||
+        hasRole('adBookApprover') ||
+        isAdmin()
+      );
       allow write: if isAdmin() || hasRole('adBookApprover');
     }
 
