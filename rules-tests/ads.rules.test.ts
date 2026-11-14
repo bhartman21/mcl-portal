@@ -428,3 +428,31 @@ describe('#3 ads: admin undo review (AC 13)', () => {
     await assertSucceeds(undoBatch('admin'));
   });
 });
+
+describe('#6 ads: owner withdraws a submitted ad to draft', () => {
+  it('the owner withdraws submitted -> draft (issue #6 repro)', async () => {
+    await seedAd('alice', 'submitted', { submittedAt: 'x' });
+    await assertSucceeds(
+      updateDoc(adRef(db('alice')), { status: 'draft', updatedAt: '2026-11-14T05:00:00Z' })
+    );
+  });
+
+  it('the withdrawal does not refund a submission or change anything else', async () => {
+    await seedAd('alice', 'submitted', { submissionCount: 2 });
+    const ref = adRef(db('alice'));
+    await assertFails(updateDoc(ref, { status: 'draft', submissionCount: 1 }));
+    await assertFails(updateDoc(ref, { status: 'draft', title: 'Edited while withdrawing' }));
+    await assertFails(updateDoc(ref, { status: 'draft', reviewedBy: 'alice' }));
+  });
+
+  it('other members and approvers cannot withdraw someone else\u2019s ad', async () => {
+    await seedAd('alice', 'submitted');
+    await assertFails(updateDoc(adRef(db('bob')), { status: 'draft' }));
+    await assertFails(updateDoc(adRef(db('approver')), { status: 'draft' }));
+  });
+
+  it('approved ads cannot be withdrawn by the owner (admin undo is the path)', async () => {
+    await seedAd('alice', 'approved', { reviewedBy: 'approver' });
+    await assertFails(updateDoc(adRef(db('alice')), { status: 'draft' }));
+  });
+});

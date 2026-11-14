@@ -264,6 +264,13 @@ service cloud.firestore {
         && changedKeys().hasOnly(contentKeys().concat(['status', 'submittedAt', 'rejectionNotes']))
         && absent('rejectionNotes');
 
+      // Owner withdraws a submitted ad back to draft (AD_BOOK.md FR-A-3, AC 10). Status only:
+      // the submission attempt is not refunded.
+      allow update: if isActiveUser() && isOwner()
+        && oldStatus() == 'submitted'
+        && newStatus() == 'draft'
+        && changedKeys().hasOnly(['status', 'updatedAt']);
+
       // A different approver or admin approves a submitted ad.
       allow update: if canReview() && !isOwner()
         && oldStatus() == 'submitted'

@@ -161,4 +161,25 @@ describe('AdBookService review rules (#3)', () => {
       expect(service.getBookById(book.id)!.adIds).not.toContain(id);
     });
   });
+
+  describe('withdraw (#6)', () => {
+    it('the owner withdraws a submitted ad to draft without refunding anything', () => {
+      auth.signInAs('alice');
+      const id = createAd('alice');
+      const before = service.getAdById(id)!;
+      const ad = service.recallToDraft(id);
+      expect(ad.status).toBe('draft');
+      expect(ad.submittedAt).toBe(before.submittedAt);
+    });
+
+    it('only submitted ads, and only by the owner', () => {
+      auth.signInAs('alice');
+      const id = createAd('alice');
+      auth.signInAs('approver', ['member', 'adBookApprover']);
+      expect(() => service.recallToDraft(id)).toThrow(/owner/);
+      service.approveAd(id);
+      auth.signInAs('alice');
+      expect(() => service.recallToDraft(id)).toThrow(/Only submitted/);
+    });
+  });
 });

@@ -32,12 +32,19 @@
     }
     @if (isLockedForEdit()) {
       <div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
-        <div>
-          This ad is currently <strong>{{ current.status }}</strong>. Recall it to draft to make changes.
-        </div>
-        <button type="button" class="btn btn-sm btn-mcl-outline" (click)="recall()">
-          Recall to Draft
-        </button>
+        @if (current.status === 'submitted') {
+          <div>
+            This ad is currently <strong>submitted</strong>. Withdraw it to draft to make changes.
+          </div>
+          <button type="button" class="btn btn-sm btn-mcl-outline" (click)="recall()">
+            Withdraw to Draft
+          </button>
+        } @else {
+          <div>
+            This ad is currently <strong>{{ current.status }}</strong> and can't be edited. If it needs
+            changes, ask an admin to undo the approval, then withdraw it.
+          </div>
+        }
       </div>
     }
   }
