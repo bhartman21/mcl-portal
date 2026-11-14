@@ -101,8 +101,8 @@ See `ARCHITECTURE.md` → `ads`, `adBooks`, `adSizes`, Storage `ad-images/...`.
 6. Admin can deactivate a size or add a new size; editor only offers `active` sizes.
 7. Unauthenticated users cannot create ads (rules + UI).
 9. A 4th submission of the same ad is rejected by both UI and Firestore rules; `submissionCount` cannot be lowered by the owner.
-11. An administrator can reset a locked ad; the member can then submit up to 3 more times, and the reset appears in the audit log.
 10. Owner can delete a draft but not a submitted/approved/rejected ad; withdraw moves submitted → draft.
+11. An administrator can reset a locked ad; the member can then submit up to 3 more times, and the reset appears in the audit log.
 8. No payment checkout UI in MVP.
 
 ## Non-functional
