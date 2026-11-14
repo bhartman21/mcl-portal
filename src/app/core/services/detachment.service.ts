@@ -173,7 +173,11 @@ export class DetachmentService {
     }
   }
 
-  /** Edit name, number, city, or notes. The document id stays stable; verification is separate. */
+  /**
+   * Edit name, number, city, or notes. The document id stays stable. Recording a new number on a
+   * detachment that needs verification clears `needsVerification`, the same outcome as Verify
+   * (#15). Saving without a new number leaves the flag alone.
+   */
   async updateDetachment(
     detachment: Detachment,
     patch: Pick<Detachment, 'name' | 'number'> & Partial<Pick<Detachment, 'city' | 'notes'>>
@@ -181,12 +185,15 @@ export class DetachmentService {
     const name = patch.name.trim();
     if (!name) return;
     const number = patch.number.trim();
-    const changes = {
+    const recordsNumber =
+      !!detachment.needsVerification && number !== '' && number !== (detachment.number ?? '');
+    const changes: Partial<Detachment> = {
       name,
       number,
       displayName: detachmentDisplayName(name, number),
       city: patch.city?.trim() ?? '',
       notes: patch.notes?.trim() ?? '',
+      ...(recordsNumber ? { needsVerification: false } : {}),
     };
     if (this.fb.isConfigured && this.fb.firestore) {
       await updateDoc(doc(this.fb.firestore, 'detachments', detachment.id), changes);

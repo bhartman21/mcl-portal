@@ -195,7 +195,7 @@
     }
 
     <div class="row g-4">
-      @for (book of adBook.adBooks(); track book.id) {
+      @for (book of adBook.visibleBooks(); track book.id) {
         <div class="col-md-6">
           <div class="mcl-card mcl-card-scarlet p-4 h-100 d-flex flex-column">
             <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
