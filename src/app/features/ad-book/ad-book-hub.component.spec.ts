@@ -55,4 +55,21 @@ describe('AdBookHubComponent', () => {
     auth.signInAs('alice');
     expect(buttonTexts()).not.toContain('Withdraw to Draft');
   });
+
+  it('shows the submission count and hides Edit/Submit on a locked ad (#5)', () => {
+    const id = newAd();
+    for (let i = 0; i < 3; i++) {
+      auth.signInAs('alice');
+      service.submitAd(id);
+      auth.signInAs('approver', ['member', 'adBookApprover']);
+      service.rejectAd(id, 'Please fix the logo');
+    }
+    auth.signInAs('alice');
+    const fixture = TestBed.createComponent(AdBookHubComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="submission-count"]')?.textContent).toContain('Submission 3 of 3');
+    expect(el.textContent).toContain('Submission limit reached');
+    expect(buttonTexts()).not.toContain('Submit');
+  });
 });

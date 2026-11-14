@@ -30,6 +30,15 @@ export interface AdBook {
 
 export type AdStatus = 'draft' | 'submitted' | 'approved' | 'rejected';
 
+/** Max submissions per ad (decided Nov 14, 2026; AD_BOOK.md FR-A-3, AC 9). */
+export const MAX_AD_SUBMISSIONS = 3;
+
+export interface AdLockReset {
+  by: string;
+  at: string;
+  reason?: string;
+}
+
 export interface AdItem {
   id: string;
   bookId?: string;
@@ -38,6 +47,14 @@ export interface AdItem {
   title: string;
   status: AdStatus;
   rejectionNotes?: string;
+  /** Times submitted; only submit increases it, never lowered by the owner. */
+  submissionCount?: number;
+  /** Default 3; fixed at create. */
+  maxSubmissions?: number;
+  /** True after the rejection of the last allowed submission; only an admin can reset it. */
+  locked?: boolean;
+  /** Admin lock resets (also written to audits). */
+  lockResets?: AdLockReset[];
   createdBy: string;
   createdByName?: string;
   createdByType: 'member' | 'company' | 'guest';
@@ -60,7 +77,7 @@ export interface AdItem {
   updatedAt: string;
 }
 
-export type AuditAction = 'selfApprove' | 'undoReview';
+export type AuditAction = 'selfApprove' | 'undoReview' | 'lockReset';
 
 /** `audits/{id}`: audited Ad Book actions (AD_BOOK.md FR-A-3, AC 12, 13). */
 export interface AuditEntry {
@@ -71,7 +88,8 @@ export interface AuditEntry {
   actorUid: string;
   actorName?: string;
   at: string;
-  reason: string;
+  /** Required for selfApprove and undoReview; optional for lockReset. */
+  reason?: string;
   fromStatus?: AdStatus;
   toStatus?: AdStatus;
 }

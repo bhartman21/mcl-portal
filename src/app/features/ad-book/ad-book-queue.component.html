@@ -124,6 +124,48 @@
     </div>
   }
 
+  @if (adBook.isDeptOrHigherAdmin() && adBook.lockedAds().length > 0) {
+    <section class="mt-5">
+      <h2 class="h4 mcl-serif mb-1">Locked Ads</h2>
+      <p class="mcl-muted small mb-3">
+        These ads were rejected on their last allowed submission. Resetting a lock returns the ad to
+        draft with 0 submissions used, and the reset is logged.
+      </p>
+      <div class="row g-4">
+        @for (ad of adBook.lockedAds(); track ad.id) {
+          <div class="col-lg-6">
+            <div class="mcl-card p-4 h-100 d-flex flex-column">
+              <h3 class="h6 fw-bold mb-1">{{ ad.title }}</h3>
+              <div class="mcl-muted small mb-2">
+                By {{ ad.createdByName || 'Member' }} &bull; Submission
+                {{ adBook.submissionsUsed(ad) }} of {{ adBook.maxSubmissions(ad) }}
+              </div>
+              <label [for]="'reset-reason-' + ad.id" class="form-label small fw-semibold mt-auto">
+                Reason (optional)
+              </label>
+              <div class="d-flex gap-2">
+                <input
+                  [id]="'reset-reason-' + ad.id"
+                  type="text"
+                  class="form-control form-control-sm"
+                  [ngModel]="reasonFor('reset-' + ad.id)"
+                  (ngModelChange)="setReason('reset-' + ad.id, $event)"
+                />
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-secondary text-nowrap"
+                  (click)="resetLock(ad.id)"
+                >
+                  <i class="bi bi-unlock me-1"></i>Reset Lock
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
   @if (adBook.isDeptOrHigherAdmin() && adBook.reviewedAds().length > 0) {
     <section class="mt-5">
       <h2 class="h4 mcl-serif mb-1">Reviewed Ads</h2>
