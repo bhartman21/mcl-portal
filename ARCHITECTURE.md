@@ -12,7 +12,7 @@ Single **Angular 21** SPA with **Bootstrap 5**, backed by **Firebase Auth + Fire
 Browser (Angular SPA + Bootstrap)
     │
     ├─ Firebase Auth (email sign-in link, free; Google possible later)  [project: mcl-portal]
-    ├─ Firestore (users, roles, detachments, settings, vavs*, adBooks, ads, audits)
+    ├─ Firestore (users, roles, detachments, settings, vavs*, adBooks, ads, audits, notifications)
     └─ Storage (ad-images/{uid}/{adId}/...)
 ```
 
@@ -75,10 +75,11 @@ public/
 | `/ad-book/ads/new` | Create ad | `authGuard` |
 | `/ad-book/ads/:adId` | Edit / view ad | owner or approver |
 | `/ad-book/queue` | Approval queue | `adBookApprover` or admin |
-| `/admin/users` | Role assignment + pending queue | department/national admin |
-| `/admin/detachments` | Detachment directory | department/national admin |
+| `/admin/users` | Role assignment + pending queue | department/national/site admin |
+| `/admin/detachments` | Detachment directory | department/national/site admin |
 | `/admin/ad-sizes` | Configurable ad sizes | ad approver or admin |
-| `/admin/settings` | Registration mode lock-down | department/national admin |
+| `/admin/settings` | Registration mode lock-down | department/national/site admin |
+| `/admin/activity` | Audit log + self-approval notifications list | department/national/site admin |
 | `/**` | Redirect `/` | — |
 
 **No** in-app `/ribbons` routes. External link only.
@@ -289,6 +290,55 @@ Required when actor is a VAVS rep editing another member’s data; recommended f
   bookId: string;
   pageIndex: number;
   slots: { adId: string; sizeId: string }[];
+}
+```
+
+### `audits/{id}`
+
+Append-only (no update or delete). Readable by department, national, and site admins; shown on `/admin/activity`. Written in the same batch as the change it records.
+
+```ts
+// Ad actions (selfApprove, undoReview, lockReset)
+{
+  entityType: 'ad';
+  entityId: string;              // ad id; ads.lastAuditId must equal this audit id
+  action: 'selfApprove' | 'undoReview' | 'lockReset';
+  actorUid: string;              // must be the signed-in admin
+  actorName?: string;
+  at: Timestamp;                 // server time
+  reason?: string;               // required for selfApprove and undoReview; optional for lockReset
+  fromStatus?: string;
+  toStatus?: string;
+}
+
+// Role changes (grant or revoke)
+{
+  action: 'roleChange';
+  actorUid: string;
+  actorRoles: string[];          // must match the actor's current roles
+  targetUid: string;             // cannot be the actor
+  at: Timestamp;
+  beforeRoles: string[]; afterRoles: string[];
+  beforeScopes: object;  afterScopes: object;
+}
+```
+
+### `notifications/{id}`
+
+In-app only (no email on the Spark plan). Created when an admin self-approves an ad, one per other admin. Shown as a badge and on `/admin/activity`.
+
+```ts
+{
+  recipientUid: string;          // another admin, never the actor
+  type: 'adSelfApproved';
+  adId: string;
+  adTitle?: string;
+  actorUid: string;
+  actorName?: string;
+  reason: string;
+  createdAt: Timestamp;
+  read: boolean;                 // only the recipient can set true (plus readAt)
+  readAt?: Timestamp;
 }
 ```
 

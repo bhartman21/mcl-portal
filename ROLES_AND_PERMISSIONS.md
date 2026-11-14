@@ -36,7 +36,8 @@
 | `departmentAdmin` | `departmentAdmin` (own department) and non-admin roles in scope; **not** `nationalAdmin` or `siteAdmin` |
 
 - Billy is the only `siteAdmin` at launch, set by the one-time first-admin bootstrap; he assigns the other admins.
-- **Inferred (confirm):** revoking follows the same table, and no one can revoke or demote a role above their own (a department admin cannot remove a national admin). Every grant and revoke is written to `audits`.
+- **Decided (Nov 14, 2026):** revoking follows the same table as granting. `siteAdmin` can revoke any admin level, `nationalAdmin` can revoke `nationalAdmin` and `departmentAdmin`, and `departmentAdmin` can revoke `departmentAdmin` only, so no one can revoke or demote a role above their own. Every grant and revoke is written to `audits`.
+- **Inferred (confirm):** nobody, `siteAdmin` included, can change their own roles or status (prevents accidental self-lockout).
 - `siteAdmin` has every power of `nationalAdmin`; wherever this repo says "department or national admin" (ad lock reset, admin self-approval, undo review), `siteAdmin` is included.
 - Enforced in Firestore rules with emulator tests, not only in the UI.
 
