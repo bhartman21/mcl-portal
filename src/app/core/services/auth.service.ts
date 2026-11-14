@@ -258,6 +258,11 @@ export class AuthService {
     return localStorage.getItem(STORAGE_EMAIL_LINK_KEY);
   }
 
+  /** Forget the stored sign-in email (e.g. it didn't match the link and the user must re-enter it). */
+  clearStoredSignInEmail(): void {
+    localStorage.removeItem(STORAGE_EMAIL_LINK_KEY);
+  }
+
   /**
    * Completes email-link sign-in. If the link was opened on a different device there is no
    * stored email, so the caller must ask the user to re-enter it and pass it as emailOverride.
