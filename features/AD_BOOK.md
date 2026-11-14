@@ -62,7 +62,7 @@ draft → submitted → approved
 ```
 
 - **Submit:** validation (image required, size selected). Increments `submissionCount`.
-- **Submission limit (decided Nov 14, 2026):** max **3** submissions per ad. After the 3rd rejection the ad is locked as `rejected` (`locked: true`); member sees "submission limit reached". Approver/admin may grant one more attempt (**inferred**, logged in audit).
+- **Submission limit (decided Nov 14, 2026):** max **3** submissions per ad. After the 3rd rejection the ad is locked as `rejected` (`locked: true`); member sees "submission limit reached". A department or national **administrator** can reset the lock (decided Nov 14, 2026): clears `locked`, sets `submissionCount` back to 0, ad returns to `draft`; reset is audited (who, when, reason).
 - **Withdraw:** owner may withdraw a `submitted` ad back to `draft` (attempt is not refunded, **inferred**).
 - **Delete:** owner may delete only while `draft`; never after approval.
 - **Approve / Reject:** approver only; reject requires notes (min length **inferred** 5 chars).
@@ -101,6 +101,7 @@ See `ARCHITECTURE.md` → `ads`, `adBooks`, `adSizes`, Storage `ad-images/...`.
 6. Admin can deactivate a size or add a new size; editor only offers `active` sizes.
 7. Unauthenticated users cannot create ads (rules + UI).
 9. A 4th submission of the same ad is rejected by both UI and Firestore rules; `submissionCount` cannot be lowered by the owner.
+11. An administrator can reset a locked ad; the member can then submit up to 3 more times, and the reset appears in the audit log.
 10. Owner can delete a draft but not a submitted/approved/rejected ad; withdraw moves submitted → draft.
 8. No payment checkout UI in MVP.
 

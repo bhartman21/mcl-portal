@@ -24,7 +24,7 @@ Decisions still needed from Billy / DoF stakeholders. Planning docs mark interim
 
 8. When companies are allowed: same Auth provider, or invite-only accounts?
 
-9. ~~After reject, can the submitter resubmit freely?~~ **Decided (Nov 14, 2026):** an ad may be submitted at most **3 times** in total. After the 3rd rejection it is locked as `rejected`; only an ad book approver or department admin can grant another attempt (**inferred** escape hatch, confirm).
+9. ~~After reject, can the submitter resubmit freely?~~ **Decided (Nov 14, 2026):** an ad may be submitted at most **3 times** in total. After the 3rd rejection it is locked as `rejected`; a department or national **administrator** can reset the submission lock (decided Nov 14, 2026), which clears `locked` and resets `submissionCount` to 0; every reset is written to the audit log with who, when, and an optional reason.
 
 10. ~~Can a member delete an ad after submit?~~ **Decided (Nov 14, 2026):** delete only while `draft`; withdrawing a `submitted` ad returns it to `draft` (does not refund a submission attempt, **inferred**).
 
