@@ -6,7 +6,9 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  writeBatch,
 } from 'firebase/firestore';
+import { canManageUser, grantableRoles } from '../auth/role-grants';
 import {
   RegistrationMode,
   RoleId,
@@ -129,6 +131,10 @@ export class AdminService {
   }
 
   async updateUserStatus(uid: string, status: UserStatus): Promise<void> {
+    const target = this._users().find((u) => u.uid === uid);
+    if (!target || !canManageUser(this.auth.user(), target)) {
+      throw new Error('You are not allowed to change this user\'s status.');
+    }
     if (this.fb.isConfigured && this.fb.firestore) {
       await updateDoc(doc(this.fb.firestore, 'users', uid), {
         status,
@@ -148,20 +154,51 @@ export class AdminService {
     }
   }
 
+  /**
+   * Grant/revoke roles (and detachment scopes) for another user. Only roles the signed-in admin may
+   * grant are accepted (see role-grants.ts / firestore.rules). In Firebase mode the user update and
+   * its audits/{id} entry (who, when, target, before/after roles and scopes) are one batched write;
+   * the rules reject a role change without its matching audit and an audit without its change.
+   */
   async updateUserRoles(
     uid: string,
     roles: RoleId[],
     detachmentScopes: string[] = []
   ): Promise<void> {
+    const actor = this.auth.user();
+    const target = this._users().find((u) => u.uid === uid);
+    if (!actor || !target || !canManageUser(actor, target)) {
+      throw new Error('You are not allowed to change this user\'s roles.');
+    }
     const cleanRoles: RoleId[] = roles.length > 0 ? Array.from(new Set(roles)) : ['member'];
+    const allowed = grantableRoles(actor.roles);
+    if (!cleanRoles.every((r) => allowed.includes(r))) {
+      throw new Error('You are not allowed to grant one or more of these roles.');
+    }
     const cleanScopes = cleanRoles.includes('detachmentVavsRep') ? detachmentScopes : [];
 
     if (this.fb.isConfigured && this.fb.firestore) {
-      await updateDoc(doc(this.fb.firestore, 'users', uid), {
+      const db = this.fb.firestore;
+      const auditRef = doc(collection(db, 'audits'));
+      const batch = writeBatch(db);
+      batch.update(doc(db, 'users', uid), {
         roles: cleanRoles,
         detachmentScopes: cleanScopes,
+        roleAuditId: auditRef.id,
         updatedAt: serverTimestamp(),
       });
+      batch.set(auditRef, {
+        action: 'roleChange',
+        actorUid: actor.uid,
+        actorRoles: actor.roles,
+        targetUid: uid,
+        at: serverTimestamp(),
+        beforeRoles: target.roles ?? [],
+        afterRoles: cleanRoles,
+        beforeScopes: target.detachmentScopes ?? [],
+        afterScopes: cleanScopes,
+      });
+      await batch.commit();
     }
 
     this._users.update((list) =>
@@ -178,12 +215,6 @@ export class AdminService {
     );
     if (!this.fb.isConfigured) {
       this.saveLocalUsers();
-    }
-    if (this.auth.user()?.uid === uid) {
-      this.auth.updateCurrentUserLocal({
-        roles: cleanRoles,
-        detachmentScopes: cleanScopes,
-      });
     }
   }
 }

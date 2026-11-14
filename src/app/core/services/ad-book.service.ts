@@ -7,6 +7,7 @@ import {
   SEED_AD_BOOKS,
   SEED_AD_SIZES,
 } from '../models/ad-book.model';
+import { AD_REVIEWER_ROLES } from '../models/user.model';
 import { AuthService } from './auth.service';
 
 const STORAGE_SIZES_KEY = 'mcl_portal_ad_sizes_v1';
@@ -43,7 +44,12 @@ export class AdBookService {
   );
 
   readonly canApprove = computed(() =>
-    this.auth.hasAnyRole(['adBookApprover', 'departmentAdmin', 'nationalAdmin'])
+    this.auth.hasAnyRole(AD_REVIEWER_ROLES)
+  );
+
+  /** Books the current user may see: members see open books only; approvers/admins see all. */
+  readonly visibleBooks = computed(() =>
+    this.canApprove() ? this._adBooks() : this._adBooks().filter((b) => b.status === 'open')
   );
 
   private loadJson<T>(key: string, fallback: T): T {
@@ -81,6 +87,12 @@ export class AdBookService {
   getBookById(id: string | undefined): AdBook | undefined {
     if (!id) return undefined;
     return this._adBooks().find((b) => b.id === id);
+  }
+
+  /** Like getBookById, but only if the current user may read the book (see visibleBooks). */
+  getVisibleBookById(id: string | undefined): AdBook | undefined {
+    if (!id) return undefined;
+    return this.visibleBooks().find((b) => b.id === id);
   }
 
   // --- Ad CRUD & Workflow ---
@@ -273,7 +285,7 @@ export class AdBookService {
     }
     const now = new Date().toISOString();
     const book: AdBook = {
-      id: `book-${Date.now()}`,
+      id: `book-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       departmentId: 'dof',
       title: input.title.trim(),
       eventName: input.eventName.trim(),
