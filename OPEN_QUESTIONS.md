@@ -40,7 +40,7 @@ Decisions still needed from Billy / DoF stakeholders. Planning docs mark interim
 
 15. Replace any temporary hard-coded admin bootstrap with role docs in Phase 0 (expected yes). **Decided (Nov 14, 2026):** a one-time first-admin bootstrap makes Billy the only `siteAdmin`; he assigns all other admins. Grant rules are in ROLES_AND_PERMISSIONS.md.
 16. **Decided (Nov 14, 2026):** the detachment directory stays publicly readable (signed-out visitors included, active entries only).
-17. ~~Do revokes follow the grant table?~~ **Decided (Nov 14, 2026):** yes. Removing admin roles follows the same rules as granting them; nobody can revoke a role above their own. (Inferred default still to confirm: nobody can change their own roles or status.)
+17. ~~Do revokes follow the grant table?~~ **Decided (Nov 14, 2026):** yes. Removing admin roles follows the same rules as granting them; nobody can revoke a role above their own. Also decided: nobody, admins included, can change their own roles or account status.
 
 ## Data & compliance
 
