@@ -12,11 +12,11 @@ Multi-user replacement for the ChatGPT **Program Booklet Ad Studio** sample, exp
 
 | Actor | Capability |
 |-------|------------|
-| Member (authenticated) | Create/edit drafts; submit; resubmit after reject |
+| Member (authenticated) | Create/edit drafts; submit; resubmit after reject (max 3 submissions per ad); withdraw a submitted ad; delete only drafts |
 | Company advertiser | Post-MVP (same flow when enabled) |
 | Ad book approver / editor | Approval queue; approve/reject with notes; assemble books; print |
 | Department admin | All approver powers + size config |
-| Guest | No create (**inferred** Auth required) |
+| Guest | No create (sign-in required, decided Nov 14, 2026) |
 
 ## User stories
 
@@ -61,7 +61,10 @@ draft → submitted → approved
                  ↘ rejected → draft (after edit)
 ```
 
-- **Submit:** validation (image required, size selected).
+- **Submit:** validation (image required, size selected). Increments `submissionCount`.
+- **Submission limit (decided Nov 14, 2026):** max **3** submissions per ad. After the 3rd rejection the ad is locked as `rejected` (`locked: true`); member sees "submission limit reached". Approver/admin may grant one more attempt (**inferred**, logged in audit).
+- **Withdraw:** owner may withdraw a `submitted` ad back to `draft` (attempt is not refunded, **inferred**).
+- **Delete:** owner may delete only while `draft`; never after approval.
 - **Approve / Reject:** approver only; reject requires notes (min length **inferred** 5 chars).
 - **Approved** ads are eligible for placement in a book.
 - Editing approved ads: require “recall to draft” or new version — **inferred:** force resubmit path (status back to draft clears approval).
@@ -97,6 +100,8 @@ See `ARCHITECTURE.md` → `ads`, `adBooks`, `adSizes`, Storage `ad-images/...`.
 5. Print preview of a book shows Letter pages without app chrome.
 6. Admin can deactivate a size or add a new size; editor only offers `active` sizes.
 7. Unauthenticated users cannot create ads (rules + UI).
+9. A 4th submission of the same ad is rejected by both UI and Firestore rules; `submissionCount` cannot be lowered by the owner.
+10. Owner can delete a draft but not a submitted/approved/rejected ad; withdraw moves submitted → draft.
 8. No payment checkout UI in MVP.
 
 ## Non-functional

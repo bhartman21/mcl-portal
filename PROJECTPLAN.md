@@ -54,7 +54,7 @@ Runnable app on Firebase Hosting (or local `ng serve`) with login, role claims/d
 - [ ] Create / wire **new** Firebase project (preferred id `mcl-portal`: Auth, Firestore, Storage, Hosting); config via environment/secret, not committed.
 - [ ] Shared layout: header, footer, nav (VAVS, Ad Book); optional external “Ribbon Rack” link to https://bhartman21.github.io/RibbonRackBuilder/
 - [ ] STYLE_GUIDE tokens mapped to Bootstrap SCSS variables.
-- [ ] Auth: Firebase email link (passwordless) sign-in (**decided** Nov 13, 2026; Google sign-in may be added later).
+- [ ] Auth: passwordless **email + one-time code** (**decided** Nov 14, 2026). Cloud Functions `requestSignInCode` (generate 6-digit code, store only a hash with 10-minute expiry, max 5 tries, rate-limit per email/IP, send via email service) and `verifySignInCode` (check hash, return a Firebase custom token; client calls `signInWithCustomToken`). Requires Blaze plan + email service (OPEN_QUESTIONS 15a). Fallback: Firebase email link. Google sign-in later.
 - [ ] User profile document + role assignment model (see `ROLES_AND_PERMISSIONS.md`), including registration-mode lock-down switch.
 - [ ] Seed `detachments`: #54 = **Morris F Dixon Jr.**; S/Sgt Ted Archambault with `needsVerification: true` (number unconfirmed).
 - [ ] Admin UI: users, roles, detachments, registration mode.
@@ -95,7 +95,7 @@ Runnable app on Firebase Hosting (or local `ng serve`) with login, role claims/d
 ### Acceptance criteria
 
 1. Member creates full/half/quarter/business-card ad; image in Storage; metadata in Firestore.
-2. Submit moves status; editor cannot change approved content without resubmit (**inferred** policy).
+2. Submit moves status; editor cannot change approved content without resubmit. An ad can be submitted at most 3 times; the 4th submit is blocked in UI and security rules. Delete only while draft; withdraw returns a submitted ad to draft.
 3. Approver can approve/reject with notes; reject returns to editable state.
 4. Approved ads can be added to an event book; print preview shows Letter pages.
 5. Payment fields absent or marked “not collected” — no checkout.

@@ -20,13 +20,13 @@ Decisions still needed from Billy / DoF stakeholders. Planning docs mark interim
 
 ## Product policy
 
-7. May **unauthenticated** users create ad drafts, or Auth required? (Inferred: Auth required for MVP.)
+7. ~~May unauthenticated users create ad drafts?~~ **Decided (Nov 14, 2026):** sign-in required. Members sign in with their email address and a one-time code emailed to them (see question 14).
 
 8. When companies are allowed: same Auth provider, or invite-only accounts?
 
-9. After **reject**, can submitter edit and resubmit freely? (Inferred: yes.)
+9. ~~After reject, can the submitter resubmit freely?~~ **Decided (Nov 14, 2026):** an ad may be submitted at most **3 times** in total. After the 3rd rejection it is locked as `rejected`; only an ad book approver or department admin can grant another attempt (**inferred** escape hatch, confirm).
 
-10. Can a member delete an ad after **submit** or only while **draft**? (Inferred: withdraw submit → draft.)
+10. ~~Can a member delete an ad after submit?~~ **Decided (Nov 14, 2026):** delete only while `draft`; withdrawing a `submitted` ad returns it to `draft` (does not refund a submission attempt, **inferred**).
 
 11. VAVS: can members export CSV for **only their** entries, or export is rep-only? (Inferred: members print/export own; reps export scope.)
 
@@ -36,7 +36,8 @@ Decisions still needed from Billy / DoF stakeholders. Planning docs mark interim
 
 ## Auth & identity
 
-14. ~~Email-link only vs Google vs both?~~ **Decided (Nov 13, 2026):** email link (passwordless) for launch. Google sign-in can be added later.
+14. ~~Email-link only vs Google vs both?~~ **Decided (Nov 13, 2026), revised (Nov 14, 2026):** passwordless **email + one-time code** (6 digits emailed to the member). Firebase has no built-in email-code sign-in, so this needs a Cloud Function (Blaze billing plan) plus an email-sending service. Fallback if that is not approved: Firebase's built-in email link. Google sign-in may be added later.
+15a. **New (open):** OK to put the `mcl-portal` Firebase project on the Blaze (pay-as-you-go) plan with a budget alert, and which email service to use (e.g. Resend, SendGrid, or the Firebase Trigger Email extension with an SMTP account)?
 
 15. Replace any temporary hard-coded admin bootstrap with role docs in Phase 0 (expected yes).
 
