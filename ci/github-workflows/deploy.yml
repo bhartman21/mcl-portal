@@ -1,0 +1,85 @@
+name: Deploy to Firebase Hosting
+
+# Builds with the Firebase web config from GitHub Actions secrets and deploys
+# Hosting + Firestore/Storage rules. Skips cleanly (green, with a notice) until
+# the Firebase project exists and the secrets below are added. See README.
+#
+# Required repository secrets:
+#   FIREBASE_SERVICE_ACCOUNT        JSON key of a deploy service account
+#   FIREBASE_PROJECT_ID             e.g. mcl-portal
+#   FIREBASE_API_KEY
+#   FIREBASE_AUTH_DOMAIN            e.g. mcl-portal.firebaseapp.com
+#   FIREBASE_STORAGE_BUCKET         e.g. mcl-portal.firebasestorage.app
+#   FIREBASE_MESSAGING_SENDER_ID
+#   FIREBASE_APP_ID
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+      FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+      FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+      FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+      FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+      FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+    steps:
+      - name: Check deploy secrets
+        id: check
+        run: |
+          missing=""
+          for name in FIREBASE_SERVICE_ACCOUNT FIREBASE_PROJECT_ID FIREBASE_API_KEY FIREBASE_AUTH_DOMAIN \
+                      FIREBASE_STORAGE_BUCKET FIREBASE_MESSAGING_SENDER_ID FIREBASE_APP_ID; do
+            if [ -z "${!name}" ]; then missing="$missing $name"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::notice title=Deploy skipped::Missing secrets:$missing. Create the Firebase project and add these repository secrets (see README)."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.ready == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.ready == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        if: steps.check.outputs.ready == 'true'
+        run: npm ci
+
+      - name: Write gitignored environment.local.ts from secrets
+        if: steps.check.outputs.ready == 'true'
+        run: npm run config:env
+
+      - name: Build (production + Firebase config)
+        if: steps.check.outputs.ready == 'true'
+        run: npm run build:firebase
+
+      - name: Deploy Hosting and security rules
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          creds="$RUNNER_TEMP/firebase-sa.json"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$creds"
+          export GOOGLE_APPLICATION_CREDENTIALS="$creds"
+          npx firebase deploy --only hosting,firestore:rules,storage \
+            --project "$FIREBASE_PROJECT_ID" --non-interactive
+          rm -f "$creds"

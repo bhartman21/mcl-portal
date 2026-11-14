@@ -1,17 +1,30 @@
 rules_version = '2';
 
+// MCL Portal Firestore rules. Source of truth for permissions: ROLES_AND_PERMISSIONS.md.
+// Tests: rules-tests/*.rules.test.ts (npm run test:rules).
+
 service cloud.firestore {
   match /databases/{database}/documents {
+    // ---------- helpers ----------
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function userDoc() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    function userPath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
     }
 
+    function hasUserDoc() {
+      return isSignedIn() && exists(userPath(request.auth.uid));
+    }
+
+    function userDoc() {
+      return get(userPath(request.auth.uid)).data;
+    }
+
+    // Writes everywhere require users/{uid}.status == 'active' (pending/suspended cannot write).
     function isActiveUser() {
-      return isSignedIn() && userDoc().status == 'active';
+      return hasUserDoc() && userDoc().status == 'active';
     }
 
     function hasRole(role) {
@@ -22,23 +35,75 @@ service cloud.firestore {
       return hasRole('departmentAdmin') || hasRole('nationalAdmin');
     }
 
+    function userScopes() {
+      return userDoc().get('detachmentScopes', []);
+    }
+
+    function inDetachmentScope(detachmentId) {
+      return hasRole('detachmentVavsRep') && detachmentId in userScopes();
+    }
+
+    // settings/registration.mode; missing doc or field means the documented default 'open'.
+    function registrationMode() {
+      let path = /databases/$(database)/documents/settings/registration;
+      return exists(path) ? get(path).data.get('mode', 'open') : 'open';
+    }
+
+    function newUserStatus() {
+      return registrationMode() == 'approval' ? 'pending' : 'active';
+    }
+
+    // ---------- users ----------
     match /users/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
-      allow create: if isSignedIn() && request.auth.uid == uid;
-      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['roles', 'status']));
+
+      // First sign-in: member role only, no detachment scopes, status set by registration mode.
+      allow create: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(
+             ['uid', 'email', 'displayName', 'status', 'roles', 'detachmentScopes', 'createdAt', 'updatedAt'])
+        && request.resource.data.uid == uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.roles == ['member']
+        && request.resource.data.get('detachmentScopes', []) == []
+        && request.resource.data.status == newUserStatus();
+
+      // Active users may edit their own profile fields; never roles, status, scopes, uid, or email.
+      allow update: if isActiveUser()
+        && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['displayName', 'memberNumber', 'defaultDetachmentId', 'updatedAt']);
+
+      // Department / national admins manage roles, scopes, and status (approve, suspend).
+      allow update: if isAdmin()
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.status in ['active', 'pending', 'suspended']
+        && request.resource.data.roles is list;
+
       allow delete: if isAdmin();
+    }
+
+    // ---------- settings (registration lock-down switch) ----------
+    match /settings/registration {
+      allow read: if isSignedIn();
+      allow write: if isAdmin()
+        && request.resource.data.mode in ['open', 'approval']
+        && request.resource.data.keys().hasOnly(['mode', 'updatedAt', 'updatedBy']);
     }
 
     match /settings/{docId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      // registration has its own validated rule above (rules OR across matches).
+      allow write: if isAdmin() && docId != 'registration';
     }
 
+    // ---------- detachments ----------
     match /detachments/{detachmentId} {
       allow read: if resource.data.active == true || isActiveUser();
       allow write: if isAdmin();
     }
 
+    // ---------- VAVS (Phase 2 feature; rules in place now) ----------
     match /vavsPeriods/{periodId} {
       allow read: if isActiveUser();
       allow write: if isAdmin() || hasRole('departmentVavsRep');
@@ -49,27 +114,43 @@ service cloud.firestore {
         resource.data.ownerUid == request.auth.uid ||
         hasRole('departmentVavsRep') ||
         isAdmin() ||
-        (hasRole('detachmentVavsRep') && resource.data.detachmentId in userDoc().detachmentScopes)
+        inDetachmentScope(resource.data.detachmentId)
       );
       allow create: if isActiveUser() && request.resource.data.ownerUid == request.auth.uid;
       allow update, delete: if isActiveUser() && (
         resource.data.ownerUid == request.auth.uid ||
         hasRole('departmentVavsRep') ||
         isAdmin() ||
-        (hasRole('detachmentVavsRep') && resource.data.detachmentId in userDoc().detachmentScopes)
+        inDetachmentScope(resource.data.detachmentId)
       );
     }
 
+    // Audit logs: written only by the acting rep/admin for an entry in their scope; immutable.
     match /vavsAuditLogs/{logId} {
       allow read: if isActiveUser() && (
-        hasRole('detachmentVavsRep') ||
         hasRole('departmentVavsRep') ||
-        isAdmin()
+        isAdmin() ||
+        (hasRole('detachmentVavsRep') && resource.data.detachmentId in userScopes())
       );
-      allow create: if isActiveUser();
+      allow create: if isActiveUser()
+        && request.resource.data.keys().hasOnly(
+             ['id', 'entryId', 'action', 'actorUid', 'actorRole', 'detachmentId', 'at', 'before', 'after'])
+        && request.resource.data.keys().hasAll(
+             ['entryId', 'action', 'actorUid', 'actorRole', 'detachmentId', 'at'])
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.action in ['create', 'update', 'delete']
+        && request.resource.data.at == request.time
+        && request.resource.data.actorRole in userDoc().roles
+        && (
+          (request.resource.data.actorRole in ['departmentAdmin', 'nationalAdmin'] && isAdmin()) ||
+          (request.resource.data.actorRole == 'departmentVavsRep' && hasRole('departmentVavsRep')) ||
+          (request.resource.data.actorRole == 'detachmentVavsRep'
+            && inDetachmentScope(request.resource.data.detachmentId))
+        );
       allow update, delete: if false;
     }
 
+    // ---------- Ad Book (Phase 1 hardening pending: submission cap/lock, withdraw) ----------
     match /adSizes/{sizeId} {
       allow read: if resource.data.active == true || isActiveUser();
       allow write: if isAdmin() || hasRole('adBookApprover');
@@ -96,4 +177,3 @@ service cloud.firestore {
     }
   }
 }
-

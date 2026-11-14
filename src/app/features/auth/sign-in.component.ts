@@ -19,17 +19,43 @@ export class SignInComponent implements OnInit {
   readonly busy = signal(false);
   readonly linkSent = signal(false);
   readonly errorMsg = signal<string | null>(null);
+  /** The page was opened from an email sign-in link on a device with no stored email. */
+  readonly needsEmailConfirm = signal(false);
+  confirmEmail = '';
 
   async ngOnInit(): Promise<void> {
-    if (!this.auth.isDemoMode()) {
-      try {
-        const completed = await this.auth.completeEmailLinkSignIn(window.location.href);
-        if (completed) {
+    if (this.auth.isDemoMode()) return;
+    const url = window.location.href;
+    if (!this.auth.isEmailSignInLink(url)) return;
+
+    if (!this.auth.storedSignInEmail()) {
+      // Link opened on a different device/browser: ask the user to re-enter their email.
+      this.needsEmailConfirm.set(true);
+      return;
+    }
+    await this.finishEmailLink();
+  }
+
+  async confirmEmailAndFinish(): Promise<void> {
+    if (!this.confirmEmail.trim()) return;
+    await this.finishEmailLink(this.confirmEmail.trim());
+  }
+
+  private async finishEmailLink(email?: string): Promise<void> {
+    this.errorMsg.set(null);
+    this.busy.set(true);
+    try {
+      const completed = await this.auth.completeEmailLinkSignIn(window.location.href, email);
+      if (completed) {
+        this.needsEmailConfirm.set(false);
+        if (this.auth.isActive()) {
           await this.navigateAfterSignIn();
         }
-      } catch (err) {
-        this.errorMsg.set(err instanceof Error ? err.message : 'Unable to complete sign-in.');
       }
+    } catch (err) {
+      this.errorMsg.set(err instanceof Error ? err.message : 'Unable to complete sign-in.');
+    } finally {
+      this.busy.set(false);
     }
   }
 

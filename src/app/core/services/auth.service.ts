@@ -11,6 +11,8 @@ import {
   User as FirebaseUser,
 } from 'firebase/auth';
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { environment } from '../../../environments/environment';
+import { buildNewUserProfile, normalizeRegistrationMode } from '../auth/registration';
 import {
   RegistrationMode,
   ROLE_LABELS,
@@ -31,10 +33,17 @@ export class AuthService {
   private readonly _user = signal<UserProfile | null>(null);
   private readonly _loading = signal<boolean>(true);
   private readonly _registrationMode = signal<RegistrationMode>('open');
+  private readonly _authError = signal<string | null>(null);
+  private resolveReady!: () => void;
+  private readonly ready = new Promise<void>((resolve) => (this.resolveReady = resolve));
+  private settledUid: string | null = null;
+  private settleWaiters: (() => void)[] = [];
 
   readonly user = this._user.asReadonly();
   readonly loading = this._loading.asReadonly();
   readonly registrationMode = this._registrationMode.asReadonly();
+  /** Set when a Firebase sign-in succeeded but the profile could not be loaded or created. */
+  readonly authError = this._authError.asReadonly();
 
   readonly isAuthenticated = computed(() => this._user() !== null);
   readonly isActive = computed(() => this._user()?.status === 'active');
@@ -65,21 +74,59 @@ export class AuthService {
 
   readonly isDemoMode = computed(() => !this.fb.isConfigured);
 
+  /** Google sign-in is "may be added later"; hidden unless explicitly enabled in the environment. */
+  readonly googleSignInEnabled = Boolean(environment.enableGoogleSignIn) && this.fb.isConfigured;
+
   constructor() {
     this.initAuth();
   }
 
+  /** Resolves once the initial auth state (Firebase or demo) is known. Guards await this. */
+  whenReady(): Promise<void> {
+    return this.ready;
+  }
+
+  private finishLoading(uid: string | null = null): void {
+    this.settledUid = uid;
+    this._loading.set(false);
+    this.resolveReady();
+    const waiters = this.settleWaiters;
+    this.settleWaiters = [];
+    waiters.forEach((w) => w());
+  }
+
+  /** Resolves after the auth listener has finished loading/creating the profile for `uid`. */
+  private waitForSettledUser(uid: string): Promise<void> {
+    if (this.settledUid === uid && !this._loading()) return Promise.resolve();
+    return new Promise((resolve) => {
+      const check = () =>
+        this.settledUid === uid ? resolve() : this.settleWaiters.push(check);
+      this.settleWaiters.push(check);
+    });
+  }
+
   private initAuth(): void {
     if (this.fb.isConfigured && this.fb.auth) {
-      this.loadRegistrationModeFromFirestore();
       onAuthStateChanged(this.fb.auth, async (fbUser) => {
         if (!fbUser) {
           this._user.set(null);
-          this._loading.set(false);
+          this.finishLoading();
           return;
         }
-        await this.syncFirestoreUser(fbUser);
-        this._loading.set(false);
+        this._loading.set(true);
+        try {
+          this._authError.set(null);
+          await this.syncFirestoreUser(fbUser);
+        } catch (err) {
+          console.error('Unable to load or create the user profile', err);
+          this._user.set(null);
+          this._authError.set(
+            'Signed in, but your portal profile could not be loaded. Please try again or contact a Department Administrator.'
+          );
+          await firebaseSignOut(this.fb.auth!).catch(() => undefined);
+        } finally {
+          this.finishLoading(fbUser.uid);
+        }
       });
     } else {
       const savedMode = localStorage.getItem(STORAGE_REG_MODE_KEY) as RegistrationMode | null;
@@ -94,7 +141,7 @@ export class AuthService {
           localStorage.removeItem(STORAGE_DEMO_USER_KEY);
         }
       }
-      this._loading.set(false);
+      this.finishLoading();
     }
   }
 
@@ -102,14 +149,33 @@ export class AuthService {
     if (!this.fb.firestore) return;
     try {
       const snap = await getDoc(doc(this.fb.firestore, 'settings', 'registration'));
-      if (snap.exists()) {
-        const mode = snap.data()['mode'];
-        if (mode === 'open' || mode === 'approval') {
-          this._registrationMode.set(mode);
-        }
-      }
+      this._registrationMode.set(
+        normalizeRegistrationMode(snap.exists() ? snap.data()['mode'] : undefined)
+      );
     } catch {
-      // Fallback to default 'open' if rules block unauthenticated read
+      // Signed-out users cannot read settings; keep the default 'open'.
+    }
+  }
+
+  /**
+   * First admin sign-in on a fresh project: write the default settings/registration doc
+   * (mode 'open') if it does not exist yet. Only admins may write settings (firestore.rules).
+   */
+  private async ensureRegistrationSettings(): Promise<void> {
+    if (!this.fb.firestore || !this.isAdmin()) return;
+    const ref = doc(this.fb.firestore, 'settings', 'registration');
+    try {
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        await setDoc(ref, {
+          mode: 'open',
+          updatedAt: serverTimestamp(),
+          updatedBy: this._user()?.uid ?? '',
+        });
+        this._registrationMode.set('open');
+      }
+    } catch (err) {
+      console.warn('Could not seed settings/registration', err);
     }
   }
 
@@ -132,22 +198,17 @@ export class AuthService {
         createdAt: String(data.createdAt ?? new Date().toISOString()),
         updatedAt: new Date().toISOString(),
       });
+      await this.loadRegistrationModeFromFirestore();
+      // Fire-and-forget: never hold up auth readiness on the one-time settings seed.
+      void this.ensureRegistrationSettings();
       return;
     }
 
     await this.loadRegistrationModeFromFirestore();
-    const mode = this._registrationMode();
-    const nowIso = new Date().toISOString();
-    const newProfile: UserProfile = {
-      uid: fbUser.uid,
-      email: fbUser.email ?? '',
-      displayName: fbUser.displayName ?? undefined,
-      status: mode === 'open' ? 'active' : 'pending',
-      roles: ['member'],
-      detachmentScopes: [],
-      createdAt: nowIso,
-      updatedAt: nowIso,
-    };
+    const newProfile = buildNewUserProfile(
+      { uid: fbUser.uid, email: fbUser.email ?? '', displayName: fbUser.displayName },
+      this._registrationMode()
+    );
 
     await setDoc(userRef, {
       ...newProfile,
@@ -177,7 +238,7 @@ export class AuthService {
 
   async sendEmailSignInLink(email: string): Promise<void> {
     if (!this.fb.isConfigured || !this.fb.auth) {
-      throw new Error('Firebase is not configured. Use Demo Sign-In below for local preview.');
+      throw new Error('Firebase is not configured. Use Local Demo Sign-In below.');
     }
     const actionCodeSettings = {
       url: `${window.location.origin}/sign-in`,
@@ -187,25 +248,45 @@ export class AuthService {
     localStorage.setItem(STORAGE_EMAIL_LINK_KEY, email);
   }
 
+  /** True when the URL is a Firebase email sign-in link. */
+  isEmailSignInLink(url: string): boolean {
+    return Boolean(this.fb.isConfigured && this.fb.auth && isSignInWithEmailLink(this.fb.auth, url));
+  }
+
+  /** Email saved when the link was requested on this device (absent when opened on another device). */
+  storedSignInEmail(): string | null {
+    return localStorage.getItem(STORAGE_EMAIL_LINK_KEY);
+  }
+
+  /**
+   * Completes email-link sign-in. If the link was opened on a different device there is no
+   * stored email, so the caller must ask the user to re-enter it and pass it as emailOverride.
+   */
   async completeEmailLinkSignIn(url: string, emailOverride?: string): Promise<boolean> {
     if (!this.fb.isConfigured || !this.fb.auth) return false;
     if (!isSignInWithEmailLink(this.fb.auth, url)) return false;
 
-    const email = emailOverride ?? localStorage.getItem(STORAGE_EMAIL_LINK_KEY);
+    const email = emailOverride?.trim() || this.storedSignInEmail();
     if (!email) {
       throw new Error('Please enter your email address to complete sign-in.');
     }
-    await signInWithEmailLink(this.fb.auth, email, url);
+    const cred = await signInWithEmailLink(this.fb.auth, email, url);
     localStorage.removeItem(STORAGE_EMAIL_LINK_KEY);
+    await this.waitForSettledUser(cred.user.uid);
+    if (this._authError()) {
+      throw new Error(this._authError()!);
+    }
     return true;
   }
 
+  /** Feature-flagged off by default (environment.enableGoogleSignIn). */
   async signInWithGoogle(): Promise<void> {
-    if (!this.fb.isConfigured || !this.fb.auth) {
-      throw new Error('Firebase is not configured. Use Demo Sign-In below for local preview.');
+    if (!this.googleSignInEnabled || !this.fb.auth) {
+      throw new Error('Google sign-in is not enabled. Use the email sign-in link.');
     }
     const provider = new GoogleAuthProvider();
-    await signInWithPopup(this.fb.auth, provider);
+    const cred = await signInWithPopup(this.fb.auth, provider);
+    await this.waitForSettledUser(cred.user.uid);
   }
 
   /**

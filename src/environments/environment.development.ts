@@ -1,18 +1,13 @@
-import { Environment } from './environment';
+import { Environment, PLACEHOLDER_FIREBASE_CONFIG } from './environment.model';
 
+/** Development default: placeholders only, so `ng serve` starts in local demo mode. */
 export const environment: Environment = {
   production: false,
   appName: 'MCL Department of Florida Portal',
   departmentId: 'dof',
   departmentName: 'Department of Florida',
   ribbonRackBuilderUrl: 'https://bhartman21.github.io/RibbonRackBuilder/',
-  firebase: {
-    apiKey: 'REPLACE_WITH_FIREBASE_API_KEY',
-    authDomain: 'mcl-portal.firebaseapp.com',
-    projectId: 'mcl-portal',
-    storageBucket: 'mcl-portal.firebasestorage.app',
-    messagingSenderId: '000000000000',
-    appId: '1:000000000000:web:0000000000000000',
-  },
+  firebase: PLACEHOLDER_FIREBASE_CONFIG,
+  useEmulators: false,
+  enableGoogleSignIn: false,
 };
-

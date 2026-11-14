@@ -21,6 +21,40 @@ export class AdminDetachmentsComponent {
   newName = '';
   newCity = '';
   readonly verifyInputs = signal<Record<string, string>>({});
+  readonly seeding = signal(false);
+
+  /** Detachment currently being edited inline, with its draft values. */
+  readonly editingId = signal<string | null>(null);
+  editDraft = { number: '', name: '', city: '', notes: '' };
+
+  startEdit(det: Detachment): void {
+    this.editingId.set(det.id);
+    this.editDraft = {
+      number: det.number ?? '',
+      name: det.name,
+      city: det.city ?? '',
+      notes: det.notes ?? '',
+    };
+  }
+
+  cancelEdit(): void {
+    this.editingId.set(null);
+  }
+
+  async saveEdit(det: Detachment): Promise<void> {
+    if (!this.editDraft.name.trim()) return;
+    await this.detachmentService.updateDetachment(det, this.editDraft);
+    this.editingId.set(null);
+  }
+
+  async seedDefaults(): Promise<void> {
+    this.seeding.set(true);
+    try {
+      await this.detachmentService.seedDefaults();
+    } finally {
+      this.seeding.set(false);
+    }
+  }
 
   setVerifyInput(id: string, val: string): void {
     this.verifyInputs.update((map) => ({ ...map, [id]: val }));
