@@ -31,8 +31,19 @@ service cloud.firestore {
       return isActiveUser() && role in userDoc().roles;
     }
 
+    // Roles that count as "department or national admin" in the docs. siteAdmin is included
+    // there too (ROLES_AND_PERMISSIONS.md, Nov 14 2026): add it to this one list when the role
+    // model lands.
+    function adminRoles() {
+      return ['departmentAdmin', 'nationalAdmin'];
+    }
+
+    function isDeptOrHigherAdmin() {
+      return isActiveUser() && userDoc().roles.hasAny(adminRoles());
+    }
+
     function isAdmin() {
-      return hasRole('departmentAdmin') || hasRole('nationalAdmin');
+      return isDeptOrHigherAdmin();
     }
 
     function userScopes() {
@@ -150,7 +161,7 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // ---------- Ad Book (Phase 1 hardening pending: submission cap/lock, withdraw) ----------
+    // ---------- Ad Book ----------
     match /adSizes/{sizeId} {
       allow read: if resource.data.active == true || isActiveUser();
       allow write: if isAdmin() || hasRole('adBookApprover');
@@ -161,19 +172,187 @@ service cloud.firestore {
       allow write: if isAdmin() || hasRole('adBookApprover');
     }
 
+    // ads: every update must match exactly one documented transition (features/AD_BOOK.md FR-A-3,
+    // AC 2, 3, 12, 13). Privileged fields (status, review fields, createdBy, ...) can only change
+    // through the transition that owns them.
     match /ads/{adId} {
+      function changedKeys() {
+        return request.resource.data.diff(resource.data).affectedKeys();
+      }
+
+      function isOwner() {
+        return resource.data.createdBy == request.auth.uid;
+      }
+
+      function canReview() {
+        return hasRole('adBookApprover') || isDeptOrHigherAdmin();
+      }
+
+      function oldStatus() {
+        return resource.data.status;
+      }
+
+      function newStatus() {
+        return request.resource.data.status;
+      }
+
+      function nonBlank(value) {
+        return value is string && value.trim().size() > 0;
+      }
+
+      // Fields the owner edits in the ad editor.
+      function contentKeys() {
+        return ['title', 'sizeId', 'bookId', 'companyName', 'imagePath', 'imageUrl', 'imageName',
+                'fit', 'position', 'createdByName', 'updatedAt'];
+      }
+
+      function reviewKeys() {
+        return ['status', 'reviewedBy', 'reviewedByName', 'reviewedAt', 'rejectionNotes', 'updatedAt'];
+      }
+
+      function absent(key) {
+        return !(key in request.resource.data);
+      }
+
+      // The write must be paired (same batch) with a new audits/{lastAuditId} doc for this ad,
+      // written by the caller for the given action.
+      function auditedAs(action) {
+        let auditId = request.resource.data.get('lastAuditId', null);
+        let audit = getAfter(/databases/$(database)/documents/audits/$(auditId)).data;
+        return auditId is string
+          && auditId != resource.data.get('lastAuditId', '')
+          && audit.action == action
+          && audit.entityType == 'ad'
+          && audit.entityId == adId
+          && audit.actorUid == request.auth.uid;
+      }
+
+      // An approved ad placed in a locked (or printed) book must be removed from the book first.
+      function placedInLockedBook() {
+        let bookId = resource.data.get('bookId', null);
+        let bookPath = /databases/$(database)/documents/adBooks/$(bookId);
+        return bookId is string && bookId.size() > 0
+          && existsAfter(bookPath)
+          && getAfter(bookPath).data.status in ['locked', 'printed']
+          && adId in getAfter(bookPath).data.get('adIds', [adId]);
+      }
+
       allow read: if isActiveUser() && (
         resource.data.createdBy == request.auth.uid ||
         hasRole('adBookApprover') ||
-        isAdmin()
+        isDeptOrHigherAdmin()
       );
-      allow create: if isActiveUser() && request.resource.data.createdBy == request.auth.uid;
-      allow update: if isActiveUser() && (
-        (resource.data.createdBy == request.auth.uid && resource.data.status in ['draft', 'rejected']) ||
-        hasRole('adBookApprover') ||
-        isAdmin()
-      );
-      allow delete: if isAdmin() || (isActiveUser() && resource.data.createdBy == request.auth.uid && resource.data.status == 'draft');
+
+      // New ads are always the caller's own draft with no review state.
+      allow create: if isActiveUser()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.status == 'draft'
+        && request.resource.data.get('createdByType', 'member') == 'member'
+        && request.resource.data.keys().hasOnly(
+             contentKeys().concat(['id', 'departmentId', 'status', 'createdBy', 'createdByType', 'createdAt']));
+
+      // Owner edits a draft or rejected ad (editing a rejected ad returns it to draft).
+      allow update: if isActiveUser() && isOwner()
+        && oldStatus() in ['draft', 'rejected']
+        && (newStatus() == oldStatus() || (oldStatus() == 'rejected' && newStatus() == 'draft'))
+        && changedKeys().hasOnly(contentKeys().concat(['status']));
+
+      // Owner submits a draft or rejected ad (may save content in the same write; clears notes).
+      allow update: if isActiveUser() && isOwner()
+        && oldStatus() in ['draft', 'rejected']
+        && newStatus() == 'submitted'
+        && changedKeys().hasOnly(contentKeys().concat(['status', 'submittedAt', 'rejectionNotes']))
+        && absent('rejectionNotes');
+
+      // A different approver or admin approves a submitted ad.
+      allow update: if canReview() && !isOwner()
+        && oldStatus() == 'submitted'
+        && newStatus() == 'approved'
+        && request.resource.data.reviewedBy == request.auth.uid
+        && changedKeys().hasOnly(reviewKeys().concat(['selfApproved', 'selfApprovalReason']))
+        && absent('rejectionNotes')
+        && absent('selfApproved')
+        && absent('selfApprovalReason');
+
+      // A department or national admin self-approves only with a reason; audited (AC 12).
+      allow update: if isDeptOrHigherAdmin() && isOwner()
+        && oldStatus() == 'submitted'
+        && newStatus() == 'approved'
+        && request.resource.data.reviewedBy == request.auth.uid
+        && request.resource.data.selfApproved == true
+        && nonBlank(request.resource.data.selfApprovalReason)
+        && changedKeys().hasOnly(reviewKeys().concat(['selfApproved', 'selfApprovalReason', 'lastAuditId']))
+        && absent('rejectionNotes')
+        && auditedAs('selfApprove');
+
+      // A different approver or admin rejects with notes (min 5 chars). Nobody self-rejects.
+      allow update: if canReview() && !isOwner()
+        && oldStatus() == 'submitted'
+        && newStatus() == 'rejected'
+        && request.resource.data.reviewedBy == request.auth.uid
+        && request.resource.data.rejectionNotes is string
+        && request.resource.data.rejectionNotes.trim().size() >= 5
+        && changedKeys().hasOnly(reviewKeys());
+
+      // Admin undoes an approval or rejection with a reason (AC 13): back to submitted, review
+      // fields cleared, submissionCount untouched, audited; not while placed in a locked book.
+      allow update: if isDeptOrHigherAdmin()
+        && oldStatus() in ['approved', 'rejected']
+        && newStatus() == 'submitted'
+        && changedKeys().hasOnly(reviewKeys().concat(['selfApproved', 'selfApprovalReason', 'lastAuditId']))
+        && absent('reviewedBy') && absent('reviewedByName') && absent('reviewedAt')
+        && absent('rejectionNotes') && absent('selfApproved') && absent('selfApprovalReason')
+        && auditedAs('undoReview')
+        && !placedInLockedBook();
+
+      allow delete: if isDeptOrHigherAdmin() || (isActiveUser() && resource.data.createdBy == request.auth.uid && resource.data.status == 'draft');
+    }
+
+    // ---------- audits (Ad Book review decisions; admins only, immutable) ----------
+    match /audits/{auditId} {
+      allow read: if isDeptOrHigherAdmin();
+      // Must be written in the same batch as the ad change it records (ads.lastAuditId == auditId).
+      allow create: if isDeptOrHigherAdmin()
+        && request.resource.data.keys().hasOnly(
+             ['entityType', 'entityId', 'action', 'actorUid', 'actorName', 'at', 'reason', 'fromStatus', 'toStatus'])
+        && request.resource.data.keys().hasAll(['entityType', 'entityId', 'action', 'actorUid', 'at', 'reason'])
+        && request.resource.data.entityType == 'ad'
+        && request.resource.data.action in ['selfApprove', 'undoReview']
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.at == request.time
+        && request.resource.data.reason is string
+        && request.resource.data.reason.trim().size() > 0
+        && getAfter(/databases/$(database)/documents/ads/$(request.resource.data.entityId))
+             .data.get('lastAuditId', null) == auditId;
+      allow update, delete: if false;
+    }
+
+    // ---------- notifications (in-app only; AD_BOOK.md AC 2/12) ----------
+    match /notifications/{notificationId} {
+      allow read: if isActiveUser() && resource.data.recipientUid == request.auth.uid;
+
+      // Only the recipient marks their own notification read.
+      allow update: if isActiveUser()
+        && resource.data.recipientUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'readAt'])
+        && request.resource.data.read == true;
+
+      // An admin who self-approved an ad notifies another admin about that ad.
+      allow create: if isDeptOrHigherAdmin()
+        && request.resource.data.keys().hasOnly(
+             ['recipientUid', 'type', 'adId', 'adTitle', 'actorUid', 'actorName', 'reason', 'createdAt', 'read'])
+        && request.resource.data.keys().hasAll(['recipientUid', 'type', 'adId', 'actorUid', 'reason', 'createdAt', 'read'])
+        && request.resource.data.type == 'adSelfApproved'
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.recipientUid != request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.read == false
+        && get(/databases/$(database)/documents/users/$(request.resource.data.recipientUid))
+             .data.roles.hasAny(adminRoles())
+        && getAfter(/databases/$(database)/documents/ads/$(request.resource.data.adId)).data.createdBy == request.auth.uid
+        && getAfter(/databases/$(database)/documents/ads/$(request.resource.data.adId)).data.get('selfApproved', false) == true;
+
+      allow delete: if false;
     }
   }
 }

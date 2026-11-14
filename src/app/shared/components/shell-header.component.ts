@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/services/auth.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { MclCrestComponent } from './mcl-crest.component';
 import { StatusBadgeComponent } from './status-badge.component';
@@ -16,6 +17,7 @@ import { StatusBadgeComponent } from './status-badge.component';
 export class ShellHeaderComponent {
   readonly auth = inject(AuthService);
   readonly themeService = inject(ThemeService);
+  readonly notifications = inject(NotificationService);
   readonly ribbonRackUrl = environment.ribbonRackBuilderUrl;
 
   readonly menuOpen = signal(false);
