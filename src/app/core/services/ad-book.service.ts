@@ -7,6 +7,7 @@ import {
   SEED_AD_BOOKS,
   SEED_AD_SIZES,
 } from '../models/ad-book.model';
+import { AD_REVIEWER_ROLES } from '../models/user.model';
 import { AuthService } from './auth.service';
 
 const STORAGE_SIZES_KEY = 'mcl_portal_ad_sizes_v1';
@@ -43,7 +44,7 @@ export class AdBookService {
   );
 
   readonly canApprove = computed(() =>
-    this.auth.hasAnyRole(['adBookApprover', 'departmentAdmin', 'nationalAdmin'])
+    this.auth.hasAnyRole(AD_REVIEWER_ROLES)
   );
 
   /** Books the current user may see: members see open books only; approvers/admins see all. */
