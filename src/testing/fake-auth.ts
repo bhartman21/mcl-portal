@@ -1,10 +1,10 @@
 import { computed, signal } from '@angular/core';
-import { RoleId, UserProfile } from '../app/core/models/user.model';
+import { ADMIN_ROLES, RoleId, UserProfile } from '../app/core/models/user.model';
 
 /** Minimal AuthService double for service/component unit tests. */
 export class FakeAuth {
   readonly user = signal<UserProfile | null>(null);
-  readonly isAdmin = computed(() => this.hasAnyRole(['departmentAdmin', 'nationalAdmin']));
+  readonly isAdmin = computed(() => this.hasAnyRole(ADMIN_ROLES));
   hasAnyRole(roles: RoleId[]): boolean {
     const u = this.user();
     return !!u && u.status === 'active' && roles.some((r) => u.roles.includes(r));

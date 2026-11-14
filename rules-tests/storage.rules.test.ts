@@ -124,3 +124,16 @@ describe('storage: ad-images are frozen after submit (#24)', () => {
     await assertSucceeds(deleteObject(ref(asUser(env, 'deptAdmin').storage(), path)));
   });
 });
+
+// siteAdmin counts as an admin for ad images (pairs with PR #18).
+describe('storage: siteAdmin on ad-images', () => {
+  it('reads and deletes an image on a submitted ad', async () => {
+    await seedUsers(env, { siteAdmin: USERS.siteAdmin });
+    const path = 'ad-images/alice/ad1/a.png';
+    await seedImage(path);
+    await seed(env, { 'ads/ad1': { createdBy: 'alice', status: 'submitted' } });
+    const st = asUser(env, 'siteAdmin').storage();
+    await assertSucceeds(getBytes(ref(st, path)));
+    await assertSucceeds(deleteObject(ref(st, path)));
+  });
+});

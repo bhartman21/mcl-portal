@@ -35,6 +35,7 @@ beforeEach(async () => {
     admin: USERS.deptAdmin,
     admin2: USERS.deptAdmin,
     natAdmin: USERS.nationalAdmin,
+    siteAdmin: USERS.siteAdmin,
   });
 });
 
@@ -563,6 +564,12 @@ describe('#5 ads: 3-submission limit, lock, and admin lock reset', () => {
     await assertSucceeds(resetBatch('natAdmin'));
   });
 
+  it('a siteAdmin resets a locked ad, with an audit (siteAdmin counts as an admin)', async () => {
+    await seedAd('alice', 'rejected', { submissionCount: 3, maxSubmissions: 3, locked: true });
+    await assertFails(resetBatch('siteAdmin', { audit: false }));
+    await assertSucceeds(resetBatch('siteAdmin', { reason: 'Site admin reset' }));
+  });
+
   it('a reset must clear the lock, zero the count, return to draft, and change nothing else', async () => {
     await seedAd('alice', 'rejected', { submissionCount: 3, maxSubmissions: 3, locked: true });
     await assertFails(resetBatch('admin', { extra: { submissionCount: 1 } }));
@@ -620,5 +627,58 @@ describe('#10 ads: only the owner deletes, only drafts', () => {
   it('a locked ad cannot be deleted', async () => {
     await seedAd('alice', 'rejected', { submissionCount: 3, maxSubmissions: 3, locked: true });
     await assertFails(del('alice'));
+  });
+});
+
+// ROLES_AND_PERMISSIONS.md (main ca46777): siteAdmin counts anywhere the docs say "department or
+// national admin" (lock reset is covered in the #5 suite above). Pairs with PR #18.
+describe('siteAdmin on ads', () => {
+  it('reads any ad and approves or rejects someone else\u2019s submitted ad', async () => {
+    await seedAd('alice', 'draft');
+    await assertSucceeds(getDoc(adRef(db('siteAdmin'))));
+    await seedAd('alice', 'submitted');
+    await assertSucceeds(approve('siteAdmin'));
+    await seedAd('alice', 'submitted');
+    await assertSucceeds(reject('siteAdmin'));
+  });
+
+  it('self-approves only with a reason and an audit, and notifies the other admins', async () => {
+    await seedAd('siteAdmin', 'submitted');
+    await assertFails(approve('siteAdmin'));
+    await assertFails(selfApproveBatch('siteAdmin', { reason: ' ' }));
+    await assertFails(selfApproveBatch('siteAdmin', { audit: false }));
+    await assertSucceeds(selfApproveBatch('siteAdmin', { notify: ['admin', 'natAdmin'] }));
+  });
+
+  it('cannot self-reject', async () => {
+    await seedAd('siteAdmin', 'submitted');
+    await assertFails(reject('siteAdmin'));
+  });
+
+  it('receives self-approval notifications from other admins and reads them', async () => {
+    await seedAd('admin', 'submitted');
+    await assertSucceeds(selfApproveBatch('admin', { notify: ['siteAdmin'] }));
+    await assertSucceeds(getDoc(doc(db('siteAdmin'), 'notifications/n-siteAdmin')));
+  });
+
+  it('undoes an approval or rejection with a reason and an audit', async () => {
+    await seedAd('alice', 'approved', { reviewedBy: 'approver', reviewedAt: 'x' });
+    await assertFails(undoBatch('siteAdmin', { audit: false }));
+    await assertSucceeds(undoBatch('siteAdmin'));
+    await seedAd('alice', 'rejected', { reviewedBy: 'approver', rejectionNotes: 'Logo too low-res' });
+    await assertSucceeds(undoBatch('siteAdmin'));
+  });
+
+  it('reads the audit log', async () => {
+    await seedAd('admin', 'submitted');
+    await selfApproveBatch('admin', { auditId: 'audit-site-1' });
+    await assertSucceeds(getDoc(doc(db('siteAdmin'), 'audits/audit-site-1')));
+  });
+
+  it('still cannot delete members\u2019 ads (#10 applies to every admin level)', async () => {
+    for (const status of ['draft', 'submitted', 'approved']) {
+      await seedAd('alice', status);
+      await assertFails(deleteDoc(adRef(db('siteAdmin'))));
+    }
   });
 });

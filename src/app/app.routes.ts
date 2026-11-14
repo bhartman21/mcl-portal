@@ -94,7 +94,7 @@ export const routes: Routes = [
       },
       {
         path: 'activity',
-        canActivate: [roleGuard(['departmentAdmin', 'nationalAdmin'])],
+        canActivate: [roleGuard(ADMIN_ROLES)],
         loadComponent: () =>
           import('./features/admin/admin-activity.component').then(
             (m) => m.AdminActivityComponent
