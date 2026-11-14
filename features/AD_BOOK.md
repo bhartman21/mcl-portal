@@ -65,6 +65,7 @@ draft → submitted → approved
 - **Submission limit (decided Nov 14, 2026):** max **3** submissions per ad. After the 3rd rejection the ad is locked as `rejected` (`locked: true`); member sees "submission limit reached". A department or national **administrator** can reset the lock (decided Nov 14, 2026): clears `locked`, sets `submissionCount` back to 0, ad returns to `draft`; reset is audited (who, when, reason).
 - **Withdraw:** owner may withdraw a `submitted` ad back to `draft` (attempt is not refunded, **inferred**).
 - **Delete:** owner may delete only while `draft`; never after approval.
+- **Undo review (decided Nov 14, 2026):** a department or national admin can reverse an approval or rejection with a required reason. The ad returns to `submitted`, the reversal does **not** count against the 3-submission limit (and decrements nothing), and it is written to `audits`. Approved ads already placed in a `locked` book must be removed from the book first.
 - **Approve / Reject:** approver only; reject requires notes (min length **inferred** 5 chars).
 - **Approved** ads are eligible for placement in a book.
 - Editing approved ads: require “recall to draft” or new version — **inferred:** force resubmit path (status back to draft clears approval).
@@ -94,7 +95,7 @@ See `ARCHITECTURE.md` → `ads`, `adBooks`, `adSizes`, Storage `ad-images/...`.
 ## Acceptance criteria (MVP)
 
 1. Authenticated user creates ads in all four seed sizes; image stored in Storage; metadata in Firestore.
-2. Submit → appears in approver queue; no one can approve or reject their own ad, even if they hold an approver or admin role (decided Nov 14, 2026); it needs a different approver. Enforced in UI and Firestore rules (`reviewedBy != createdBy`).
+2. Submit → appears in approver queue; approvers cannot approve or reject their own ad; it needs a different approver (decided Nov 14, 2026). **Exception:** a department or national admin may approve their own ad only after entering a required reason; the action is audited (`selfApproved: true`, reason) and all other admins are notified. Enforced in UI and Firestore rules.
 3. Reject with notes returns ad to editable state; notes visible to owner.
 4. Approve enables placement into an `open` book; `locked` book rejects new placements.
 5. Print preview of a book shows Letter pages without app chrome.
@@ -103,6 +104,8 @@ See `ARCHITECTURE.md` → `ads`, `adBooks`, `adSizes`, Storage `ad-images/...`.
 9. A 4th submission of the same ad is rejected by both UI and Firestore rules; `submissionCount` cannot be lowered by the owner.
 10. Owner can delete a draft but not a submitted/approved/rejected ad; withdraw moves submitted → draft.
 11. An administrator can reset a locked ad; the member can then submit up to 3 more times, and the reset appears in the audit log.
+12. A non-admin approver cannot review their own ad; an admin can self-approve only with a reason, which is audited and notifies other admins.
+13. An admin can undo an approval or rejection with a reason; the ad returns to submitted and the submission count is unchanged.
 8. No payment checkout UI in MVP.
 
 ## Non-functional
