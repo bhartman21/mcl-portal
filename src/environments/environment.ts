@@ -1,36 +1,22 @@
-export interface FirebaseConfig {
-  apiKey: string;
-  authDomain: string;
-  projectId: string;
-  storageBucket: string;
-  messagingSenderId: string;
-  appId: string;
-}
+import { Environment, PLACEHOLDER_FIREBASE_CONFIG } from './environment.model';
 
-export interface Environment {
-  production: boolean;
-  appName: string;
-  departmentId: string;
-  departmentName: string;
-  ribbonRackBuilderUrl: string;
-  firebase: FirebaseConfig;
-}
+export type { Environment, FirebaseConfig } from './environment.model';
 
+/**
+ * Committed default environment: placeholders only (the repo is public).
+ *
+ * With placeholder config the app runs in clearly labeled local demo mode.
+ * To use a real Firebase project or the emulators, generate the gitignored
+ * `environment.local.ts` with `npm run config:env` / `npm run config:emulators`
+ * and build or serve with the `firebase` configuration (see README).
+ */
 export const environment: Environment = {
   production: true,
   appName: 'MCL Department of Florida Portal',
   departmentId: 'dof',
   departmentName: 'Department of Florida',
   ribbonRackBuilderUrl: 'https://bhartman21.github.io/RibbonRackBuilder/',
-  // Inject real Firebase config via CI secrets or local replacement before production deploy.
-  // Do NOT commit production secrets to the public repository.
-  firebase: {
-    apiKey: 'REPLACE_WITH_FIREBASE_API_KEY',
-    authDomain: 'mcl-portal.firebaseapp.com',
-    projectId: 'mcl-portal',
-    storageBucket: 'mcl-portal.firebasestorage.app',
-    messagingSenderId: '000000000000',
-    appId: '1:000000000000:web:0000000000000000',
-  },
+  firebase: PLACEHOLDER_FIREBASE_CONFIG,
+  useEmulators: false,
+  enableGoogleSignIn: false,
 };
-

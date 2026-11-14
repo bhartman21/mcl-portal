@@ -7,7 +7,13 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "lint": "ng lint"
+    "lint": "ng lint",
+    "start:firebase": "ng serve --configuration firebase",
+    "build:firebase": "ng build --configuration production,firebase",
+    "config:env": "node scripts/write-firebase-env.mjs",
+    "config:emulators": "node scripts/write-firebase-env.mjs --emulators",
+    "emulators": "firebase emulators:start --project demo-mcl-portal",
+    "test:rules": "firebase emulators:exec --only firestore,storage --project demo-mcl-portal \"vitest run --config vitest.rules.config.mts\""
   },
   "prettier": {
     "printWidth": 100,

@@ -41,3 +41,18 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Local config and secrets (never commit; the repo is public)
+.env
+.env.*
+!.env.example
+src/environments/environment.local.ts
+*service-account*.json
+*-adminsdk-*.json
+firebase-debug.log
+firestore-debug.log
+storage-debug.log
+ui-debug.log
+database-debug.log
+pubsub-debug.log
+.firebase/
