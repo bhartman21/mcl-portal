@@ -67,6 +67,8 @@ npx ng build --configuration production
 
 ## Deploy (GitHub Actions → Firebase Hosting)
 
+> **Activation pending:** the workflows are currently staged in [`ci/github-workflows/`](./ci/github-workflows/) because the token that opened the Phase 0 PR lacked GitHub's `workflow` scope. Move them to `.github/workflows/` to turn them on (see that folder's README).
+
 - `.github/workflows/ci.yml` runs on every PR and push to `main`: `npm ci`, lint, unit tests, rules tests, production build.
 - `.github/workflows/deploy.yml` runs on push to `main` (and manually). It writes `environment.local.ts` from secrets, runs `npm run build:firebase`, then `firebase deploy --only hosting,firestore:rules,storage`. **Until every secret below exists, the job skips with a notice instead of failing.**
 
