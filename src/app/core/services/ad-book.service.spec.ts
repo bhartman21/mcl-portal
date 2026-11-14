@@ -263,4 +263,32 @@ describe('AdBookService review rules (#3)', () => {
       expect(ad).toMatchObject({ status: 'submitted', submissionCount: 3, locked: false });
     });
   });
+
+  describe('delete (#10)', () => {
+    it('the owner deletes only drafts', () => {
+      auth.signInAs('alice');
+      const id = createAd('alice');
+      expect(() => service.deleteAd(id)).toThrow(/Only draft/);
+      service.recallToDraft(id);
+      service.deleteAd(id);
+      expect(service.getAdById(id)).toBeUndefined();
+    });
+
+    it('approvers and admins cannot delete members\u2019 ads, even drafts (issue #10 repro)', () => {
+      auth.signInAs('alice');
+      const id = createAd('alice');
+      for (const [uid, role] of [
+        ['approver', 'adBookApprover'],
+        ['admin', 'departmentAdmin'],
+      ] as const) {
+        auth.signInAs(uid, ['member', role]);
+        expect(() => service.deleteAd(id)).toThrow(/owner/);
+      }
+      auth.signInAs('alice');
+      service.recallToDraft(id);
+      auth.signInAs('approver', ['member', 'adBookApprover']);
+      expect(() => service.deleteAd(id)).toThrow(/owner/);
+      expect(service.getAdById(id)).toBeDefined();
+    });
+  });
 });

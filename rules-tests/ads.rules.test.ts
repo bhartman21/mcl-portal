@@ -4,6 +4,7 @@
  */
 import { assertFails, assertSucceeds, RulesTestEnvironment } from '@firebase/rules-unit-testing';
 import {
+  deleteDoc,
   deleteField,
   doc,
   Firestore,
@@ -589,5 +590,35 @@ describe('#5 ads: 3-submission limit, lock, and admin lock reset', () => {
     await assertFails(undoBatch('admin'));
     await assertFails(undoBatch('admin', { extra: { locked: false, submissionCount: 2 } }));
     await assertSucceeds(undoBatch('admin', { extra: { locked: false } }));
+  });
+});
+
+describe('#10 ads: only the owner deletes, only drafts', () => {
+  const del = (uid: string) => deleteDoc(adRef(db(uid)));
+
+  it('the owner deletes their own draft', async () => {
+    await seedAd('alice', 'draft');
+    await assertSucceeds(del('alice'));
+  });
+
+  it('the owner cannot delete a submitted, approved, or rejected ad', async () => {
+    for (const status of ['submitted', 'approved', 'rejected']) {
+      await seedAd('alice', status);
+      await assertFails(del('alice'));
+    }
+  });
+
+  it('approvers and admins cannot delete members\u2019 ads in any status (issue #10)', async () => {
+    for (const status of ['draft', 'submitted', 'approved', 'rejected']) {
+      await seedAd('alice', status);
+      for (const uid of ['approver', 'admin', 'natAdmin', 'bob']) {
+        await assertFails(del(uid));
+      }
+    }
+  });
+
+  it('a locked ad cannot be deleted', async () => {
+    await seedAd('alice', 'rejected', { submissionCount: 3, maxSubmissions: 3, locked: true });
+    await assertFails(del('alice'));
   });
 });

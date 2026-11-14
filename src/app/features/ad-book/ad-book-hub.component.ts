@@ -64,8 +64,13 @@ export class AdBookHubComponent {
 
   deleteAd(id: string): void {
     this.errorMsg.set(null);
-    this.adBook.deleteAd(id);
-    this.notice.set('Draft deleted.');
+    this.notice.set(null);
+    try {
+      this.adBook.deleteAd(id);
+      this.notice.set('Draft deleted.');
+    } catch (err) {
+      this.errorMsg.set(err instanceof Error ? err.message : 'Unable to delete ad.');
+    }
   }
 
   createBook(): void {

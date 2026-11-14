@@ -345,7 +345,9 @@ service cloud.firestore {
                 && request.resource.data.lockResets.size() == resource.data.get('lockResets', []).size() + 1))
         && auditedAs('lockReset');
 
-      allow delete: if isDeptOrHigherAdmin() || (isActiveUser() && resource.data.createdBy == request.auth.uid && resource.data.status == 'draft');
+      // Only the owner deletes, and only while draft (AD_BOOK.md FR-A-3, AC 10). Approvers and
+      // admins can't delete members' ads; withdraw is the path for a submitted ad.
+      allow delete: if resource.data.status == 'draft' && isOwner() && isActiveUser();
     }
 
     // ---------- audits (Ad Book review decisions; admins only, immutable) ----------

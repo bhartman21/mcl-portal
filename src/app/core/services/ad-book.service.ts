@@ -508,7 +508,11 @@ export class AdBookService {
   deleteAd(id: string): void {
     const ad = this.getAdById(id);
     if (!ad) return;
-    if (ad.status !== 'draft' && !this.canApprove()) {
+    // Owner-only, draft-only (AD_BOOK.md FR-A-3, AC 10); approver/admin roles don't widen this.
+    if (!this.isOwnAd(ad)) {
+      throw new Error('Only the ad owner can delete it.');
+    }
+    if (ad.status !== 'draft') {
       throw new Error('Only draft ads can be deleted.');
     }
     this._ads.update((list) => list.filter((a) => a.id !== id));
