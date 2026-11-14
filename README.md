@@ -75,6 +75,8 @@ This repo **`mcl-portal`** is the portal. RibbonRackBuilder remains a **separate
 
 ## Getting started (placeholder for implementers)
 
+User and admin guides live in [`docs/`](./docs/) (maintained by D.O.T.). Real run and deploy steps will replace this section once Phase 0 merges.
+
 ```bash
 git clone https://github.com/bhartman21/mcl-portal.git
 cd mcl-portal

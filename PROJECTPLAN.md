@@ -42,6 +42,8 @@ Ship a single Angular 21 + Bootstrap 5 + Firebase portal for **MCL Department of
 
 ---
 
+> **Status note (Nov 14, 2026):** an initial build landed on `main` on Nov 13 without a PR. Checkboxes below are ticked only after T.E.D. verifies the acceptance criteria; until then, built-but-unverified work stays unchecked.
+
 ## Phase 0 — Portal shell + auth + roles + detachment directory
 
 ### Milestone
@@ -57,7 +59,10 @@ Runnable app on Firebase Hosting (or local `ng serve`) with login, role claims/d
 - [ ] Auth: Firebase built-in **email sign-in link** (passwordless, free Spark plan; **decided** Nov 14, 2026). No Cloud Functions or paid email service. Google sign-in may be added later.
 - [ ] User profile document + role assignment model (see `ROLES_AND_PERMISSIONS.md`), including registration-mode lock-down switch.
 - [ ] Seed `detachments`: #54 = **Morris F Dixon Jr.**; S/Sgt Ted Archambault with `needsVerification: true` (number unconfirmed).
-- [ ] Admin UI: users, roles, detachments, registration mode.
+- [ ] Admin UI: users, roles, detachments (create, edit, deactivate), registration mode.
+- [ ] Email-link sign-in completes on a different device: prompt for the email with a visible input.
+- [ ] Hide the "Continue with Google" button until Google sign-in is approved (email link only at launch).
+- [ ] In-app labels follow the current phase order (Ad Book = Phase 1, VAVS = Phase 2).
 - [ ] Deploy pipeline (GitHub Actions → Firebase Hosting).
 - [ ] App README with run/deploy steps.
 
@@ -90,7 +95,13 @@ Runnable app on Firebase Hosting (or local `ng serve`) with login, role claims/d
 - [ ] `adBooks` per event/convention with status and page assembly.
 - [ ] Approver queue for staff roles.
 - [ ] Print / Save PDF via browser print for book preview (MVP).
-- [ ] Authenticated users can create drafts (**inferred**; company accounts later).
+- [ ] Signed-in users can create drafts (**decided** Nov 14, 2026; company accounts later).
+- [ ] **Ad data on Firestore + Storage** (added Nov 14, 2026): the first build saves ads only in browser localStorage, so approvers on other computers can't see them. All ad, book, and size data must live in Firestore, with images in Storage. Remove localStorage as the source of truth.
+- [ ] **Submission limit and lock** (decided Nov 14, 2026): `submissionCount`/`maxSubmissions` (3), lock after the 3rd rejection, enforced in the UI and Firestore rules.
+- [ ] **Admin lock reset + audit**: department or national admins reset a locked ad (count to 0, back to draft); each reset is written to `audits`.
+- [ ] Withdraw (submitted back to draft) and draft-only delete, enforced in rules.
+- [ ] Confirmation dialogs for destructive or final actions (delete, approve, reject, suspend user).
+- [ ] Event book form includes event date (per FR-A-4).
 
 ### Acceptance criteria
 

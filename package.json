@@ -44,8 +44,13 @@
     "@angular/build": "^21.0.4",
     "@angular/cli": "^21.0.4",
     "@angular/compiler-cli": "^21.0.0",
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "angular-eslint": "^21.4.0",
+    "eslint": "^9.39.5",
+    "firebase-tools": "^15.36.0",
     "jsdom": "^27.1.0",
     "typescript": "~5.9.2",
+    "typescript-eslint": "^8.72.2",
     "vitest": "^4.0.8"
   }
 }
