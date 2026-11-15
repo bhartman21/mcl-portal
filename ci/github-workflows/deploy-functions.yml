@@ -6,8 +6,11 @@ name: Deploy budget-guard (Cloud Function)
 #
 # Required repository secrets (same as deploy.yml):
 #   FIREBASE_SERVICE_ACCOUNT   JSON key of the deploy service account. Beyond the Hosting deploy
-#                              roles, it needs Cloud Functions Admin and Service Account User on
-#                              budget-guard@<project>.iam.gserviceaccount.com (see the README).
+#                              roles it needs Cloud Functions Developer, Service Usage Consumer,
+#                              and Service Account User on the budget-guard and Cloud Build service
+#                              accounts. Exact list: functions/budget-guard/README.md, section
+#                              "CI deployer permissions (deploy-functions.yml)".
+#                              Do the first deploy as Owner (README step 5) before using this.
 #   FIREBASE_PROJECT_ID        e.g. mcl-portal
 
 on:

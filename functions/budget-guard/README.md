@@ -11,7 +11,7 @@ It follows Google's [Disable billing usage with notifications](https://cloud.goo
 | Function name | `budgetGuard` (Firebase codebase `budget-guard`, source `functions/budget-guard`) |
 | Trigger | Pub/Sub topic **`budget-guard`** in the same project (param `BUDGET_GUARD_TOPIC`) |
 | Runs as | `budget-guard@<PROJECT_ID>.iam.gserviceaccount.com` (dedicated service account, no keys) |
-| Roles | **Project Billing Manager** + **Browser** on the **project** only (see "Roles" below) |
+| Roles | **Project Billing Manager** + **Browser** on the **project** only, plus **Cloud Run Invoker** on its own Cloud Run service (see "Roles" below) |
 | Dry run | `BUDGET_GUARD_DRY_RUN` param, default `false`; `true` only logs |
 | Secrets | None. It authenticates as its runtime service account through Application Default Credentials. |
 
@@ -41,6 +41,8 @@ Detaching billing needs the permission to **unlink the project from its billing 
 | `roles/billing.projectManager` (Project Billing Manager) | project `mcl-portal` | Holds only `resourcemanager.projects.createBillingAssignment` and `deleteBillingAssignment` ([role reference](https://cloud.google.com/billing/docs/how-to/billing-access)). Used for `updateBillingInfo` with an empty account. |
 | `roles/browser` (Browser) | project `mcl-portal` | `projects.getBillingInfo` needs `resourcemanager.projects.get` ([API reference](https://cloud.google.com/billing/docs/reference/rest/v1/projects/getBillingInfo)), so it can tell when billing is already off. Read-only project metadata. |
 
+| `roles/run.invoker` (Cloud Run Invoker) | the function's own Cloud Run service (`budgetguard`, us-east1) | The Firebase CLI makes the runtime service account the Pub/Sub trigger's identity too (`eventTrigger.serviceAccountEmail`). Google's [Eventarc roles page](https://cloud.google.com/eventarc/docs/roles-permissions) says the trigger service account needs Cloud Run Invoker on the target service; without it, every push gets a 403 and the function never runs. The Firebase CLI grants this automatically only for the default compute service account, not for a custom one. Granted in setup step 5b. |
+
 It gets nothing on the billing account. Re-linking billing would also need Billing Account User on the account, so **budget-guard can turn billing off but can never turn it back on or move the project to another account**.
 
 The Disable billing table also lists Billing Account Viewer on the billing account. That's for seeing the project in the console's Billing pages, not for the API call. If a live detach ever logs `PERMISSION_DENIED`, the fallback is to add `roles/billing.viewer` (read-only) on the billing account. Don't use `roles/billing.admin`.
@@ -66,7 +68,7 @@ gcloud config set project "$PROJECT_ID"
 gcloud services enable \
   cloudbilling.googleapis.com billingbudgets.googleapis.com pubsub.googleapis.com \
   cloudfunctions.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com \
-  eventarc.googleapis.com run.googleapis.com \
+  eventarc.googleapis.com run.googleapis.com storage.googleapis.com \
   --project "$PROJECT_ID"
 ```
 
@@ -130,6 +132,18 @@ npm run deploy:functions           # = firebase deploy --only functions:budget-g
 - `functions/budget-guard/.env.<projectId>` holds the two non-secret settings and is gitignored. If the file is missing, the CLI asks for both values and offers the defaults (`budget-guard`, `false`).
 - If the CLI asks how long to keep container images, any short period is fine (for example 1 day).
 - Deploys of Hosting and rules (`npm run deploy:hosting` and the GitHub deploy workflow) never deploy this function. Deploy it only with the command above. Plain `firebase deploy` with no `--only` would deploy everything, including this function.
+- Do this **first** deploy yourself, as Owner, not from CI. On the first 2nd-gen event function, the Firebase CLI adds some one-time service-agent roles to the project IAM policy (see "One-time service agent roles" below), and the CLI asks for the container-image cleanup policy. A CI deployer can't do either without broad IAM rights.
+
+### 5b. Let the function's identity invoke its own service (once, after the first deploy)
+
+```bash
+SERVICE=$(gcloud functions describe budgetGuard --region "$REGION" --project "$PROJECT_ID" \
+  --format='value(serviceConfig.service)' | awk -F/ '{print $NF}')   # normally "budgetguard"
+gcloud run services add-iam-policy-binding "$SERVICE" --region "$REGION" --project "$PROJECT_ID" \
+  --member="serviceAccount:${SA}" --role="roles/run.invoker"
+```
+
+Without this, Pub/Sub pushes get a 403 and nothing shows in the function logs. The grant stays when you redeploy. IAM changes can take a few minutes, and Pub/Sub retries in the meantime.
 
 ### 6. Test safely in dry run
 
@@ -149,6 +163,7 @@ gcloud functions logs read budgetGuard --gen2 --region "$REGION" --project "$PRO
 - `budget-guard: under budget (2 of 10); no action.`
 - `budget-guard: DRY RUN. Budget reached (10 >= 10); would detach billing from projects/mcl-portal. Nothing changed.`
 - **No** `could not read billing status` warning. That warning would mean the Browser role or the Cloud Billing API is missing.
+- If nothing shows at all, step 5b (Cloud Run Invoker) is probably missing or hasn't taken effect yet.
 
 Billing stays linked: `gcloud billing projects describe "$PROJECT_ID"` still shows `billingEnabled: true`.
 
@@ -160,6 +175,63 @@ npm run deploy:functions
 ```
 
 ⚠️ Once it's armed, **don't publish an over-budget test message**: it really detaches billing. To test again, switch back to dry run first.
+
+## CI deployer permissions (deploy-functions.yml)
+
+This section is only needed if you use the optional manual workflow `ci/github-workflows/deploy-functions.yml` instead of deploying from your own machine. That workflow uses the same GitHub secret as the Hosting deploy, `FIREBASE_SERVICE_ACCOUNT`. Call the service account behind that key (or behind Workload Identity Federation, if you switch to it) the **CI deployer**, for example `firebase-deployer@<PROJECT_ID>.iam.gserviceaccount.com`.
+
+It assumes you did the **first** deploy yourself (step 5). After that, CI only updates an existing 2nd-gen function with a Pub/Sub trigger and a custom runtime service account.
+
+| Role | Principal | Resource | Why |
+|---|---|---|---|
+| `roles/cloudfunctions.developer` (Cloud Functions Developer) | CI deployer | project | Create and update functions through the Cloud Functions API. Google's [Cloud Functions access control](https://cloud.google.com/functions/docs/reference/iam/roles) lists it as the deploy role. It also covers what the CLI reads during deploy: `resourcemanager.projects.get`, `serviceusage.services.get/list`, Artifact Registry repository reads for the cleanup-policy check, and the Cloud Run and Eventarc operations the Functions API runs ([permission list](https://cloud.google.com/iam/docs/roles-permissions/cloudfunctions)). |
+| `roles/iam.serviceAccountUser` (Service Account User, i.e. actAs) | CI deployer | **service account** `budget-guard@<PROJECT_ID>.iam.gserviceaccount.com` only | Deploying needs Service Account User on the **runtime service account** ([same page](https://cloud.google.com/functions/docs/reference/iam/roles)). Grant it on that one service account, not the project. A project-wide grant would let CI act as every service account. |
+| `roles/iam.serviceAccountUser` | CI deployer | **service account** that Cloud Build uses, by default `<PROJECT_NUMBER>-compute@developer.gserviceaccount.com` | The same page also requires Service Account User on the **Cloud Build service account**. New projects build with the Compute Engine default service account ([Cloud Run functions deploy](https://cloud.google.com/run/docs/deploy-functions)). |
+| `roles/serviceusage.serviceUsageConsumer` (Service Usage Consumer) | CI deployer | project | On every deploy the CLI checks each required API with `services.get`, and sends the project as the quota project, so it needs `serviceusage.services.use`. A 403 here stops the deploy. This is the minimum from the firebase-tools maintainers ([firebase-tools #11005](https://github.com/firebase/firebase-tools/issues/11005)). |
+| Firebase project read (`firebase.projects.get`) | CI deployer | project | The CLI reads the project's `adminSdkConfig` to set `FIREBASE_CONFIG`. The CI deployer already has this through **Firebase Hosting Admin** for the Hosting deploy (root README, "Deploy (GitHub Actions → Firebase Hosting)"). If you use a separate deployer, add `roles/firebase.viewer`. |
+
+**Not needed**, even though they often appear in checklists:
+- `roles/artifactregistry.writer`: Cloud Build pushes the image as the Cloud Build service account, not as the deployer. The deployer only reads the repository's cleanup policy, which Cloud Functions Developer covers. If the cleanup policy is missing, a non-interactive deploy deploys the function and then exits with an error. Set the policy once with `npx firebase functions:artifacts:setpolicy`, or let the step-5 interactive deploy set it.
+- `roles/run.admin`: the Firebase CLI sets Cloud Run invoker IAM only for HTTPS, callable and scheduled functions, not for Pub/Sub triggers. The Cloud Functions API manages the Run service itself. budget-guard's own invoker grant is the one-time step 5b.
+- `roles/eventarc.admin` and `roles/pubsub.editor`: the Cloud Functions service agent creates the Eventarc trigger and its subscription. The topic already exists (step 2).
+- `serviceusage.services.enable` (Service Usage Admin): only needed if an API is still off. Step 1 turns them all on, including `storage.googleapis.com`, which the CLI checks for every 2nd-gen deploy. If CI ever stops with "API not enabled", enable that API as Owner. Don't widen the CI role.
+- `serviceusage.services.generateServiceIdentity`: the CLI calls this for Pub/Sub and Eventarc on every 2nd-gen deploy, but it checks no IAM permission ([firebase-tools #11005](https://github.com/firebase/firebase-tools/issues/11005)).
+- `resourcemanager.projects.setIamPolicy` (Project IAM Admin): only the first 2nd-gen event deploy edits the project policy (below), and you do that one in step 5.
+
+```bash
+DEPLOYER=firebase-deployer@${PROJECT_ID}.iam.gserviceaccount.com   # the account behind FIREBASE_SERVICE_ACCOUNT
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+BUILD_SA=${PROJECT_NUMBER}-compute@developer.gserviceaccount.com
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" --member="serviceAccount:${DEPLOYER}" \
+  --role="roles/cloudfunctions.developer" --condition=None
+gcloud projects add-iam-policy-binding "$PROJECT_ID" --member="serviceAccount:${DEPLOYER}" \
+  --role="roles/serviceusage.serviceUsageConsumer" --condition=None
+gcloud iam service-accounts add-iam-policy-binding "$SA" --project "$PROJECT_ID" \
+  --member="serviceAccount:${DEPLOYER}" --role="roles/iam.serviceAccountUser"
+gcloud iam service-accounts add-iam-policy-binding "$BUILD_SA" --project "$PROJECT_ID" \
+  --member="serviceAccount:${DEPLOYER}" --role="roles/iam.serviceAccountUser"
+```
+
+### One-time service agent roles
+
+These belong to Google-managed accounts, not the CI deployer. They're needed once per project, and your step-5 deploy as Owner normally takes care of them:
+
+| Role | Principal | Resource | Source |
+|---|---|---|---|
+| `roles/iam.serviceAccountTokenCreator` | Pub/Sub service agent `service-<PROJECT_NUMBER>@gcp-sa-pubsub.iam.gserviceaccount.com` | project | Lets Pub/Sub mint the tokens for authenticated pushes. Google requires a manual grant only if the Pub/Sub service agent was enabled **on or before April 8, 2021**; newer projects have it by default ([Eventarc roles](https://cloud.google.com/eventarc/docs/roles-permissions), [Pub/Sub triggers](https://cloud.google.com/functions/docs/calling/pubsub)). The Firebase CLI also adds it on the first 2nd-gen event deploy. |
+| `roles/run.invoker` and `roles/eventarc.eventReceiver` | Compute Engine default service account | project | Added by the Firebase CLI on the first 2nd-gen event deploy, for functions that use the default identity. budget-guard doesn't run as that account; its invoker grant is step 5b. |
+| Eventarc Service Agent role | `service-<PROJECT_NUMBER>@gcp-sa-eventarc.iam.gserviceaccount.com` | project | Granted automatically when the first Eventarc resource is created; only restore it if someone removes it ([Eventarc roles](https://cloud.google.com/eventarc/docs/roles-permissions)). |
+
+To grant the Pub/Sub one by hand (only for an older project, or if a deploy says it's missing):
+
+```bash
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-pubsub.iam.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountTokenCreator" --condition=None
+```
+
+If a deploy fails at the **build** step with a permission error, the Cloud Build service account (`$BUILD_SA`) is missing its build rights. Some projects create the Compute Engine default service account without Editor. Grant it `roles/cloudbuild.builds.builder` on the project ([Cloud Run functions deploy](https://cloud.google.com/run/docs/deploy-functions)).
 
 ## If billing gets detached: re-enabling safely
 
