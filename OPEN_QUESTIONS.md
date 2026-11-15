@@ -13,7 +13,7 @@ Decisions still needed from Billy / DoF stakeholders. Planning docs mark interim
 4. **Ad payment (explicitly out of MVP — still need policy)**  
    How will staff know an approved ad is paid (cash/check/external)? Status field later? Honor system?
 
-5. ~~**Detachment #54 duplicate**~~ **Decided (Nov 9, 2026):** #54 is the **Morris F Dixon Jr. Detachment**. S/Sgt Ted Archambault Detachment keeps a separate seed entry with `needsVerification: true` and **no number** until confirmed.
+5. ~~**Detachment #54 duplicate**~~ **Decided (Nov 9, 2026):** #54 is the **Morris F Dixon Jr. Detachment**. S/Sgt Ted Archambault Detachment keeps a separate seed entry with `needsVerification: true` and **no number** until confirmed. **Update (Nov 15, 2026):** R.U.D.Y. confirmed Archambault is **#819** (Crystal River).
 
 6. **Firebase project id (default, not a blocker)**  
    **Recommended (Nov 9, 2026 docs update):** create a **new** Firebase project with preferred id **`mcl-portal`** (Hosting `https://mcl-portal.web.app`) instead of reusing `mcl-rack-builder`, so RibbonRackBuilder’s data/auth stay isolated and the default URL reads correctly. Exact id may differ if taken — record the actual id in env/CI. Proceed with this default unless Billy objects.
@@ -58,6 +58,8 @@ Decisions still needed from Billy / DoF stakeholders. Planning docs mark interim
 
 20. When national expands: single Firebase project multi-tenant, or separate projects per department?
 
+21. **#1055 Lou Ehlers** is in the current seed, but the National locator lists #1055 as Yakima, WA, and it is not on the DoF district page (R.U.D.Y., Nov 15, 2026). Remove it from the seed, or keep it flagged until Billy confirms?
+
 ---
 
 ## Deferred (RibbonRackBuilder repo — not portal blockers)
@@ -86,7 +88,7 @@ See `features/RIBBON_RACK.md` and PROJECTPLAN “Future / optional”.
 | Repo | Public `bhartman21/mcl-portal` |
 | Priority | Shell → Ad Book MVP (Phase 1) → VAVS MVP (Phase 2) → polish (reordered Nov 13, 2026) |
 | Registration | Auto-approve members + lock-down switch |
-| #54 | Morris F Dixon Jr.; Archambault needs verification |
+| #54 | Morris F Dixon Jr.; Archambault is #819 |
 | Ad layouts | Expand beyond full/half; configurable sizes |
 | Ad approval | Required before book inclusion |
 | Payment | Not in MVP |

@@ -161,12 +161,12 @@ public/
   name: string;                // e.g. 'PFC BRUCE W CARTER'
   displayName: string;         // full label for selects
   active: boolean;
-  needsVerification?: boolean; // e.g. S/Sgt Ted Archambault until number confirmed
+  needsVerification?: boolean; // single-source rows, e.g. #549, #1072, #1476
   notes?: string;
 }
 ```
 
-Seed from VAVS sample options. **#54 = Morris F Dixon Jr. Detachment** (confirmed Nov 9, 2026). Seed S/Sgt Ted Archambault as a separate doc with `needsVerification: true` and no number.
+Seed from R.U.D.Y.'s Department of Florida directory (`docs/research/MCL_Department_of_Florida_Detachments.csv`, 51 active detachments, Nov 15, 2026; sources: mcldof.org district page and the National detachment locator). **#54 = Morris F Dixon Jr. Detachment** (confirmed Nov 9, 2026). S/Sgt Ted Archambault is **#819** (Crystal River). Rows found on only one source get `needsVerification: true`.
 
 ### `vavsPeriods/{id}`
 

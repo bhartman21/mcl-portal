@@ -102,7 +102,7 @@ There are no hard-coded admin emails. Roles live in `users/{uid}` and only an ex
 
 1. Open the deployed site and sign in with the email link. This creates `users/{your uid}` with `roles: ['member']`.
 2. In Firebase console → Firestore → `users` → your document, edit `roles` to `["member", "siteAdmin"]` and make sure `status` is `"active"`. (The console bypasses security rules; this is the only time roles are edited outside the app.)
-3. Reload the portal. On first admin load the app writes `settings/registration` (`mode: 'open'`) and seeds the DoF `detachments` directory (#54 = Morris F. Dixon Jr.; S/Sgt Ted Archambault with `needsVerification: true` and no number). If the directory is still empty, use **Admin → Detachment Directory → Seed DoF Detachments**.
+3. Reload the portal. On first admin load the app writes `settings/registration` (`mode: 'open'`) and seeds the DoF `detachments` directory (#54 = Morris F. Dixon Jr.; S/Sgt Ted Archambault = #819; full list of 51 detachments). If the directory is still empty, use **Admin → Detachment Directory → Seed DoF Detachments**.
 4. From then on, assign every other admin from **Admin → Users & Roles**. Each grant or revoke is written to `audits` (who, when, target user, before/after roles).
 
 ### Admin grant hierarchy (decided Nov 14, 2026)

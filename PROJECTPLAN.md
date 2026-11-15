@@ -60,7 +60,7 @@ Runnable app on Firebase Hosting (or local `ng serve`) with login, role claims/d
 - [ ] User profile document + role assignment model (see `ROLES_AND_PERMISSIONS.md`), including registration-mode lock-down switch.
 - [ ] `siteAdmin` role and admin grant rules (siteAdmin grants any level; nationalAdmin grants national/department; departmentAdmin grants department only), enforced in rules with emulator tests; one-time first-admin bootstrap makes Billy siteAdmin (decided Nov 14, 2026).
 - [ ] Detachment directory publicly readable (active entries only), including signed out.
-- [ ] Seed `detachments`: #54 = **Morris F Dixon Jr.**; S/Sgt Ted Archambault with `needsVerification: true` (number unconfirmed).
+- [ ] Seed `detachments` from R.U.D.Y.'s directory (`docs/research/MCL_Department_of_Florida_Detachments.csv`, 51 active detachments, Nov 15, 2026): #54 = **Morris F Dixon Jr.** (Clearwater); S/Sgt Ted Archambault = **#819** (Crystal River). Fix the current seed: DeLong is #1267 (not #55); #58 is Indian River and Smedley is #64; #567 is Holiday; #755 is Tamarac and Gator is #990; #1055 Lou Ehlers is not in Florida (awaiting Billy). Mark the 3 single-source rows (#549, #1072, #1476) `needsVerification: true`.
 - [ ] Admin UI: users, roles, detachments (create, edit, deactivate), registration mode.
 - [ ] Email-link sign-in completes on a different device: prompt for the email with a visible input.
 - [ ] Hide the "Continue with Google" button until Google sign-in is approved (email link only at launch).
@@ -158,7 +158,7 @@ Phase 0 roles + detachments.
 ## Phase 3 — DoF rollout polish
 
 - [ ] Training one-pager for VAVS reps and ad approvers.
-- [ ] Confirm Archambault detachment number; clear `needsVerification`.
+- [x] Confirm Archambault detachment number (#819, Crystal River, per R.U.D.Y. Nov 15, 2026).
 - [ ] Monitoring: Auth error rates, Storage quotas.
 - [ ] Point ChatGPT sample links to the portal (or retire them).
 - [ ] Backup/export runbooks for VAVS periods.
