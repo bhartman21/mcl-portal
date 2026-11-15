@@ -95,7 +95,7 @@ See `ARCHITECTURE.md` → `ads`, `adBooks`, `adSizes`, Storage `ad-images/...`.
 ## Acceptance criteria (MVP)
 
 1. Authenticated user creates ads in all four seed sizes; image stored in Storage; metadata in Firestore.
-2. Submit → appears in approver queue; approvers cannot approve or reject their own ad; it needs a different approver (decided Nov 14, 2026). **Exception:** a department or national admin may approve their own ad only after entering a required reason; the action is audited (`selfApproved: true`, reason) and all other admins get an **in-app notification** (a `notifications/{id}` doc per admin, shown as a header badge plus a list on the admin page; no email, which keeps the free Spark plan). **No self-reject:** nobody, admins included, may reject their own ad; they withdraw it instead. Enforced in UI and Firestore rules.
+2. Submit → appears in approver queue; approvers cannot approve or reject their own ad; it needs a different approver (decided Nov 14, 2026). **Exception:** a department or national admin may approve their own ad only after entering a required reason; the action is audited (`selfApproved: true`, reason) and all other admins get an **in-app notification** (a `notifications/{id}` doc per admin, shown as a header badge plus a list on the admin page; no email). **No self-reject:** nobody, admins included, may reject their own ad; they withdraw it instead. Enforced in UI and Firestore rules.
 3. Reject with notes returns ad to editable state; notes visible to owner.
 4. Approve enables placement into an `open` book; `locked` book rejects new placements.
 5. Print preview of a book shows Letter pages without app chrome.

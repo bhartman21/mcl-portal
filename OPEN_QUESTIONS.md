@@ -36,7 +36,7 @@ Decisions still needed from Billy / DoF stakeholders. Planning docs mark interim
 
 ## Auth & identity
 
-14. ~~Email-link only vs Google vs both?~~ **Decided (Nov 14, 2026, final):** Firebase's built-in, free **email sign-in link** (passwordless). The emailed one-time-code idea was dropped because it needs Cloud Functions, the Blaze plan, and a paid email service. Google sign-in may be added later.
+14. ~~Email-link only vs Google vs both?~~ **Decided (Nov 14, 2026, final):** Firebase's built-in, free **email sign-in link** (passwordless). The emailed one-time-code idea was dropped because it needs Cloud Functions, the Blaze plan, and a paid email service. Google sign-in may be added later. **Update (Nov 15, 2026):** Firebase now limits Spark projects to 5 sign-in link emails a day and requires Blaze for Storage, so the project moves to Blaze with a $10/month automatic shutoff (see ARCHITECTURE.md).
 
 15. Replace any temporary hard-coded admin bootstrap with role docs in Phase 0 (expected yes). **Decided (Nov 14, 2026):** a one-time first-admin bootstrap makes Billy the only `siteAdmin`; he assigns all other admins. Grant rules are in ROLES_AND_PERMISSIONS.md.
 16. **Decided (Nov 14, 2026):** the detachment directory stays publicly readable (signed-out visitors included, active entries only).

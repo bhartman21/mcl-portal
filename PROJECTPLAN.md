@@ -56,7 +56,7 @@ Runnable app on Firebase Hosting (or local `ng serve`) with login, role claims/d
 - [ ] Create / wire **new** Firebase project (preferred id `mcl-portal`: Auth, Firestore, Storage, Hosting); config via environment/secret, not committed.
 - [ ] Shared layout: header, footer, nav (VAVS, Ad Book); optional external “Ribbon Rack” link to https://bhartman21.github.io/RibbonRackBuilder/
 - [ ] STYLE_GUIDE tokens mapped to Bootstrap SCSS variables.
-- [ ] Auth: Firebase built-in **email sign-in link** (passwordless, free Spark plan; **decided** Nov 14, 2026). No Cloud Functions or paid email service. Google sign-in may be added later.
+- [ ] Auth: Firebase built-in **email sign-in link** (passwordless; **decided** Nov 14, 2026; needs Blaze for more than 5 sign-in emails/day, see ARCHITECTURE.md "Pricing plan and cost cap"). No Cloud Functions or paid email service. Google sign-in may be added later.
 - [ ] User profile document + role assignment model (see `ROLES_AND_PERMISSIONS.md`), including registration-mode lock-down switch.
 - [ ] `siteAdmin` role and admin grant rules (siteAdmin grants any level; nationalAdmin grants national/department; departmentAdmin grants department only), enforced in rules with emulator tests; one-time first-admin bootstrap makes Billy siteAdmin (decided Nov 14, 2026).
 - [ ] Detachment directory publicly readable (active entries only), including signed out.
@@ -66,6 +66,7 @@ Runnable app on Firebase Hosting (or local `ng serve`) with login, role claims/d
 - [ ] Hide the "Continue with Google" button until Google sign-in is approved (email link only at launch).
 - [ ] In-app labels follow the current phase order (Ad Book = Phase 1, VAVS = Phase 2).
 - [ ] Cleaner header per STYLE_GUIDE.md "App header layout" (Nov 15, 2026): three zones, account avatar menu with theme picker, Ribbon Rack to footer, demo-mode strip, no overflow at 1200–1440px.
+- [ ] Cost cap (decided Nov 15, 2026): Blaze plan, $10/month budget with alerts at $2/$5/$8/$10, and the `budget-guard` Cloud Function that detaches billing at $10. Include a dry-run test and owner steps in the Firebase setup guide.
 - [ ] Deploy pipeline (GitHub Actions → Firebase Hosting).
 - [ ] App README with run/deploy steps.
 
