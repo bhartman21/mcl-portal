@@ -265,7 +265,8 @@ This is a separate robot account from the GitHub deploy one in Part 7. It gets *
 - Press **Save**.
 - It can take a few minutes to take effect. The permission stays when budget-guard is deployed again, so this is a one-time step.
 - *Why it's easier on a computer:* the checkbox and the side panel are small on a phone. Turn it sideways in desktop mode.
-- These console steps follow Google's Cloud Run docs ("Control access on an individual service"). B.O.B.'s README gives the terminal command instead (step 5b). *Unverified:* that the service is named exactly `budgetguard`. If you don't see it, look for the name containing "budget", or ask B.O.B.
+- **Confirm the name first:** before granting, look under **Cloud Run → Services** and check that the service is listed as `budgetguard`. B.O.B. confirmed that's its normal name: the function is `budgetGuard`, and 2nd-gen functions run on a Cloud Run service named after the function in lower case. If the list shows a different name, use that service instead.
+- These console steps follow Google's Cloud Run docs ("Control access on an individual service"). B.O.B.'s README gives a terminal command instead (step 5b). It looks up the service name automatically (normally `budgetguard`) and grants on whatever name it finds, so it works either way.
 
 **26. Test it safely in dry run.** — Easier on a computer (console route works on a phone with care)
 Send budget-guard two fake budget messages, one at $2 and one at $10, and check what it wrote down.
@@ -376,14 +377,18 @@ GitHub uses this robot account to publish the site and rules. This is done in th
 Under **Grant this service account access to project**, use **Select a role** and **+ Add another role** to add these roles. Type each name into the search box:
 
 - **Firebase Admin**
-- **Service Account User**
 
 Then press **Continue**, then **Done**.
 
-*Why these:* the README lists the smaller set **Firebase Hosting Admin**, **Firebase Rules Admin** and **Service Account User**, "or Firebase Admin". The deploy publishes Hosting, Firestore rules **and** Storage rules. I could not confirm that the smaller set is enough for the Storage part, so **Firebase Admin** is the safer choice (*Unverified until the first deploy runs*). If you prefer the smaller set and the deploy later fails with a "permission" error, add **Firebase Admin**.
+**Don't** add **Service Account User** here. B.O.B. confirmed the website deploy (`deploy.yml`: Hosting plus the Firestore and Storage rules) doesn't need it. `firebase.json` only has the plain `/index.html` rewrite. Giving it on the whole project would let GitHub act as every robot account in the project.
+- *Caveat for later:* if a Hosting rewrite to a Cloud Function or Cloud Run service is ever added to `firebase.json`, `github-deploy` will need **Service Account User** on **that service's runtime account only**. Grant it on the single account, as in step 33, not on the project.
+
+*Why Firebase Admin:* the README lists the smaller set **Firebase Hosting Admin**, **Firebase Rules Admin** and **Service Account User**, "or Firebase Admin". (Leave out its Service Account User, as explained above.) The deploy publishes Hosting, Firestore rules **and** Storage rules. I could not confirm that the smaller set is enough for the Storage part, so **Firebase Admin** is the safer choice (*Unverified until the first deploy runs*). If you prefer the smaller set and the deploy later fails with a "permission" error, add **Firebase Admin**.
 
 **33. Optional: extra roles for the GitHub budget-guard workflow.** — Phone OK (desktop mode), easier on a computer
-**Only needed if you'll use the optional GitHub workflow `deploy-functions.yml` (Deploy budget-guard) for later deploys.** Skip it if you deploy budget-guard from your computer (steps 24 and 27). That workflow has **not been tested** against a real project yet (*Unverified*). It uses the same `FIREBASE_SERVICE_ACCOUNT` secret, so these roles go to **`github-deploy@YOUR-PROJECT-ID.iam.gserviceaccount.com`**. This list comes from B.O.B.'s README, section "CI deployer permissions (deploy-functions.yml)".
+**Only needed if you'll use the optional GitHub workflow `deploy-functions.yml` (Deploy budget-guard) for later deploys.** Skip it if you deploy budget-guard from your computer (steps 24 and 27). That workflow has **not been tested** against a real project yet (*Unverified*). It uses the same `FIREBASE_SERVICE_ACCOUNT` secret, so these roles go to **`github-deploy@YOUR-PROJECT-ID.iam.gserviceaccount.com`**. This list comes from B.O.B.'s README, section "CI deployer permissions (deploy-functions.yml)". His README calls this account `firebase-deployer@…` in its example commands. It's the same account; if you or B.O.B. run those commands, use `github-deploy` in place of `firebase-deployer`.
+
+**If you deploy budget-guard only from a terminal (steps 24 and 27), skip this whole step.** `github-deploy` then needs neither Service Account User grant, and none of the other roles below.
 
 | Role (as shown in the console) | Granted on | How |
 |--------------------------------|-----------|-----|
@@ -406,11 +411,10 @@ Then press **Continue**, then **Done**.
 - **New principals:** `github-deploy@YOUR-PROJECT-ID.iam.gserviceaccount.com`
 - **Select a role:** **Service Account User**.
 - Press **Save**.
-- This lets GitHub act as **that one account only**, not every account in the project.
+- `github-deploy` gets **Service Account User** on these two accounts only: `budget-guard@YOUR-PROJECT-ID.iam.gserviceaccount.com` and `PROJECT-NUMBER-compute@developer.gserviceaccount.com`, and only if you want GitHub to deploy budget-guard. It never gets it on the whole project. This lets GitHub act as those two accounts only.
 - Granting on a single service account follows Google's IAM docs ("Manage access to service accounts").
 
 Notes:
-- Step 32 already gave `github-deploy` **Service Account User** on the **whole project**. That also covers both single-account grants above. B.O.B.'s README recommends the narrower single-account grants, because a project-wide grant lets GitHub act as every service account. Ask B.O.B. whether the project-wide one can be removed. The website deploy may still need it (*Unverified*).
 - If a workflow run stops with "API not enabled", turn that API on yourself as Owner (step 19). Don't give GitHub more roles.
 - If a run fails at the **build** step with a permission error, the Cloud Build account may be missing its build rights. B.O.B.'s README says to give `PROJECT-NUMBER-compute@developer.gserviceaccount.com` the **Cloud Build Service Account** role (`roles/cloudbuild.builds.builder`) on the project. Ask B.O.B. first.
 - Also move `deploy-functions.yml` into `.github/workflows/` (Part 10).
@@ -605,10 +609,8 @@ Marked *Unverified* above:
 - The exact API titles in the API Library (step 19). Searching by ID works either way.
 - The **Firebase console → Functions → budgetGuard → Logs** path (step 26). It comes from B.O.B.'s README, not from Google's docs.
 - The optional GitHub "Deploy budget-guard" workflow and its extra roles (step 33). It's untested.
-- That the Cloud Run service is named exactly `budgetguard` (step 25).
-- Whether the project-wide **Service Account User** from step 32 can be dropped in favor of the single-account grants (step 33).
 - The wording of the Storage permission prompt, and the manual IAM role names.
-- Whether the smaller README role set is enough.
+- Whether **Firebase Hosting Admin** plus **Firebase Rules Admin** alone would be enough in place of Firebase Admin.
 - Firestore array-editing controls.
 - Copying the key file on iPhone and Android.
 
