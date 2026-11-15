@@ -72,11 +72,13 @@ npx ng build --configuration production
 - `.github/workflows/ci.yml` runs on every PR and push to `main`: `npm ci`, lint, unit tests, rules tests, production build.
 - `.github/workflows/deploy.yml` runs on push to `main` (and manually). It writes `environment.local.ts` from secrets, runs `npm run build:firebase`, then `firebase deploy --only hosting,firestore:rules,storage`. **Until every secret below exists, the job skips with a notice instead of failing.**
 
+Deploys run as a dedicated service account named **`github-deploy`** (the same name the Firebase setup guide uses).
+
 Required repository secrets (Settings → Secrets and variables → Actions):
 
 | Secret | Value |
 |--------|-------|
-| `FIREBASE_SERVICE_ACCOUNT` | JSON key for a deploy service account (roles: Firebase Hosting Admin, Firebase Rules Admin, Service Account User; or Firebase Admin) |
+| `FIREBASE_SERVICE_ACCOUNT` | JSON key for the `github-deploy` service account (roles: Firebase Hosting Admin and Firebase Rules Admin, or Firebase Admin). Service Account User isn't needed because Hosting has no rewrites to a function or Cloud Run. |
 | `FIREBASE_PROJECT_ID` | e.g. `mcl-portal` |
 | `FIREBASE_API_KEY` | web app `apiKey` |
 | `FIREBASE_AUTH_DOMAIN` | e.g. `mcl-portal.firebaseapp.com` |
