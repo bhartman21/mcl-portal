@@ -1,6 +1,6 @@
 # Detachment directory
 
-For: Department Admins and National Admins.
+For: Department Admins, National Admins, and Site Administrators.
 
 The portal keeps a list of Department of Florida detachments. Members see the active ones on the home page under **Active Florida Detachments**.
 
@@ -11,6 +11,12 @@ The portal keeps a list of Department of Florida detachments. Members see the ac
 
 Or, on the home page, press **Manage Detachments**.
 
+## On a brand-new portal: load the starter list
+
+The first time an administrator opens the portal, it fills in the Department of Florida list by itself.
+
+If the directory is still empty, you will see "The detachment directory is empty." Press **Seed DoF Detachments** to load the starter list.
+
 ## Add a detachment
 
 1. Under **Add Detachment**, type the **Number**. Example: 54. Leave it empty if you do not know it.
@@ -20,14 +26,25 @@ Or, on the home page, press **Manage Detachments**.
 
 If you leave the number empty, the detachment is marked **Needs Verification**.
 
+## Change a detachment
+
+1. Find the detachment in the list.
+2. Press **Edit** on its row. The row turns yellow.
+3. Change the number, name, notes (**Notes (optional)**), or city.
+4. Press **Save**. Or press **Cancel** to undo your changes.
+
+The name can't be empty.
+
 ## Confirm a detachment number
 
 Some detachments show **Needs Verification**. Their number is not confirmed yet. A yellow box at the top of the page tells you how many.
 
-1. Find the detachment in the list.
-2. In the **Det #** box on its row, type the confirmed number.
-3. Press **Verify**.
-4. The **Needs Verification** badge goes away.
+You can confirm the number in either of two ways:
+
+- **Quick way:** in the **Det #** box on its row, type the confirmed number. Press **Verify**.
+- **While editing:** press **Edit**, type the number, and press **Save**. The edit row reminds you: "Saving a new number marks it verified."
+
+Either way, the **Needs Verification** badge goes away.
 
 Today, the S/Sgt Ted Archambault Detachment is marked **Needs Verification**. Keep it separate from #54, which is the Morris F. Dixon Jr. Detachment.
 
@@ -40,5 +57,4 @@ There is no "Are you sure?" question. The change happens right away.
 
 ## Not built yet
 
-- Editing a detachment's name or city after it is added.
-- Deleting a detachment.
+- Deleting a detachment. Use **Deactivate** instead.

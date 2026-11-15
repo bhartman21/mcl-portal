@@ -1,21 +1,33 @@
 # Resetting a locked ad
 
-> **Planned — not available yet.**
->
-> This feature is not built. There is no reset button in the portal today, and ads do not get locked yet.
+For: Department Admins, National Admins, and Site Administrators. Ad Book Approvers can't reset locks.
 
-## What is planned
+> **Please note:** like all Ad Book data, locked ads are saved only in the web browser where they were made. You can only reset ads you can see on your own computer. Shared saving is **planned — not available yet**.
 
-From `features/AD_BOOK.md` and `OPEN_QUESTIONS.md` (question 9), decided Nov 14, 2026:
+## What a locked ad is
 
-- Each ad may be submitted at most **3 times**.
-- After the 3rd rejection, the ad will be locked. The member will see that the submission limit was reached.
-- A **Department Admin** or **National Admin** will be able to reset the lock.
-- A reset will unlock the ad, set its submission count back to zero, and return it to draft. The member can then submit it up to 3 more times.
-- Every reset will be recorded: who did it, when, and an optional reason.
+Each ad can be submitted up to **3 times**. If an ad is rejected on its 3rd submission, it is **locked**. The member can't edit, submit, or delete it. Only an administrator can unlock it.
 
-Step-by-step instructions will be added here when the feature is built.
+## Reset the lock
 
-## Not the same thing: locking a program book
+1. Open **Ad Book Studio**.
+2. Press **Approval Queue**.
+3. Scroll down to **Locked Ads**. This section only shows when there is at least one locked ad.
+4. Find the ad. It shows its title, who made it, and **Submission 3 of 3**.
+5. If you like, type why in **Reason (optional)**.
+6. Press **Reset Lock**.
+7. You will see "Lock reset. The ad is back in draft and the member can submit up to 3 more times."
 
-Locking a **program book** is built. It stops new ads from being added to that book. See [Event books and ad sizes](./event-books-and-ad-sizes.md).
+There is no "Are you sure?" question. The reset happens right away.
+
+## What happens next
+
+- The ad goes back to **draft**.
+- Its count goes back to **Submission 0 of 3**.
+- The member can edit it and submit it up to 3 more times.
+- The reset is recorded: who did it, when, and your reason if you gave one. Look for **Reset submission lock** in the [audit log](./notifications-and-audit-log.md).
+- The portal does not tell the member. You may want to tell them yourself.
+
+## Another way: undo the rejection
+
+If the last rejection was a mistake, you can use **Undo Review** instead. That puts the ad back in the queue as **submitted** and unlocks it, without starting the count over. See [Approving and rejecting ads](./ad-approvals.md#undo-a-review-administrators-only).

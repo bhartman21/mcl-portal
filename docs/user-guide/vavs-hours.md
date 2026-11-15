@@ -4,7 +4,7 @@
 >
 > The VAVS Service Tracker is not built yet. You cannot log hours in the portal today.
 >
-> The **VAVS Tracker** page exists, but it is only a placeholder. Its **New Entry** button does not work yet.
+> The **VAVS Tracker** page exists, but it is only a placeholder. Its **New Entry (Phase 2)** button does not work yet.
 >
 > Please keep using your detachment's current way of reporting VAVS hours.
 

@@ -1,12 +1,14 @@
 # Event books and ad sizes
 
-For: Ad Book Approvers, Department Admins, and National Admins.
+For: Ad Book Approvers, Department Admins, National Admins, and Site Administrators.
 
 > **Please note:** like ads, program books and ad sizes are saved only in the web browser on the computer you used. Shared saving is planned.
 
 ## Program books
 
 A program book holds approved ads for one event, such as the Department convention.
+
+**Who sees which books:** members only see books that are **Open**. Approvers and administrators see every book, including **Locked** and **Printed** ones.
 
 ### Make a new book
 
@@ -51,6 +53,8 @@ Under **Book Controls**, press one of:
 - **Printed** — the same as Locked. Use it to show the book has been printed.
 
 To make changes to a Locked or Printed book, press **Open** again.
+
+While a book is **Locked** or **Printed**, members can't see it in Ad Book Studio.
 
 ### Print the book
 

@@ -8,7 +8,7 @@ Ad Book Studio lets you make an ad for a Department program book. You then send 
 > - An approver on a different computer cannot see your ad yet.
 > - Clearing your browser history may erase your ads.
 >
-> Saving ads to the Department's shared system is planned.
+> Saving ads to the Department's shared system is **planned — not available yet**.
 
 You must be signed in to use Ad Book Studio.
 
@@ -64,6 +64,13 @@ After you add artwork, two buttons appear:
   - The ad must have a title and artwork.
   - You return to the Ad Book Studio page.
 
+## You can submit each ad up to 3 times
+
+- Each ad shows **Submission 1 of 3**, **Submission 2 of 3**, and so on, under **My Ads**.
+- Every time you submit, one submission is used.
+- Taking an ad back with **Withdraw to Draft** does **not** give the submission back.
+- If an ad is rejected on its 3rd submission, it is locked. See [When an ad is rejected or locked](./rejected-or-locked-ads.md).
+
 ## Check on your ad
 
 Each ad under **My Ads** shows a status:
@@ -78,10 +85,18 @@ Each ad under **My Ads** shows a status:
 ## Buttons on your ad
 
 - **Edit** — change a draft or rejected ad.
-- **Submit** — send a draft or rejected ad for approval, right from the list.
-- Trash can (**Delete draft**) — delete a draft. **Be careful:** it is deleted right away. There is no "Are you sure?" question.
-- **View** — look at a submitted or approved ad.
-- **Recall to Draft** — take back a submitted or approved ad so you can change it. You will need to submit it again. If the ad was in a program book, it is taken out of that book (unless the book is locked or printed).
+- **Submit** — send a draft or rejected ad for approval, right from the list. You will see "Ad submitted to the Approval Queue."
+- Trash can (**Delete draft**) — delete a draft. Only drafts can be deleted. **Be careful:** it is deleted right away. There is no "Are you sure?" question.
+- **View** — look at a submitted, approved, or locked ad.
+- **Withdraw to Draft** — take back a **submitted** ad before it is reviewed, so you can change it. You will see "Ad withdrawn to draft. This does not give back a submission." You will need to submit it again.
+
+## If your ad is already approved
+
+An approved ad can't be edited. The editor says: "This ad is currently **approved** and can't be edited. If it needs changes, ask an admin to undo the approval, then withdraw it."
+
+## Who reviews your ad
+
+A different person must review your ad. Approvers can't approve or reject their own ads.
 
 ## Payment
 

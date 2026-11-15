@@ -1,6 +1,6 @@
 # Registration lock-down and new members
 
-For: Department Admins and National Admins.
+For: Department Admins, National Admins, and Site Administrators.
 
 You choose what happens when someone signs in to the portal for the first time.
 
@@ -31,9 +31,12 @@ Changing this setting only affects **new** sign-ins. People who already use the 
 
 There is no "Are you sure?" question. The change happens right away.
 
+You can't approve or suspend yourself, or someone with a higher admin role. See [Roles: who can do what](./roles.md).
+
 You can also give roles to a new person. See [Roles: who can do what](./roles.md).
 
 ## Good to know
 
 - A pending person cannot use Ad Book Studio or the VAVS Tracker.
 - The portal does not email people when they are approved. You may want to tell them yourself.
+- On a brand-new portal, the setting starts as **Open (Auto-Approve)**. It is saved the first time an administrator opens the portal.
