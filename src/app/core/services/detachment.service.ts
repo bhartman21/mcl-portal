@@ -24,7 +24,8 @@ function byName(a: Detachment, b: Detachment): number {
   return a.name.localeCompare(b.name);
 }
 
-const STORAGE_DETACHMENTS_KEY = 'mcl_portal_detachments_v1';
+// v2 (Nov 15, 2026): corrected 52-row seed; demo browsers holding the old 8-row v1 copy re-seed.
+const STORAGE_DETACHMENTS_KEY = 'mcl_portal_detachments_v2';
 
 @Injectable({ providedIn: 'root' })
 export class DetachmentService {
@@ -101,8 +102,8 @@ export class DetachmentService {
   }
 
   /**
-   * Writes SEED_DETACHMENTS (#54 = Morris F. Dixon Jr.; S/Sgt Ted Archambault with
-   * needsVerification and no number) to Firestore. Only admins can write detachments.
+   * Writes SEED_DETACHMENTS (R.U.D.Y.'s DoF directory; #54 = Morris F. Dixon Jr.,
+   * Archambault = #819) to Firestore. Only admins can write detachments.
    * Existing documents with the same ids are left untouched.
    */
   async seedDefaults(): Promise<void> {
