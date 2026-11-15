@@ -92,6 +92,7 @@ Billy asked for a cleaner header after screenshots showed it overflowing when si
 - Header height stays one row (about 64–72px) on desktop. The scarlet blood stripe stays.
 - Keyboard: avatar and Admin menus open with Enter/Space, close with Esc, and focus returns to the button. `aria-expanded` is set on both. Bell has an aria-label with the unread count.
 - Visual: keep navy bar, gold subtitle, scarlet active-link underline (replace the filled red "Home" pill).
+- Decided in build (PR #28, B.O.B.): in the collapsed menu the bell sits beside the hamburger; Admin links show inline under a small "Admin" heading instead of a nested dropdown; avatar initials come from the first and last words of the display name (text in parentheses ignored), falling back to the first letter of the email; in dark mode the selected theme button is gold.
 
 ## Component conventions
 
