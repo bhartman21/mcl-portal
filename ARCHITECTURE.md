@@ -42,6 +42,8 @@ The free Spark plan no longer fits: Cloud Storage (even the default bucket) requ
 | Automatic shutoff | Budget publishes to a Pub/Sub topic; a small Cloud Function (`budget-guard`) detaches billing from the project when actual cost reaches $10 (Google's documented "disable billing with notifications" pattern) |
 | Shutoff effect | Billed services stop until Billy re-links billing; Google warns resources may not shut down cleanly, so alerts at $2/$5/$8 give time to react first |
 | Only Cloud Function | `budget-guard` is the only function; app features still use no Cloud Functions |
+| Guard details (B.O.B., PR #34) | Pub/Sub topic `budget-guard`; fires when cost >= budget; budget scoped to this project only; the function's service account has Project Billing Manager + Browser on the project (not Billing Account Admin); dry-run flag defaults to false, but the first deploy runs with dry run on to test it |
+| Re-linking while over budget | **Open (OPEN_QUESTIONS #22):** the guard detaches billing again if it's re-linked while that month's cost is still over $10. Current plan: raise the budget first, then re-link |
 
 Email sign-in link stays the sign-in method (no change to the app).
 
