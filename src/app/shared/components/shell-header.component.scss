@@ -1,16 +1,33 @@
+// App header layout: STYLE_GUIDE.md "App header layout" (Nov 15, 2026).
+
+.mcl-demo-strip {
+  background-color: var(--mcl-navy-deep);
+  color: var(--mcl-subtitle-color);
+  font-size: 0.75rem;
+  line-height: 1.5rem;
+}
+
 .mcl-navbar {
   background-color: var(--mcl-header-bg);
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+
+  @media (min-width: 1200px) {
+    min-height: 64px;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
 }
 
 .mcl-brand-title {
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: #ffffff;
   letter-spacing: 0.02em;
 }
 
 .mcl-brand-subtitle {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.09em;
@@ -18,66 +35,241 @@
 }
 
 .mcl-nav-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
   color: rgba(255, 255, 255, 0.88);
   font-weight: 500;
-  padding: 0.55rem 0.85rem;
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  background: transparent;
   border-radius: 0.375rem;
-  transition: color 0.15s ease, background-color 0.15s ease;
 
-  &:hover {
+  &:hover,
+  &:focus-visible {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  // Scarlet active-link underline (replaces the filled red pill).
+  &.active {
+    color: #ffffff;
+    font-weight: 600;
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 0.75rem;
+      right: 0.75rem;
+      bottom: 0.15rem;
+      height: 3px;
+      border-radius: 2px;
+      background-color: var(--mcl-scarlet-bright, #cc0000);
+    }
+  }
+}
+
+// Collapsed menu: active link marked with a left bar instead of an underline.
+@media (max-width: 1199.98px) {
+  .mcl-nav-link {
+    display: flex;
+
+    &.active::after {
+      left: 0;
+      right: auto;
+      top: 0.4rem;
+      bottom: 0.4rem;
+      width: 3px;
+      height: auto;
+    }
+  }
+}
+
+.mcl-collapsed-heading {
+  display: block;
+  margin: 0.5rem 0 0.15rem;
+  padding: 0 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--mcl-subtitle-color);
+}
+
+.mcl-header-right {
+  @media (max-width: 1199.98px) {
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    margin-top: 0.5rem;
+    padding-top: 0.75rem;
+  }
+}
+
+.mcl-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.5rem;
+  height: 2.5rem;
+  padding: 0 0.6rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.1rem;
+  white-space: nowrap;
+
+  &:hover,
+  &:focus-visible {
     color: #ffffff;
     background-color: rgba(255, 255, 255, 0.12);
   }
 
-  &.active {
-    color: #ffffff;
-    background-color: var(--mcl-scarlet);
-    font-weight: 600;
+  @media (max-width: 1199.98px) {
+    justify-content: flex-start;
+    font-size: 1rem;
+    border-radius: 0.375rem;
+    align-self: stretch;
   }
 }
 
-.mcl-user-role {
-  font-size: 0.7rem;
-  color: var(--mcl-subtitle-color);
-  letter-spacing: 0.03em;
+.mcl-bell-badge {
+  font-size: 0.65rem;
+
+  @media (min-width: 1200px) {
+    position: absolute;
+    top: 0.1rem;
+    right: 0.05rem;
+  }
+
+  @media (max-width: 1199.98px) {
+    margin-left: 0.5rem;
+  }
+}
+
+.mcl-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  border: 2px solid var(--mcl-subtitle-color);
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover,
+  &[aria-expanded='true'] {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
 }
 
 .mcl-dropdown {
   border-top: 2px solid var(--mcl-gold);
   box-shadow: 0 8px 24px rgba(0, 27, 58, 0.18);
+
+  .dropdown-item {
+    white-space: nowrap;
+
+    &.active,
+    &:active {
+      background-color: var(--mcl-navy);
+      color: #ffffff;
+    }
+  }
 }
 
-.mcl-theme-switcher {
-  display: inline-flex;
-  align-items: center;
-  background-color: rgba(0, 0, 0, 0.22);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 999px;
-  padding: 2px;
-  gap: 2px;
+.mcl-account-menu {
+  width: 18rem;
+  max-width: calc(100vw - 1rem);
+  padding: 0.75rem 0 0.25rem;
+  margin-top: 0.4rem;
 }
 
-.mcl-theme-btn {
-  border: 0;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.8);
+.mcl-account-head,
+.mcl-account-theme {
+  padding: 0 1rem 0.6rem;
+  min-width: 0;
+}
+
+.mcl-account-email,
+.mcl-account-label {
+  color: var(--bs-secondary-color);
+}
+
+.mcl-user-role {
   font-size: 0.75rem;
   font-weight: 600;
-  padding: 0.3rem 0.65rem;
-  border-radius: 999px;
-  display: inline-flex;
+  color: var(--mcl-heading);
+  letter-spacing: 0.03em;
+}
+
+.mcl-signout {
+  display: flex;
   align-items: center;
-  gap: 0.3rem;
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0.45rem 1rem;
+  text-align: left;
+  font-weight: 500;
 
-  &:hover {
-    color: #ffffff;
-    background-color: rgba(255, 255, 255, 0.1);
+  &:hover,
+  &:focus-visible {
+    background-color: var(--bs-tertiary-bg);
+  }
+}
+
+// Collapsed (navy) context: account block and theme picker sit on the dark bar.
+.mcl-collapsed-account {
+  color: #ffffff;
+
+  .mcl-account-head,
+  .mcl-account-theme {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
   }
 
-  &.active {
-    background-color: #ffffff;
-    color: #142c49;
+  .mcl-account-email,
+  .mcl-account-email,
+.mcl-account-label {
+    color: rgba(255, 255, 255, 0.65);
   }
+
+  .mcl-user-role {
+    color: var(--mcl-subtitle-color);
+  }
+
+  hr {
+    border-color: rgba(255, 255, 255, 0.15);
+    opacity: 1;
+  }
+
+  .mcl-signout {
+    padding-left: 0.75rem;
+    border-radius: 0.375rem;
+
+    &:hover,
+    &:focus-visible {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+  }
+}
+
+// Right-align the avatar and theme menus (no Popper here).
+.dropdown-menu-end {
+  right: 0;
+  left: auto;
+}
+
+// Let long names truncate instead of widening the collapsed menu.
+.navbar-collapse,
+.mcl-header-right,
+.mcl-collapsed-account {
+  min-width: 0;
+  max-width: 100%;
 }
