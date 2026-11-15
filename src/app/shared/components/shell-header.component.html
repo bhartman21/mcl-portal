@@ -11,20 +11,20 @@
     <div class="container-xl">
       <!-- Left zone: brand lockup links home (no separate Home link) -->
       <a
-        class="navbar-brand mcl-brand d-flex align-items-center gap-2 py-0 me-xl-4"
+        class="navbar-brand mcl-brand d-flex overflow-hidden align-items-center gap-2 py-0 me-2 me-xl-4"
         routerLink="/"
         (click)="closeMenus()"
         aria-label="Marine Corps League, Department of Florida Member Portal, home"
       >
         <app-mcl-crest [size]="40" />
-        <span class="d-flex flex-column lh-sm text-nowrap">
-          <span class="mcl-brand-title mcl-serif">Marine Corps League</span>
-          <span class="mcl-brand-subtitle">Department of Florida &bull; Member Portal</span>
+        <span class="d-flex flex-column lh-sm text-nowrap overflow-hidden">
+          <span class="mcl-brand-title mcl-serif text-truncate">Marine Corps League</span>
+          <span class="mcl-brand-subtitle text-truncate">Department of Florida &bull; Member Portal</span>
         </span>
       </a>
 
       <button
-        class="navbar-toggler"
+        class="navbar-toggler flex-shrink-0"
         type="button"
         (click)="menuOpen.set(!menuOpen())"
         [attr.aria-expanded]="menuOpen()"

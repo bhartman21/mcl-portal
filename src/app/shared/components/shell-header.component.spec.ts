@@ -41,6 +41,23 @@ describe('initialsFor', () => {
     expect(initialsFor('Dept. Adjutant (Admin)', 'a@b.org')).toBe('DA');
     expect(initialsFor('Cpl. D. Rivera', 'a@b.org')).toBe('CR');
   });
+  it('skips name suffixes Jr, Sr, II, III, IV when picking the last word (#29)', () => {
+    expect(initialsFor('Morris F Dixon Jr.', 'a@b.org')).toBe('MD');
+    expect(initialsFor('Morris F Dixon Jr', 'a@b.org')).toBe('MD');
+    expect(initialsFor('Morris Dixon, JR.', 'a@b.org')).toBe('MD');
+    expect(initialsFor('John Smith sr', 'a@b.org')).toBe('JS');
+    expect(initialsFor('John Smith Sr.', 'a@b.org')).toBe('JS');
+    expect(initialsFor('Bartholomew Montgomery-Fitzgerald III (Department Adjutant)', 'a@b.org')).toBe('BM');
+    expect(initialsFor('Henry Ford ii', 'a@b.org')).toBe('HF');
+    expect(initialsFor('Henry Ford IV.', 'a@b.org')).toBe('HF');
+    expect(initialsFor('Henry Ford III Jr', 'a@b.org')).toBe('HF');
+  });
+  it('keeps words that only look like suffixes when they are not the last word or are the whole name', () => {
+    expect(initialsFor('Ivan Ivy', 'a@b.org')).toBe('II');
+    expect(initialsFor('Jr', 'a@b.org')).toBe('JR');
+    expect(initialsFor('Sr. Smith', 'a@b.org')).toBe('SS');
+    expect(initialsFor('Mark Junior', 'a@b.org')).toBe('MJ');
+  });
   it('falls back to a single word, then the email', () => {
     expect(initialsFor('Billy', 'x@y.org')).toBe('BI');
     expect(initialsFor('', 'member@dof-mcl.org')).toBe('ME');
