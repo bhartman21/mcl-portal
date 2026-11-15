@@ -1,14 +1,59 @@
 rules_version = '2';
 
+// MCL Portal Storage rules. Uses cross-service Firestore lookups (users/{uid}, ads/{adId}).
+// Tests: rules-tests/storage.rules.test.ts (npm run test:rules).
+
 service firebase.storage {
   match /b/{bucket}/o {
+    function userDoc() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isActiveUser() {
+      return request.auth != null && userDoc().status == 'active';
+    }
+
+    function hasAnyRole(roles) {
+      return isActiveUser() && userDoc().roles.hasAny(roles);
+    }
+
+    function isApproved(adId) {
+      return firestore.get(/databases/(default)/documents/ads/$(adId)).data.status == 'approved';
+    }
+
+    // Issue #24: the owner may add, replace, or delete an ad's image only while the ad is editable
+    // (features/AD_BOOK.md workflow, mirrored from the ads update rules in firestore.rules): before
+    // the ad doc exists (first upload of a new ad), or while it is their own draft, or their own
+    // rejected ad that is not locked. Once submitted or approved the reviewed image is frozen.
+    function ownerMayChangeImage(uid, adId) {
+      let adPath = /databases/(default)/documents/ads/$(adId);
+      return !firestore.exists(adPath) || (
+        firestore.get(adPath).data.createdBy == uid
+        && (firestore.get(adPath).data.status == 'draft'
+            || (firestore.get(adPath).data.status == 'rejected'
+                && firestore.get(adPath).data.get('locked', false) != true))
+      );
+    }
+
+    // ARCHITECTURE.md: ad-images/{uid}/{adId}/{filename}; jpeg/png/webp; max 10 MB.
     match /ad-images/{uid}/{adId}/{filename} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null
+      // Owner, approvers/admins, or any active user once the ad is approved.
+      allow read: if isActiveUser() && (
+        request.auth.uid == uid ||
+        hasAnyRole(['adBookApprover', 'departmentAdmin', 'nationalAdmin', 'siteAdmin']) ||
+        isApproved(adId)
+      );
+      // Write own path only, and only while the ad is editable (#24).
+      allow create, update: if isActiveUser()
         && request.auth.uid == uid
+        && ownerMayChangeImage(uid, adId)
         && request.resource.size < 10 * 1024 * 1024
         && request.resource.contentType.matches('image/(jpeg|png|webp)');
+      // Owner deletes only while the ad is editable (#24); admins may still remove an image.
+      allow delete: if isActiveUser() && (
+        (request.auth.uid == uid && ownerMayChangeImage(uid, adId))
+        || hasAnyRole(['departmentAdmin', 'nationalAdmin', 'siteAdmin'])
+      );
     }
   }
 }
-

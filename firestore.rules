@@ -1,44 +1,203 @@
 rules_version = '2';
 
+// MCL Portal Firestore rules. Source of truth for permissions: ROLES_AND_PERMISSIONS.md.
+// Tests: rules-tests/*.rules.test.ts (npm run test:rules).
+
 service cloud.firestore {
   match /databases/{database}/documents {
+    // ---------- helpers ----------
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function userDoc() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    function userPath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
     }
 
+    function hasUserDoc() {
+      return isSignedIn() && exists(userPath(request.auth.uid));
+    }
+
+    function userDoc() {
+      return get(userPath(request.auth.uid)).data;
+    }
+
+    // Writes everywhere require users/{uid}.status == 'active' (pending/suspended cannot write).
     function isActiveUser() {
-      return isSignedIn() && userDoc().status == 'active';
+      return hasUserDoc() && userDoc().status == 'active';
     }
 
     function hasRole(role) {
       return isActiveUser() && role in userDoc().roles;
     }
 
-    function isAdmin() {
-      return hasRole('departmentAdmin') || hasRole('nationalAdmin');
+    // Roles that count as "department or national admin" in the docs. siteAdmin counts there too
+    // (ROLES_AND_PERMISSIONS.md, decided Nov 14, 2026): lock reset, self-approval, undo review,
+    // the audit log, and self-approval notification recipients.
+    function adminRoles() {
+      return ['departmentAdmin', 'nationalAdmin', 'siteAdmin'];
     }
 
+    function isDeptOrHigherAdmin() {
+      return isActiveUser() && userDoc().roles.hasAny(adminRoles());
+    }
+
+    function isAdmin() {
+      return isDeptOrHigherAdmin();
+    }
+
+    // ---------- admin grant hierarchy (ROLES_AND_PERMISSIONS.md "Admin role grants") ----------
+    function nonAdminRoles() {
+      return ['member', 'companyAdvertiser', 'detachmentVavsRep', 'departmentVavsRep', 'adBookApprover'];
+    }
+
+    // Roles the signed-in admin may grant AND revoke (revoke follows the grant table; inferred).
+    function grantableRoles() {
+      return hasRole('siteAdmin')
+        ? nonAdminRoles().concat(['departmentAdmin', 'nationalAdmin', 'siteAdmin'])
+        : hasRole('nationalAdmin')
+          ? nonAdminRoles().concat(['departmentAdmin', 'nationalAdmin'])
+          : hasRole('departmentAdmin')
+            ? nonAdminRoles().concat(['departmentAdmin'])
+            : [];
+    }
+
+    function auditPath(auditId) {
+      return /databases/$(database)/documents/audits/$(auditId);
+    }
+
+    function rolesOrScopesChanged() {
+      return request.resource.data.get('roles', []) != resource.data.get('roles', [])
+        || request.resource.data.get('detachmentScopes', []) != resource.data.get('detachmentScopes', []);
+    }
+
+    // A roles/scopes change must carry a fresh roleAuditId whose audits/{id} doc is written in the
+    // same batch (contents are validated by the audits create rule).
+    function roleChangeAudited(uid) {
+      let auditId = request.resource.data.get('roleAuditId', '');
+      return auditId is string
+        && auditId != ''
+        && auditId != resource.data.get('roleAuditId', '')
+        && !exists(auditPath(auditId))
+        && existsAfter(auditPath(auditId))
+        && getAfter(auditPath(auditId)).data.targetUid == uid;
+    }
+
+    // An audits/{id} roleChange entry is valid only alongside the matching users/{target} write.
+    function roleAuditMatchesUserWrite(auditId, a) {
+      let before = get(userPath(a.targetUid)).data;
+      let after = getAfter(userPath(a.targetUid)).data;
+      return after.get('roleAuditId', '') == auditId
+        && before.get('roleAuditId', '') != auditId
+        && a.beforeRoles == before.get('roles', [])
+        && a.afterRoles == after.get('roles', [])
+        && a.beforeScopes == before.get('detachmentScopes', [])
+        && a.afterScopes == after.get('detachmentScopes', []);
+    }
+
+    function userScopes() {
+      return userDoc().get('detachmentScopes', []);
+    }
+
+    function inDetachmentScope(detachmentId) {
+      return hasRole('detachmentVavsRep') && detachmentId in userScopes();
+    }
+
+    // settings/registration.mode; missing doc or field means the documented default 'open'.
+    function registrationMode() {
+      let path = /databases/$(database)/documents/settings/registration;
+      return exists(path) ? get(path).data.get('mode', 'open') : 'open';
+    }
+
+    function newUserStatus() {
+      return registrationMode() == 'approval' ? 'pending' : 'active';
+    }
+
+    // ---------- users ----------
     match /users/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
-      allow create: if isSignedIn() && request.auth.uid == uid;
-      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['roles', 'status']));
-      allow delete: if isAdmin();
+
+      // First sign-in: member role only, no detachment scopes, status set by registration mode.
+      allow create: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(
+             ['uid', 'email', 'displayName', 'status', 'roles', 'detachmentScopes', 'createdAt', 'updatedAt'])
+        && request.resource.data.uid == uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.roles == ['member']
+        && request.resource.data.get('detachmentScopes', []) == []
+        && request.resource.data.status == newUserStatus();
+
+      // Active users may edit their own profile fields; never roles, status, scopes, uid, or email.
+      allow update: if isActiveUser()
+        && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['displayName', 'memberNumber', 'defaultDetachmentId', 'updatedAt']);
+
+      // Admins manage other users' roles, scopes, and status (approve, suspend) per the grant table:
+      // - never their own doc (nobody raises, or accidentally drops, their own roles);
+      // - only targets whose current roles are all grantable by the actor (no demoting/suspending
+      //   someone above you; inferred), and only to roles the actor may grant;
+      // - every roles/scopes change is audited in audits/{roleAuditId} in the same batch.
+      allow update: if isAdmin()
+        && request.auth.uid != uid
+        && resource.data.get('roles', []).hasOnly(grantableRoles())
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+             ['roles', 'detachmentScopes', 'status', 'roleAuditId', 'updatedAt',
+              'displayName', 'memberNumber', 'defaultDetachmentId'])
+        && request.resource.data.status in ['active', 'pending', 'suspended']
+        && request.resource.data.roles is list
+        && request.resource.data.roles.size() > 0
+        && request.resource.data.roles.hasOnly(grantableRoles())
+        && request.resource.data.get('detachmentScopes', []) is list
+        && (!rolesOrScopesChanged() || roleChangeAudited(uid));
+
+      allow delete: if isAdmin()
+        && request.auth.uid != uid
+        && resource.data.get('roles', []).hasOnly(grantableRoles());
+    }
+
+    // ---------- audits (role grants/revokes; immutable, unforgeable) ----------
+    match /audits/{auditId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(
+             ['action', 'actorUid', 'actorRoles', 'targetUid', 'at',
+              'beforeRoles', 'afterRoles', 'beforeScopes', 'afterScopes'])
+        && request.resource.data.keys().hasAll(
+             ['action', 'actorUid', 'actorRoles', 'targetUid', 'at',
+              'beforeRoles', 'afterRoles', 'beforeScopes', 'afterScopes'])
+        && request.resource.data.action == 'roleChange'
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.actorRoles == userDoc().roles
+        && request.resource.data.at == request.time
+        && request.resource.data.targetUid is string
+        && request.resource.data.targetUid != request.auth.uid
+        && roleAuditMatchesUserWrite(auditId, request.resource.data);
+      allow update, delete: if false;
+    }
+
+    // ---------- settings (registration lock-down switch) ----------
+    match /settings/registration {
+      allow read: if isSignedIn();
+      allow write: if isAdmin()
+        && request.resource.data.mode in ['open', 'approval']
+        && request.resource.data.keys().hasOnly(['mode', 'updatedAt', 'updatedBy']);
     }
 
     match /settings/{docId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      // registration has its own validated rule above (rules OR across matches).
+      allow write: if isAdmin() && docId != 'registration';
     }
 
+    // ---------- detachments ----------
     match /detachments/{detachmentId} {
       allow read: if resource.data.active == true || isActiveUser();
       allow write: if isAdmin();
     }
 
+    // ---------- VAVS (Phase 2 feature; rules in place now) ----------
     match /vavsPeriods/{periodId} {
       allow read: if isActiveUser();
       allow write: if isAdmin() || hasRole('departmentVavsRep');
@@ -49,51 +208,285 @@ service cloud.firestore {
         resource.data.ownerUid == request.auth.uid ||
         hasRole('departmentVavsRep') ||
         isAdmin() ||
-        (hasRole('detachmentVavsRep') && resource.data.detachmentId in userDoc().detachmentScopes)
+        inDetachmentScope(resource.data.detachmentId)
       );
       allow create: if isActiveUser() && request.resource.data.ownerUid == request.auth.uid;
       allow update, delete: if isActiveUser() && (
         resource.data.ownerUid == request.auth.uid ||
         hasRole('departmentVavsRep') ||
         isAdmin() ||
-        (hasRole('detachmentVavsRep') && resource.data.detachmentId in userDoc().detachmentScopes)
+        inDetachmentScope(resource.data.detachmentId)
       );
     }
 
+    // Audit logs: written only by the acting rep/admin for an entry in their scope; immutable.
     match /vavsAuditLogs/{logId} {
       allow read: if isActiveUser() && (
-        hasRole('detachmentVavsRep') ||
         hasRole('departmentVavsRep') ||
-        isAdmin()
+        isAdmin() ||
+        (hasRole('detachmentVavsRep') && resource.data.detachmentId in userScopes())
       );
-      allow create: if isActiveUser();
+      allow create: if isActiveUser()
+        && request.resource.data.keys().hasOnly(
+             ['id', 'entryId', 'action', 'actorUid', 'actorRole', 'detachmentId', 'at', 'before', 'after'])
+        && request.resource.data.keys().hasAll(
+             ['entryId', 'action', 'actorUid', 'actorRole', 'detachmentId', 'at'])
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.action in ['create', 'update', 'delete']
+        && request.resource.data.at == request.time
+        && request.resource.data.actorRole in userDoc().roles
+        && (
+          (request.resource.data.actorRole in ['departmentAdmin', 'nationalAdmin', 'siteAdmin'] && isAdmin()) ||
+          (request.resource.data.actorRole == 'departmentVavsRep' && hasRole('departmentVavsRep')) ||
+          (request.resource.data.actorRole == 'detachmentVavsRep'
+            && inDetachmentScope(request.resource.data.detachmentId))
+        );
       allow update, delete: if false;
     }
 
+    // ---------- Ad Book ----------
     match /adSizes/{sizeId} {
       allow read: if resource.data.active == true || isActiveUser();
       allow write: if isAdmin() || hasRole('adBookApprover');
     }
 
+    // Members read open books only; approvers and admins read every book (ARCHITECTURE.md
+    // security outline: members "read open books", approvers/admins R/W). Member queries must
+    // filter on status == 'open'.
     match /adBooks/{bookId} {
-      allow read: if isActiveUser();
+      allow read: if isActiveUser() && (
+        resource.data.status == 'open' ||
+        hasRole('adBookApprover') ||
+        isAdmin()
+      );
       allow write: if isAdmin() || hasRole('adBookApprover');
     }
 
+    // ads: every update must match exactly one documented transition (features/AD_BOOK.md FR-A-3,
+    // AC 2, 3, 12, 13). Privileged fields (status, review fields, createdBy, ...) can only change
+    // through the transition that owns them.
     match /ads/{adId} {
+      function changedKeys() {
+        return request.resource.data.diff(resource.data).affectedKeys();
+      }
+
+      function isOwner() {
+        return resource.data.createdBy == request.auth.uid;
+      }
+
+      function canReview() {
+        return hasRole('adBookApprover') || isDeptOrHigherAdmin();
+      }
+
+      function oldStatus() {
+        return resource.data.status;
+      }
+
+      function newStatus() {
+        return request.resource.data.status;
+      }
+
+      function nonBlank(value) {
+        return value is string && value.trim().size() > 0;
+      }
+
+      // Fields the owner edits in the ad editor.
+      function contentKeys() {
+        return ['title', 'sizeId', 'bookId', 'companyName', 'imagePath', 'imageUrl', 'imageName',
+                'fit', 'position', 'createdByName', 'updatedAt'];
+      }
+
+      function reviewKeys() {
+        return ['status', 'reviewedBy', 'reviewedByName', 'reviewedAt', 'rejectionNotes', 'updatedAt'];
+      }
+
+      function absent(key) {
+        return !(key in request.resource.data);
+      }
+
+      // Submission limit (AD_BOOK.md FR-A-3, AC 9, 11): max 3 submissions; maxSubmissions is
+      // fixed at create and never changes.
+      function submissionsUsed() {
+        return resource.data.get('submissionCount', 0);
+      }
+
+      function maxSubmissions() {
+        return resource.data.get('maxSubmissions', 3);
+      }
+
+      function isLocked() {
+        return resource.data.get('locked', false) == true;
+      }
+
+      // The write must be paired (same batch) with a new audits/{lastAuditId} doc for this ad,
+      // written by the caller for the given action.
+      function auditedAs(action) {
+        let auditId = request.resource.data.get('lastAuditId', null);
+        let audit = getAfter(/databases/$(database)/documents/audits/$(auditId)).data;
+        return auditId is string
+          && auditId != resource.data.get('lastAuditId', '')
+          && audit.action == action
+          && audit.entityType == 'ad'
+          && audit.entityId == adId
+          && audit.actorUid == request.auth.uid;
+      }
+
+      // An approved ad placed in a locked (or printed) book must be removed from the book first.
+      function placedInLockedBook() {
+        let bookId = resource.data.get('bookId', null);
+        let bookPath = /databases/$(database)/documents/adBooks/$(bookId);
+        return bookId is string && bookId.size() > 0
+          && existsAfter(bookPath)
+          && getAfter(bookPath).data.status in ['locked', 'printed']
+          && adId in getAfter(bookPath).data.get('adIds', [adId]);
+      }
+
       allow read: if isActiveUser() && (
         resource.data.createdBy == request.auth.uid ||
         hasRole('adBookApprover') ||
-        isAdmin()
+        isDeptOrHigherAdmin()
       );
-      allow create: if isActiveUser() && request.resource.data.createdBy == request.auth.uid;
-      allow update: if isActiveUser() && (
-        (resource.data.createdBy == request.auth.uid && resource.data.status in ['draft', 'rejected']) ||
-        hasRole('adBookApprover') ||
-        isAdmin()
-      );
-      allow delete: if isAdmin() || (isActiveUser() && resource.data.createdBy == request.auth.uid && resource.data.status == 'draft');
+
+      // New ads are always the caller's own draft with no review state.
+      allow create: if isActiveUser()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.status == 'draft'
+        && request.resource.data.get('createdByType', 'member') == 'member'
+        && request.resource.data.get('submissionCount', 0) == 0
+        && request.resource.data.get('maxSubmissions', 3) == 3
+        && request.resource.data.get('locked', false) == false
+        && request.resource.data.keys().hasOnly(
+             contentKeys().concat(['id', 'departmentId', 'status', 'createdBy', 'createdByType', 'createdAt',
+                                   'submissionCount', 'maxSubmissions', 'locked']));
+
+      // Owner edits a draft or rejected ad (editing a rejected ad returns it to draft).
+      // A locked ad (3rd rejection) can't be edited until an admin resets it.
+      allow update: if oldStatus() in ['draft', 'rejected'] && newStatus() in ['draft', 'rejected']
+        && isOwner() && isActiveUser()
+        && !isLocked()
+        && (newStatus() == oldStatus() || (oldStatus() == 'rejected' && newStatus() == 'draft'))
+        && changedKeys().hasOnly(contentKeys().concat(['status']));
+
+      // Owner submits a draft or rejected ad (may save content in the same write; clears notes).
+      // Each submit adds exactly 1 to submissionCount; the 4th submit is denied.
+      allow update: if oldStatus() in ['draft', 'rejected'] && newStatus() == 'submitted'
+        && isOwner() && isActiveUser()
+        && !isLocked()
+        && request.resource.data.get('submissionCount', 0) == submissionsUsed() + 1
+        && request.resource.data.get('submissionCount', 0) <= maxSubmissions()
+        && changedKeys().hasOnly(contentKeys().concat(['status', 'submittedAt', 'rejectionNotes', 'submissionCount']))
+        && absent('rejectionNotes');
+
+      // Owner withdraws a submitted ad back to draft (AD_BOOK.md FR-A-3, AC 10). Status only:
+      // the submission attempt is not refunded.
+      allow update: if oldStatus() == 'submitted' && newStatus() == 'draft'
+        && isOwner() && isActiveUser()
+        && changedKeys().hasOnly(['status', 'updatedAt']);
+
+      // A different approver or admin approves a submitted ad.
+      allow update: if oldStatus() == 'submitted' && newStatus() == 'approved'
+        && !isOwner() && canReview()
+        && request.resource.data.reviewedBy == request.auth.uid
+        && changedKeys().hasOnly(reviewKeys().concat(['selfApproved', 'selfApprovalReason']))
+        && absent('rejectionNotes')
+        && absent('selfApproved')
+        && absent('selfApprovalReason');
+
+      // A department, national, or site admin self-approves only with a reason; audited (AC 12).
+      allow update: if oldStatus() == 'submitted' && newStatus() == 'approved'
+        && isOwner() && isDeptOrHigherAdmin()
+        && request.resource.data.reviewedBy == request.auth.uid
+        && request.resource.data.selfApproved == true
+        && nonBlank(request.resource.data.selfApprovalReason)
+        && changedKeys().hasOnly(reviewKeys().concat(['selfApproved', 'selfApprovalReason', 'lastAuditId']))
+        && absent('rejectionNotes')
+        && auditedAs('selfApprove');
+
+      // A different approver or admin rejects with notes (min 5 chars). Nobody self-rejects.
+      allow update: if oldStatus() == 'submitted' && newStatus() == 'rejected'
+        && !isOwner() && canReview()
+        && request.resource.data.reviewedBy == request.auth.uid
+        && request.resource.data.rejectionNotes is string
+        && request.resource.data.rejectionNotes.trim().size() >= 5
+        // The rejection of the last allowed submission locks the ad.
+        && request.resource.data.get('locked', false) == (submissionsUsed() >= maxSubmissions())
+        && changedKeys().hasOnly(reviewKeys().concat(['locked']));
+
+      // Admin undoes an approval or rejection with a reason (AC 13): back to submitted, review
+      // fields cleared, submissionCount untouched, audited; not while placed in a locked book.
+      allow update: if oldStatus() in ['approved', 'rejected'] && newStatus() == 'submitted'
+        && isDeptOrHigherAdmin()
+        && changedKeys().hasOnly(reviewKeys().concat(['selfApproved', 'selfApprovalReason', 'lastAuditId', 'locked']))
+        && request.resource.data.get('locked', false) == false
+        && absent('reviewedBy') && absent('reviewedByName') && absent('reviewedAt')
+        && absent('rejectionNotes') && absent('selfApproved') && absent('selfApprovalReason')
+        && auditedAs('undoReview')
+        && !placedInLockedBook();
+
+      // Admin lock reset (AD_BOOK.md FR-A-3, AC 11): clears locked, submissionCount = 0, back to
+      // draft, audited (who, when, reason).
+      allow update: if isLocked() && newStatus() == 'draft'
+        && isDeptOrHigherAdmin()
+        && request.resource.data.submissionCount == 0
+        && request.resource.data.locked == false
+        && changedKeys().hasOnly(['status', 'submissionCount', 'locked', 'lockResets', 'lastAuditId', 'updatedAt'])
+        && (!changedKeys().hasAny(['lockResets'])
+            || (request.resource.data.lockResets is list
+                && request.resource.data.lockResets.size() == resource.data.get('lockResets', []).size() + 1))
+        && auditedAs('lockReset');
+
+      // Only the owner deletes, and only while draft (AD_BOOK.md FR-A-3, AC 10). Approvers and
+      // admins can't delete members' ads; withdraw is the path for a submitted ad.
+      allow delete: if resource.data.status == 'draft' && isOwner() && isActiveUser();
+    }
+
+    // ---------- audits (Ad Book review decisions; admins only, immutable) ----------
+    match /audits/{auditId} {
+      allow read: if isDeptOrHigherAdmin();
+      // Must be written in the same batch as the ad change it records (ads.lastAuditId == auditId).
+      allow create: if isDeptOrHigherAdmin()
+        && request.resource.data.keys().hasOnly(
+             ['entityType', 'entityId', 'action', 'actorUid', 'actorName', 'at', 'reason', 'fromStatus', 'toStatus'])
+        && request.resource.data.keys().hasAll(['entityType', 'entityId', 'action', 'actorUid', 'at'])
+        && request.resource.data.entityType == 'ad'
+        && request.resource.data.action in ['selfApprove', 'undoReview', 'lockReset']
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.at == request.time
+        && request.resource.data.get('reason', '') is string
+        // Reason is required for self-approval and undo; optional for a lock reset.
+        && (request.resource.data.action == 'lockReset'
+            || request.resource.data.get('reason', '').trim().size() > 0)
+        && getAfter(/databases/$(database)/documents/ads/$(request.resource.data.entityId))
+             .data.get('lastAuditId', null) == auditId;
+      allow update, delete: if false;
+    }
+
+    // ---------- notifications (in-app only; AD_BOOK.md AC 2/12) ----------
+    match /notifications/{notificationId} {
+      allow read: if isActiveUser() && resource.data.recipientUid == request.auth.uid;
+
+      // Only the recipient marks their own notification read.
+      allow update: if isActiveUser()
+        && resource.data.recipientUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'readAt'])
+        && request.resource.data.read == true;
+
+      // An admin who self-approved an ad notifies another admin about that ad.
+      allow create: if isDeptOrHigherAdmin()
+        && request.resource.data.keys().hasOnly(
+             ['recipientUid', 'type', 'adId', 'adTitle', 'actorUid', 'actorName', 'reason', 'createdAt', 'read'])
+        && request.resource.data.keys().hasAll(['recipientUid', 'type', 'adId', 'actorUid', 'reason', 'createdAt', 'read'])
+        && request.resource.data.type == 'adSelfApproved'
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.recipientUid != request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.read == false
+        && get(/databases/$(database)/documents/users/$(request.resource.data.recipientUid))
+             .data.roles.hasAny(adminRoles())
+        && getAfter(/databases/$(database)/documents/ads/$(request.resource.data.adId)).data.createdBy == request.auth.uid
+        && getAfter(/databases/$(database)/documents/ads/$(request.resource.data.adId)).data.get('selfApproved', false) == true;
+
+      allow delete: if false;
     }
   }
 }
-

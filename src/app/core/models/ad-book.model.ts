@@ -30,6 +30,15 @@ export interface AdBook {
 
 export type AdStatus = 'draft' | 'submitted' | 'approved' | 'rejected';
 
+/** Max submissions per ad (decided Nov 14, 2026; AD_BOOK.md FR-A-3, AC 9). */
+export const MAX_AD_SUBMISSIONS = 3;
+
+export interface AdLockReset {
+  by: string;
+  at: string;
+  reason?: string;
+}
+
 export interface AdItem {
   id: string;
   bookId?: string;
@@ -38,6 +47,14 @@ export interface AdItem {
   title: string;
   status: AdStatus;
   rejectionNotes?: string;
+  /** Times submitted; only submit increases it, never lowered by the owner. */
+  submissionCount?: number;
+  /** Default 3; fixed at create. */
+  maxSubmissions?: number;
+  /** True after the rejection of the last allowed submission; only an admin can reset it. */
+  locked?: boolean;
+  /** Admin lock resets (also written to audits). */
+  lockResets?: AdLockReset[];
   createdBy: string;
   createdByName?: string;
   createdByType: 'member' | 'company' | 'guest';
@@ -47,10 +64,49 @@ export interface AdItem {
   fit: 'cover' | 'contain';
   position: { x: number; y: number };
   submittedAt?: string;
+  /** uid of the approver/admin who approved or rejected the ad. */
   reviewedBy?: string;
+  reviewedByName?: string;
   reviewedAt?: string;
+  /** Admin approved their own ad (AD_BOOK.md AC 12); always paired with selfApprovalReason. */
+  selfApproved?: boolean;
+  selfApprovalReason?: string;
+  /** Id of the audits/{id} doc written with the last audited change (self-approve, undo). */
+  lastAuditId?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export type AuditAction = 'selfApprove' | 'undoReview' | 'lockReset';
+
+/** `audits/{id}`: audited Ad Book actions (AD_BOOK.md FR-A-3, AC 12, 13). */
+export interface AuditEntry {
+  id: string;
+  entityType: 'ad';
+  entityId: string;
+  action: AuditAction;
+  actorUid: string;
+  actorName?: string;
+  at: string;
+  /** Required for selfApprove and undoReview; optional for lockReset. */
+  reason?: string;
+  fromStatus?: AdStatus;
+  toStatus?: AdStatus;
+}
+
+/** `notifications/{id}`: in-app notification for one recipient (no email). */
+export interface AppNotification {
+  id: string;
+  recipientUid: string;
+  type: 'adSelfApproved';
+  adId: string;
+  adTitle?: string;
+  actorUid: string;
+  actorName?: string;
+  reason: string;
+  createdAt: string;
+  read: boolean;
+  readAt?: string;
 }
 
 export const SEED_AD_SIZES: AdSize[] = [

@@ -85,6 +85,16 @@
                 }
               </div>
 
+              <div class="small mcl-muted mb-1" data-testid="submission-count">
+                Submission {{ adBook.submissionsUsed(ad) }} of {{ adBook.maxSubmissions(ad) }}
+              </div>
+              @if (ad.locked) {
+                <div class="alert alert-warning py-2 px-3 small mb-2" role="status">
+                  <strong>Submission limit reached.</strong> An administrator must reset this ad before
+                  it can be edited or submitted again.
+                </div>
+              }
+
               @if (ad.status === 'rejected' && ad.rejectionNotes) {
                 <div class="alert alert-danger py-2 px-3 small mb-2">
                   <strong>Revision Requested:</strong> {{ ad.rejectionNotes }}
@@ -92,13 +102,14 @@
               }
 
               <div class="mt-auto pt-2 d-flex flex-wrap gap-2">
-                @if (ad.status === 'draft' || ad.status === 'rejected') {
+                @if ((ad.status === 'draft' || ad.status === 'rejected') && !ad.locked) {
                   <a [routerLink]="['/ad-book/ads', ad.id]" class="btn btn-sm btn-mcl-outline flex-grow-1">
                     <i class="bi bi-pencil me-1"></i>Edit
                   </a>
                   <button
                     type="button"
                     class="btn btn-sm btn-mcl flex-grow-1"
+                    [disabled]="!adBook.canSubmit(ad)"
                     (click)="submitAd(ad.id)"
                   >
                     <i class="bi bi-send me-1"></i>Submit
@@ -117,13 +128,15 @@
                   <a [routerLink]="['/ad-book/ads', ad.id]" class="btn btn-sm btn-mcl-outline flex-grow-1">
                     <i class="bi bi-eye me-1"></i>View
                   </a>
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-outline-secondary"
-                    (click)="recallAd(ad.id)"
-                  >
-                    Recall to Draft
-                  </button>
+                  @if (ad.status === 'submitted') {
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-secondary"
+                      (click)="recallAd(ad.id)"
+                    >
+                      Withdraw to Draft
+                    </button>
+                  }
                 }
               </div>
             </div>
@@ -195,7 +208,7 @@
     }
 
     <div class="row g-4">
-      @for (book of adBook.adBooks(); track book.id) {
+      @for (book of adBook.visibleBooks(); track book.id) {
         <div class="col-md-6">
           <div class="mcl-card mcl-card-scarlet p-4 h-100 d-flex flex-column">
             <div class="d-flex align-items-start justify-content-between gap-2 mb-2">

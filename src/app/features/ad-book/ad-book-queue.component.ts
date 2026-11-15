@@ -15,6 +15,8 @@ export class AdBookQueueComponent {
   readonly notice = signal<string | null>(null);
   readonly errorMsg = signal<string | null>(null);
   readonly notesMap = signal<Record<string, string>>({});
+  /** Self-approval reasons (admins, own ads) and undo reasons, keyed by ad id. */
+  readonly reasonMap = signal<Record<string, string>>({});
 
   sizeLabel(sizeId: string): string {
     const s = this.adBook.getSizeById(sizeId);
@@ -25,21 +27,68 @@ export class AdBookQueueComponent {
     this.notesMap.update((m) => ({ ...m, [adId]: val }));
   }
 
-  approve(adId: string): void {
-    this.errorMsg.set(null);
-    this.adBook.approveAd(adId);
-    this.notice.set('Ad approved and ready for book placement.');
+  setReason(adId: string, val: string): void {
+    this.reasonMap.update((m) => ({ ...m, [adId]: val }));
   }
 
-  reject(adId: string): void {
+  reasonFor(adId: string): string {
+    return this.reasonMap()[adId] || '';
+  }
+
+  private run(action: () => void, success: string, fallback: string): void {
     this.errorMsg.set(null);
     this.notice.set(null);
     try {
-      this.adBook.rejectAd(adId, this.notesMap()[adId] || '');
-      this.notice.set('Ad returned to member with revision notes.');
+      action();
+      this.notice.set(success);
     } catch (err) {
-      this.errorMsg.set(err instanceof Error ? err.message : 'Unable to reject ad.');
+      this.errorMsg.set(err instanceof Error ? err.message : fallback);
     }
   }
-}
 
+  approve(adId: string): void {
+    this.run(
+      () => this.adBook.approveAd(adId),
+      'Ad approved and ready for book placement.',
+      'Unable to approve ad.'
+    );
+  }
+
+  selfApprove(adId: string): void {
+    this.run(
+      () => this.adBook.approveAd(adId, { selfApprovalReason: this.reasonFor(adId) }),
+      'Your ad was self-approved. The reason was logged and the other admins were notified.',
+      'Unable to approve ad.'
+    );
+  }
+
+  reject(adId: string): void {
+    this.run(
+      () => this.adBook.rejectAd(adId, this.notesMap()[adId] || ''),
+      'Ad returned to member with revision notes.',
+      'Unable to reject ad.'
+    );
+  }
+
+  resetLock(adId: string): void {
+    this.run(
+      () => {
+        this.adBook.resetLock(adId, this.reasonFor(`reset-${adId}`));
+        this.setReason(`reset-${adId}`, '');
+      },
+      'Lock reset. The ad is back in draft and the member can submit up to 3 more times.',
+      'Unable to reset the lock.'
+    );
+  }
+
+  undo(adId: string): void {
+    this.run(
+      () => {
+        this.adBook.undoReview(adId, this.reasonFor(adId));
+        this.setReason(adId, '');
+      },
+      'Review undone. The ad is back in the queue as submitted.',
+      'Unable to undo review.'
+    );
+  }
+}

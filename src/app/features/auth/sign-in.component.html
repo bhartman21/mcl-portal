@@ -42,64 +42,115 @@
             </div>
           }
 
-          @if (linkSent()) {
-            <div class="alert alert-success small" role="alert">
-              <i class="bi bi-envelope-check me-1"></i>
-              Sign-in link sent to <strong>{{ email }}</strong>. Check your inbox and click the link on this device.
+          @if (auth.authError()) {
+            <div class="alert alert-danger small" role="alert">
+              {{ auth.authError() }}
             </div>
           }
 
-          <form (ngSubmit)="sendEmailLink()" class="mb-3">
-            <label for="signInEmail" class="form-label fw-semibold small">
-              Email Address
-            </label>
-            <div class="input-group mb-3">
-              <input
-                id="signInEmail"
-                name="email"
-                type="email"
-                class="form-control"
-                placeholder="marine@example.com"
-                [(ngModel)]="email"
-                required
-              />
-              <button
-                type="submit"
-                class="btn btn-mcl px-4"
-                [disabled]="busy() || !email.trim()"
-              >
-                Send Sign-In Link
-              </button>
+          @if (needsEmailConfirm()) {
+            <div class="alert alert-info small" role="status">
+              <i class="bi bi-envelope-open me-1"></i>
+              @if (confirmReason() === 'mismatch') {
+                We couldn't finish signing in with the email address saved on this device. Check
+                the address below (it must be the one the link was sent to) and try again.
+              } @else {
+                It looks like you opened your sign-in link on a different device or browser.
+                Please re-enter your email address to finish signing in.
+              }
             </div>
-          </form>
+            <form (ngSubmit)="confirmEmailAndFinish()" class="mb-3">
+              <label for="confirmSignInEmail" class="form-label fw-semibold small">
+                Confirm Email Address
+              </label>
+              <div class="input-group mb-3">
+                <input
+                  id="confirmSignInEmail"
+                  name="confirmEmail"
+                  type="email"
+                  autocomplete="email"
+                  class="form-control"
+                  placeholder="marine@example.com"
+                  [(ngModel)]="confirmEmail"
+                  required
+                />
+                <button
+                  type="submit"
+                  class="btn btn-mcl px-4"
+                  [disabled]="busy() || !confirmEmail.trim()"
+                >
+                  Finish Sign-In
+                </button>
+              </div>
+            </form>
+          }
 
-          <div class="d-flex align-items-center my-3">
-            <hr class="flex-grow-1" />
-            <span class="px-3 small mcl-muted">or</span>
-            <hr class="flex-grow-1" />
-          </div>
+          @if (linkSent()) {
+            <div class="alert alert-success small" role="alert">
+              <i class="bi bi-envelope-check me-1"></i>
+              Sign-in link sent to <strong>{{ email }}</strong>. Check your inbox and open the link
+              (on another device you will be asked to confirm your email).
+            </div>
+          }
 
-          <button
-            type="button"
-            class="btn btn-mcl-outline w-100 mb-3"
-            (click)="signInGoogle()"
-            [disabled]="busy()"
-          >
-            <i class="bi bi-google me-1"></i>Continue with Google
-          </button>
+          @if (!needsEmailConfirm()) {
+            <form (ngSubmit)="sendEmailLink()" class="mb-3">
+              <label for="signInEmail" class="form-label fw-semibold small">
+                Email Address
+              </label>
+              <div class="input-group mb-3">
+                <input
+                  id="signInEmail"
+                  name="email"
+                  type="email"
+                  class="form-control"
+                  placeholder="marine@example.com"
+                  [(ngModel)]="email"
+                  required
+                />
+                <button
+                  type="submit"
+                  class="btn btn-mcl px-4"
+                  [disabled]="busy() || !email.trim()"
+                >
+                  Send Sign-In Link
+                </button>
+              </div>
+            </form>
+          }
+
+          <!-- Google sign-in "may be added later" (PROJECTPLAN Phase 0); off unless enabled in the environment. -->
+          @if (auth.googleSignInEnabled) {
+            <div class="d-flex align-items-center my-3">
+              <hr class="flex-grow-1" />
+              <span class="px-3 small mcl-muted">or</span>
+              <hr class="flex-grow-1" />
+            </div>
+
+            <button
+              type="button"
+              class="btn btn-mcl-outline w-100 mb-3"
+              (click)="signInGoogle()"
+              [disabled]="busy()"
+            >
+              <i class="bi bi-google me-1"></i>Continue with Google
+            </button>
+          }
 
           @if (auth.isDemoMode()) {
             <div class="mt-4 p-3 rounded border bg-light">
               <div class="d-flex align-items-center justify-content-between mb-2">
                 <span class="fw-bold small text-uppercase mcl-eyebrow-dark">
-                  <i class="bi bi-laptop me-1 text-warning"></i>Local Preview Sign-In
+                  <i class="bi bi-laptop me-1 text-warning"></i>Local Demo Mode (no Firebase)
                 </span>
                 <span class="badge bg-secondary-subtle text-dark">
                   Reg Mode: {{ auth.registrationMode() }}
                 </span>
               </div>
               <p class="mcl-muted small mb-3">
-                Firebase credentials are not configured yet. Choose a role below to preview the portal shell, guards, and admin controls:
+                Firebase is not configured, so this build runs in local demo mode: nothing is saved
+                to a server and these preview accounts exist only in this browser. Choose a role to
+                preview the portal shell, guards, and admin controls:
               </p>
               <div class="d-grid gap-2">
                 <button

@@ -267,7 +267,11 @@ export class AdEditorComponent implements OnInit {
 
   recall(): void {
     if (!this.adId()) return;
-    this.adBook.recallToDraft(this.adId()!);
-    this.notice.set('Ad recalled to draft. You may now edit and resubmit.');
+    try {
+      this.adBook.recallToDraft(this.adId()!);
+      this.notice.set('Ad withdrawn to draft. You may now edit and resubmit.');
+    } catch (err) {
+      this.errorMsg.set(err instanceof Error ? err.message : 'Unable to withdraw ad.');
+    }
   }
 }

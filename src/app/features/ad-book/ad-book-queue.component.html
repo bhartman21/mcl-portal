@@ -62,32 +62,174 @@
               }
             </div>
 
-            <div class="mb-3">
-              <label [for]="'notes-' + ad.id" class="form-label small fw-semibold">
-                Rejection Notes (required if rejecting, min 5 chars)
-              </label>
-              <input
-                [id]="'notes-' + ad.id"
-                type="text"
-                class="form-control form-control-sm"
-                placeholder="e.g. Logo resolution too low for full-page print"
-                [ngModel]="notesMap()[ad.id] || ''"
-                (ngModelChange)="setNotes(ad.id, $event)"
-              />
-            </div>
+            @if (adBook.canReviewAd(ad)) {
+              <div class="mb-3">
+                <label [for]="'notes-' + ad.id" class="form-label small fw-semibold">
+                  Rejection Notes (required if rejecting, min 5 chars)
+                </label>
+                <input
+                  [id]="'notes-' + ad.id"
+                  type="text"
+                  class="form-control form-control-sm"
+                  placeholder="e.g. Logo resolution too low for full-page print"
+                  [ngModel]="notesMap()[ad.id] || ''"
+                  (ngModelChange)="setNotes(ad.id, $event)"
+                />
+              </div>
 
-            <div class="mt-auto d-flex gap-2">
-              <button type="button" class="btn btn-success flex-grow-1" (click)="approve(ad.id)">
-                <i class="bi bi-check-lg me-1"></i>Approve
-              </button>
-              <button type="button" class="btn btn-outline-danger flex-grow-1" (click)="reject(ad.id)">
-                <i class="bi bi-x-lg me-1"></i>Reject with Notes
-              </button>
-            </div>
+              <div class="mt-auto d-flex gap-2">
+                <button type="button" class="btn btn-success flex-grow-1" (click)="approve(ad.id)">
+                  <i class="bi bi-check-lg me-1"></i>Approve
+                </button>
+                <button type="button" class="btn btn-outline-danger flex-grow-1" (click)="reject(ad.id)">
+                  <i class="bi bi-x-lg me-1"></i>Reject with Notes
+                </button>
+              </div>
+            } @else if (adBook.canSelfApprove(ad)) {
+              <div class="alert alert-warning small mb-3" role="note">
+                This is your own ad. As an admin you may approve it only with a reason. The approval
+                is logged and every other admin is notified. You can't reject your own ad; withdraw it
+                instead.
+              </div>
+              <div class="mb-3">
+                <label [for]="'self-reason-' + ad.id" class="form-label small fw-semibold">
+                  Reason for approving your own ad (required)
+                </label>
+                <input
+                  [id]="'self-reason-' + ad.id"
+                  type="text"
+                  class="form-control form-control-sm"
+                  [ngModel]="reasonFor(ad.id)"
+                  (ngModelChange)="setReason(ad.id, $event)"
+                />
+              </div>
+              <div class="mt-auto">
+                <button
+                  type="button"
+                  class="btn btn-success w-100"
+                  [disabled]="!reasonFor(ad.id).trim()"
+                  (click)="selfApprove(ad.id)"
+                >
+                  <i class="bi bi-check-lg me-1"></i>Approve My Own Ad
+                </button>
+              </div>
+            } @else {
+              <div class="alert alert-secondary small mt-auto mb-0" role="note">
+                This is your own ad. A different approver must review it.
+              </div>
+            }
           </div>
         </div>
       }
     </div>
   }
-</div>
 
+  @if (adBook.isDeptOrHigherAdmin() && adBook.lockedAds().length > 0) {
+    <section class="mt-5">
+      <h2 class="h4 mcl-serif mb-1">Locked Ads</h2>
+      <p class="mcl-muted small mb-3">
+        These ads were rejected on their last allowed submission. Resetting a lock returns the ad to
+        draft with 0 submissions used, and the reset is logged.
+      </p>
+      <div class="row g-4">
+        @for (ad of adBook.lockedAds(); track ad.id) {
+          <div class="col-lg-6">
+            <div class="mcl-card p-4 h-100 d-flex flex-column">
+              <h3 class="h6 fw-bold mb-1">{{ ad.title }}</h3>
+              <div class="mcl-muted small mb-2">
+                By {{ ad.createdByName || 'Member' }} &bull; Submission
+                {{ adBook.submissionsUsed(ad) }} of {{ adBook.maxSubmissions(ad) }}
+              </div>
+              <label [for]="'reset-reason-' + ad.id" class="form-label small fw-semibold mt-auto">
+                Reason (optional)
+              </label>
+              <div class="d-flex gap-2">
+                <input
+                  [id]="'reset-reason-' + ad.id"
+                  type="text"
+                  class="form-control form-control-sm"
+                  [ngModel]="reasonFor('reset-' + ad.id)"
+                  (ngModelChange)="setReason('reset-' + ad.id, $event)"
+                />
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-secondary text-nowrap"
+                  (click)="resetLock(ad.id)"
+                >
+                  <i class="bi bi-unlock me-1"></i>Reset Lock
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  @if (adBook.isDeptOrHigherAdmin() && adBook.reviewedAds().length > 0) {
+    <section class="mt-5">
+      <h2 class="h4 mcl-serif mb-1">Reviewed Ads</h2>
+      <p class="mcl-muted small mb-3">
+        Admins can undo an approval or rejection with a reason. The ad returns to submitted, no
+        submission is used, and the undo is logged. Remove an approved ad from a locked book first.
+      </p>
+      <div class="row g-4">
+        @for (ad of adBook.reviewedAds(); track ad.id) {
+          <div class="col-lg-6">
+            <div class="mcl-card p-4 h-100 d-flex flex-column">
+              <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                <div>
+                  <h3 class="h6 fw-bold mb-1">{{ ad.title }}</h3>
+                  <div class="mcl-muted small">
+                    By {{ ad.createdByName || 'Member' }} &bull; reviewed by
+                    {{ ad.reviewedByName || 'an approver' }}
+                  </div>
+                </div>
+                <div class="d-flex gap-1">
+                  @if (ad.selfApproved) {
+                    <span class="badge text-bg-warning">Self-approved</span>
+                  }
+                  <span
+                    class="badge"
+                    [class.text-bg-success]="ad.status === 'approved'"
+                    [class.text-bg-danger]="ad.status === 'rejected'"
+                    >{{ ad.status }}</span
+                  >
+                </div>
+              </div>
+              @if (ad.selfApprovalReason) {
+                <div class="small mb-2"><strong>Reason:</strong> {{ ad.selfApprovalReason }}</div>
+              }
+              @if (adBook.lockedBookContaining(ad.id); as book) {
+                <div class="alert alert-secondary small mb-0 mt-auto" role="note">
+                  Placed in locked book "{{ book.title }}". Remove it from the book before undoing.
+                </div>
+              } @else {
+                <label [for]="'undo-reason-' + ad.id" class="form-label small fw-semibold mt-auto">
+                  Reason for undoing (required)
+                </label>
+                <div class="d-flex gap-2">
+                  <input
+                    [id]="'undo-reason-' + ad.id"
+                    type="text"
+                    class="form-control form-control-sm"
+                    [ngModel]="reasonFor(ad.id)"
+                    (ngModelChange)="setReason(ad.id, $event)"
+                  />
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary text-nowrap"
+                    [disabled]="!reasonFor(ad.id).trim()"
+                    (click)="undo(ad.id)"
+                  >
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Undo Review
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+  }
+</div>

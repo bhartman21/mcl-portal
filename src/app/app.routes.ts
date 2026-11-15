@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { activeUserGuard } from './core/guards/active-user.guard';
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
+import { AD_REVIEWER_ROLES, ADMIN_ROLES } from './core/models/user.model';
 
 export const routes: Routes = [
   {
@@ -54,7 +55,7 @@ export const routes: Routes = [
       },
       {
         path: 'queue',
-        canActivate: [roleGuard(['adBookApprover', 'departmentAdmin', 'nationalAdmin'])],
+        canActivate: [roleGuard(AD_REVIEWER_ROLES)],
         loadComponent: () =>
           import('./features/ad-book/ad-book-queue.component').then(
             (m) => m.AdBookQueueComponent
@@ -69,7 +70,7 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'users' },
       {
         path: 'users',
-        canActivate: [roleGuard(['departmentAdmin', 'nationalAdmin'])],
+        canActivate: [roleGuard(ADMIN_ROLES)],
         loadComponent: () =>
           import('./features/admin/admin-users.component').then(
             (m) => m.AdminUsersComponent
@@ -77,7 +78,7 @@ export const routes: Routes = [
       },
       {
         path: 'detachments',
-        canActivate: [roleGuard(['departmentAdmin', 'nationalAdmin'])],
+        canActivate: [roleGuard(ADMIN_ROLES)],
         loadComponent: () =>
           import('./features/admin/admin-detachments.component').then(
             (m) => m.AdminDetachmentsComponent
@@ -85,15 +86,23 @@ export const routes: Routes = [
       },
       {
         path: 'ad-sizes',
-        canActivate: [roleGuard(['adBookApprover', 'departmentAdmin', 'nationalAdmin'])],
+        canActivate: [roleGuard(AD_REVIEWER_ROLES)],
         loadComponent: () =>
           import('./features/admin/admin-ad-sizes.component').then(
             (m) => m.AdminAdSizesComponent
           ),
       },
       {
+        path: 'activity',
+        canActivate: [roleGuard(ADMIN_ROLES)],
+        loadComponent: () =>
+          import('./features/admin/admin-activity.component').then(
+            (m) => m.AdminActivityComponent
+          ),
+      },
+      {
         path: 'settings',
-        canActivate: [roleGuard(['departmentAdmin', 'nationalAdmin'])],
+        canActivate: [roleGuard(ADMIN_ROLES)],
         loadComponent: () =>
           import('./features/admin/admin-settings.component').then(
             (m) => m.AdminSettingsComponent
