@@ -32,13 +32,15 @@ Blaze needs a credit or debit card. It still includes the free usage amounts. A 
 
 > ### ⚠️ Read this: what the $10 shutoff does
 >
-> **If the shutoff fires at $10, the portal goes offline.** Sign-in, ads, the database and image storage all stop. The site stays down **until you re-link billing** (see "If the shutoff fires" in Part 4).
+> **If the shutoff fires at $10, the portal goes offline.** Sign-in, ads, the database and image storage all stop. The site stays down **until you re-link billing** (see "If the shutoff fires: re-link billing" at the end of Part 5).
 >
 > Google warns that turning billing off can **shut things down roughly**: "Resources might be irretrievably deleted," and there is "no guarantee of service recovery." ([Google Cloud docs](https://cloud.google.com/billing/docs/how-to/disable-billing-with-notifications))
 >
 > **That is why the early alerts matter.** If you get the $2, $5 or $8 email, tell P.A.T. or B.O.B. right away, so the cause can be found and fixed before the shutoff is needed.
 >
-> Also: Google reports costs with a delay (often hours, sometimes more than a day). The bill can end up a little over $10 before the shutoff happens.
+> Also: if billing is re-linked while the month is still at $10 or more, the shutoff fires again within hours. See the **Pending** note in Part 5.
+>
+> Google reports costs with a delay (often hours, sometimes more than a day). The bill can end up a little over $10 before the shutoff happens.
 
 ---
 
@@ -61,7 +63,11 @@ Firebase will say the ID is not available, or add letters and numbers to it (for
 - The website address becomes `https://YOUR-PROJECT-ID.web.app` instead of `https://mcl-portal.web.app`.
 - In GitHub secrets (Part 9), use your ID for `FIREBASE_PROJECT_ID`, `FIREBASE_AUTH_DOMAIN` and `FIREBASE_STORAGE_BUCKET`.
 - Ask B.O.B. to change `.firebaserc` in the repo. Its `"default": "mcl-portal"` line must become your ID. Also ask for the examples in `.env.example` and the "planned project" line in `README.md` to be updated. The deploy itself uses the `FIREBASE_PROJECT_ID` secret, so it will work even before that change, but local tools use `.firebaserc`.
-- Tell B.O.B. your ID before he sets up budget-guard (Part 5), so it points at the right project.
+- **budget-guard (Part 5)** uses the ID in a few places, too. The function's code doesn't change, but:
+  - B.O.B.'s setup steps (`functions/budget-guard/README.md`) start with a `PROJECT_ID=mcl-portal` line. Change it to your ID. The budget's project filter and the topic path (`projects/YOUR-PROJECT-ID/topics/budget-guard`) use it.
+  - The settings file is named after the ID: `functions/budget-guard/.env.YOUR-PROJECT-ID` instead of `.env.mcl-portal`.
+  - The robot account becomes `budget-guard@YOUR-PROJECT-ID.iam.gserviceaccount.com`.
+  - The `FIREBASE_PROJECT_ID` GitHub secret (Part 9) is also used by the budget-guard deploy workflow.
 - Nothing else in the code needs to change. The committed config in `src/environments/` holds placeholders only.
 
 **5. Accept terms and finish.** — Phone OK
@@ -124,13 +130,13 @@ Left menu: **Security → Authentication**. (Older layouts show **Build → Auth
 
 ## Part 4 — Upgrade to Blaze and set the $10 budget
 
-Do this **before** creating Firestore and Storage, so the alerts are in place before anything can cost money.
+Do this **before** creating Firestore and Storage, so the alerts are in place before anything can cost money. This Part sets up the budget and its email alerts. Part 5 connects the budget to the automatic shutoff.
 
 **11. Upgrade to Blaze.** — Phone OK
 - In the Firebase console, find the plan name **Spark** (usually at the bottom of the left menu) and press **Upgrade**. *Unverified:* the exact button location.
 - Choose **Blaze (pay as you go)**. Link or create a **Cloud Billing account** and enter your card.
-- The upgrade screen may offer a budget alert. You can skip it. You will make the real $10 budget in the next steps. (If you already made one, you can edit that one instead of making a second, so you don't get double emails.)
-- You must be the project **Owner** to do this. The person who created the project is the Owner.
+- The upgrade screen may offer a budget alert. You can skip it. You will make the real $10 budget in the next steps. (If you already made one, edit that one instead of making a second, so you don't get double emails.)
+- You must be the project **Owner** to do this. The person who created the project is the Owner. You will also be the billing account's **Billing Account Administrator**, which Part 5 needs.
 
 **12. Open Budgets & alerts.** — Phone OK (desktop mode)
 - Go to https://console.cloud.google.com/billing/budgets
@@ -140,13 +146,13 @@ Do this **before** creating Firestore and Storage, so the alerts are in place be
 
 **13. Name the budget.** — Phone OK (desktop mode)
 - In the **Define** section, choose **Alerts only**.
-- **Name:** `mcl-portal $10 monthly`.
+- **Name:** `mcl-portal $10/month`.
 - Press **Next**.
 - Why not **Spend cap**? Google's newer spend cap budgets only cover a few services (Gemini, Vertex AI, Cloud Run, Cloud Run functions). They do **not** cover Firestore, Storage or Hosting. So the portal uses budget-guard instead.
 
 **14. Set the scope.** — Phone OK (desktop mode)
 - **Time range:** **Monthly** (the default).
-- **Projects:** select only **YOUR-PROJECT-ID** (for example `mcl-portal`).
+- **Projects:** select **only YOUR-PROJECT-ID** (for example `mcl-portal`). This matters: the shutoff acts on this budget's total, so other projects on your billing account must not count toward it.
 - **Services:** leave all services selected.
 - Leave the other settings as they are.
 - Press **Next**.
@@ -170,64 +176,153 @@ Use **Add threshold** to add the fourth row. *Phone tip:* the rows are small. Tu
 
 **17. Choose who gets the emails.** — Phone OK
 - Under **Manage notifications**, leave **Email alerts to billing admins and users** ticked. You are the billing admin, so the emails come to you.
-- To send them to a second address too (for example P.A.T.'s), Google offers **Link Monitoring email notification channels to this budget**. That is optional and takes extra setup. *Unverified* on a phone.
+- Leave **Connect a Pub/Sub topic to this budget** unticked for now. You connect it in step 21, after the topic exists.
+- To send the emails to a second address too (for example P.A.T.'s), Google offers **Link Monitoring email notification channels to this budget**. That is optional and takes extra setup. *Unverified* on a phone.
 
-**18. Connect the Pub/Sub topic.** — Easier on a computer (Phone OK with care)
-This is how the budget tells budget-guard about spending.
-- Tick **Connect a Pub/Sub topic to this budget**.
-- **Project:** press **Select a project** and choose **YOUR-PROJECT-ID**.
-- Under **Select a Pub/Sub topic**, press **Create a topic**.
-- **Topic ID:** type `BUDGET-TOPIC-NAME`. **This is a placeholder.** `ARCHITECTURE.md` and the README don't name the topic yet. Ask B.O.B. for the exact name **before** this step. It must match the topic budget-guard listens to, letter for letter.
-- Press **Create topic**. It is then selected for you.
-- If Google asks you to turn on (enable) the Pub/Sub API, say yes. *Unverified* whether that prompt appears.
-- *Why it's easier on a computer:* this opens a small pop-up on top of the budget form, which can be hard to use on a phone.
-- You can also come back later: open the budget from **Budgets & alerts**, tick the box, and **Save**.
-
-**19. Save and check.** — Phone OK
+**18. Save and check.** — Phone OK
 - Press **Finish**.
 - The budget now shows in the **Budgets & alerts** list.
-- Google says the first email or Pub/Sub message can take **several hours**. Budgets count in US Pacific time and reset on the 1st of each month.
+- Google says the first email can take **several hours**. Budgets count in US Pacific time and reset on the 1st of each month.
+- **Until Part 5 is finished, this budget only sends emails. It does not stop spending.**
+
+---
+
+## Part 5 — Turn on the budget-guard shutoff
+
+budget-guard is a small robot (a Cloud Function, the project's only one). When the budget reports that this month's cost has **reached $10**, it turns billing off for the project. It can turn billing **off** but can never turn it back **on**, and it has no access to your billing account. It was written by B.O.B. Its full technical steps are in `functions/budget-guard/README.md`.
+
+> **⏳ Depends on PR #34.** budget-guard's code is in pull request #34 (branch `feat/budget-guard`), which **has not merged yet**. Steps 19–23 only use the Google Cloud console and are safe to do any time after Part 4. **Wait for PR #34 to merge before steps 24–26.**
+
+> **Some of this needs a computer.** Deploying budget-guard (steps 24 and 26) needs a terminal with Google's and Firebase's command-line tools. That can't be done from a phone's web browser. Do those steps on a computer, or ask B.O.B. to walk you through them. Everything else in this Part has a console route that works on a phone.
+
+**19. Turn on (enable) 8 Google Cloud APIs.** — Phone OK (desktop mode), a bit slow
+- Go to https://console.cloud.google.com/apis/library (Google Cloud console → **APIs & Services** → **Library**). Check that the project selector at the top shows **YOUR-PROJECT-ID**.
+- For each API below, type its ID (in brackets) into the search box, open it, and press **Enable**. If it says **Manage** instead, it's already on.
+
+| API | ID to search for |
+|-----|------------------|
+| Cloud Billing API | `cloudbilling.googleapis.com` |
+| Cloud Billing Budget API | `billingbudgets.googleapis.com` |
+| Cloud Pub/Sub API | `pubsub.googleapis.com` |
+| Cloud Functions API | `cloudfunctions.googleapis.com` |
+| Cloud Build API | `cloudbuild.googleapis.com` |
+| Artifact Registry API | `artifactregistry.googleapis.com` |
+| Eventarc API | `eventarc.googleapis.com` |
+| Cloud Run Admin API | `run.googleapis.com` |
+
+*Unverified:* the exact API titles shown in the Library. The IDs come from B.O.B.'s README.
+
+**20. Create the topic `budget-guard`.** — Phone OK
+A "topic" is the mailbox the budget drops its messages into for budget-guard.
+- Go to https://console.cloud.google.com/cloudpubsub/topic/list (Google Cloud console → **Pub/Sub** → **Topics**), in project **YOUR-PROJECT-ID**.
+- Press **Create topic**.
+- **Topic ID:** `budget-guard` (exactly, all lower case, with the dash). budget-guard listens to this name.
+- Leave the other settings as they are, and press **Create**.
+
+**21. Connect the topic to the budget.** — Easier on a computer (Phone OK with care)
+- Go back to **Budgets & alerts** (step 12) and open the **`mcl-portal $10/month`** budget.
+- In the **Actions** section, under **Manage notifications**, tick **Connect a Pub/Sub topic to this budget**.
+- **Project:** press **Select a project** and choose **YOUR-PROJECT-ID**.
+- Under **Select a Pub/Sub topic**, choose **`budget-guard`**.
+- Press **Save**. Google gives the billing system permission to post to the topic.
+- *Why it's easier on a computer:* the topic picker is a small pop-up, which can be hard to use on a phone.
+
+**22. Create budget-guard's robot account.** — Phone OK
+This is a separate robot account from the GitHub deploy one in Part 7. It gets **no key**.
+- Go to https://console.cloud.google.com/iam-admin/serviceaccounts, in project **YOUR-PROJECT-ID**.
+- Press **+ Create service account**.
+- **Service account name:** `budget-guard`. The ID fills in as `budget-guard`. Its email becomes `budget-guard@YOUR-PROJECT-ID.iam.gserviceaccount.com`.
+- **Description:** `Turns billing off at $10/month`.
+- Press **Create and continue**.
+- Under **Grant this service account access to project**, add exactly these two roles:
+  - **Project Billing Manager**
+  - **Browser**
+- Press **Continue**, then **Done**.
+- **Don't** create a key for this account. **Don't** give it anything on the billing account. Its two roles are on the project only, which is why it can turn billing off but never back on.
+
+**23. Check the two roles.** — Phone OK (desktop mode)
+- Go to https://console.cloud.google.com/iam-admin/iam, in project **YOUR-PROJECT-ID**.
+- Find `budget-guard@YOUR-PROJECT-ID.iam.gserviceaccount.com`. It should show **Project Billing Manager** and **Browser**.
+- If a role is missing, press the **pencil** (edit) on that row → **+ Add another role** → pick it → **Save**. If the account isn't listed, press **Grant access**, paste its email as the principal, add both roles, and **Save**.
+
+**24. Deploy budget-guard in "dry run" (practice) mode.** — **Needs a computer** (or B.O.B.'s help). Wait for PR #34 to merge.
+- In dry run, budget-guard only **writes down** what it would do. It never turns billing off.
+- On a computer with Node.js 22, the Google Cloud CLI (`gcloud`) and a copy of the repo, follow **step 5 ("Deploy the function, first in dry run")** in `functions/budget-guard/README.md`. It signs you in to Firebase once, writes a small settings file `functions/budget-guard/.env.YOUR-PROJECT-ID` with `BUDGET_GUARD_DRY_RUN=true`, and runs `npm run deploy:functions`. That file holds two plain settings, not secrets, and is never uploaded to GitHub.
+- If it asks how long to keep container images, any short period is fine (for example 1 day).
+- Or ask B.O.B. to sit with you (screen share) while you run it.
+- *Possible later phone route, Unverified:* PR #34 also adds an optional GitHub workflow, **Deploy budget-guard (Cloud Function)**, that you start with **Run workflow** on github.com, with **Deploy in dry-run mode** ticked by default. It has not been tested against a real project. It also needs the workflow file moved (Part 10) and extra permissions for the GitHub deploy account. Ask B.O.B. before using it.
+
+**25. Test it safely in dry run.** — Easier on a computer (console route works on a phone with care)
+Send budget-guard two fake budget messages, one at $2 and one at $10, and check what it wrote down.
+- Go to **Pub/Sub → Topics** (step 20) and open **`budget-guard`**.
+- Open **Messages** and press **Publish message**.
+- Paste this into **Message body**, exactly, then press **Publish**:
+
+```
+{"budgetDisplayName":"mcl-portal $10/month (TEST)","costAmount":2.00,"budgetAmount":10.00,"currencyCode":"USD","alertThresholdExceeded":0.2}
+```
+
+- Press **Publish message** again, paste this one, and press **Publish**:
+
+```
+{"budgetDisplayName":"mcl-portal $10/month (TEST)","costAmount":10.00,"budgetAmount":10.00,"currencyCode":"USD","alertThresholdExceeded":1.0}
+```
+
+- Check the log: **Firebase console → Functions → budgetGuard → Logs** (path from B.O.B.'s README; *Unverified* by me). After a minute or two you should see:
+  - `budget-guard: under budget (2 of 10); no action.`
+  - `budget-guard: DRY RUN. Budget reached (10 >= 10); would detach billing from projects/YOUR-PROJECT-ID. Nothing changed.`
+  - **No** line saying `could not read billing status`. If you see it, the **Browser** role (step 22) or the Cloud Billing API (step 19) is missing. Tell B.O.B.
+- Check billing is still on: **Billing → Manage billing accounts → My projects**. YOUR-PROJECT-ID should still show your billing account, not "Billing is disabled".
+- B.O.B.'s README also gives the terminal commands for this step.
+- *Why it's easier on a computer:* the message text must be pasted exactly. It is easiest to copy it from this page on the same computer.
+
+**26. Arm it (turn dry run off).** — **Needs a computer** (or B.O.B.'s help)
+- Follow **step 7 ("Arm it")** in `functions/budget-guard/README.md`. It changes the settings file to `BUDGET_GUARD_DRY_RUN=false` and runs `npm run deploy:functions` again.
+- Now the shutoff is live.
+
+> **⚠️ Once it's armed, never publish a test message of $10 or more.** budget-guard will really turn billing off and the portal will go offline. To test again, switch back to dry run first (step 24), then test (step 25), then arm it again (step 26). A $2 test message is harmless.
+
+Other notes from B.O.B.:
+- The normal GitHub site deploy (Part 11) **never** deploys budget-guard, and budget-guard's deploy never touches the website.
+- budget-guard checks the budget's real numbers. If a notification is missing its numbers, it ignores it and writes an error to the log.
 
 ### If the shutoff fires: re-link billing
 
-When budget-guard turns billing off, the portal is offline. To bring it back, first find out (with P.A.T. or B.O.B.) what caused the spending, then re-link billing:
+When budget-guard turns billing off, the portal is offline. You will have had the $2, $5 and $8 emails first.
 
-**R1. Open billing accounts.** — Phone OK (desktop mode)
-Go to https://console.cloud.google.com/billing/projects (Google Cloud console → **Billing** → **Manage billing accounts** → **My projects** tab).
+> **⏳ Re-linking billing while still over $10 — Pending Billy's decision.**
+>
+> Budgets keep sending updates to budget-guard **several times a day** for the rest of the month. If you re-link billing while this month's cost is still $10 or more, the **next update turns billing off again, usually within hours**. budget-guard has no override, on purpose.
+>
+> B.O.B.'s safe way, within the same month: **change the budget first, then re-link billing.** Either:
+> - **Option A:** raise the budget amount above this month's cost so far (for example to $20) and keep the topic connected, so the shutoff still protects you at the new limit; or
+> - **Option B:** untick **Connect a Pub/Sub topic to this budget** for the rest of the month (email alerts only, no automatic shutoff).
+>
+> At the start of next month the cost resets to $0, so re-linking then is safe without changing anything. **Billy hasn't chosen between A and B yet.** Until he does, ask B.O.B. before re-linking within the same month.
 
-**R2. Find the project.** — Phone OK (desktop mode)
-Find **YOUR-PROJECT-ID**. Its billing column will say **Billing is disabled**.
+**R1. Find out what happened.** — Phone OK
+Tell P.A.T. or B.O.B. Find out what caused the spending before turning billing back on.
 
-**R3. Link billing again.** — Phone OK (desktop mode)
-In that row, press the **Actions** menu (⋮) → **Change billing** → choose your billing account → **Set account**.
+**R2. If it's still the same month: change the budget first.** — Phone OK (desktop mode). *Pending Billy's decision (A or B above).*
+**Billing → Budgets & alerts → `mcl-portal $10/month`**. Either raise the **Target amount** (Option A) or untick **Connect a Pub/Sub topic to this budget** (Option B). Press **Save**. This works even while the project's billing is off, because the budget belongs to your billing account.
+
+**R3. Re-link billing.** — Phone OK (desktop mode)
+Go to https://console.cloud.google.com/billing/projects (Google Cloud console → **Billing** → **Manage billing accounts** → **My projects** tab). Find **YOUR-PROJECT-ID**; it will say **Billing is disabled**. In that row, press the **Actions** menu (⋮) → **Change billing** → choose your billing account → **Set account**.
 (Another way: in the Firebase console, upgrade the project to **Blaze** again, as in step 11.)
 
 **R4. Wait and check.** — Phone OK
 - Google says it can take **up to 24 hours** for things to start again, and some services may need a manual restart. Ask B.O.B. to check.
 - Open https://mcl-portal.web.app and sign in to test.
 - Some data might not come back. Google warns resources may be deleted while billing is off.
-- *Unverified:* if the month's spending is still over $10, budget-guard might turn billing off again. Ask B.O.B. how budget-guard behaves before re-linking in the same month.
 
----
-
-## Part 5 — Deploy the budget-guard shutoff (steps coming from B.O.B.)
-
-> **🚧 Placeholder — steps coming from B.O.B.**
->
-> budget-guard is the small Cloud Function that turns billing off when the month reaches $10. It is the only Cloud Function in the project (`ARCHITECTURE.md`, "Pricing plan and cost cap").
->
-> B.O.B. will supply the steps to deploy it, the permissions it needs, and the exact Pub/Sub topic name for step 18. **Until this is done, the $10 budget only sends emails. It does not stop spending.**
->
-> Phone OK or Easier on a computer: to be marked when the steps arrive.
-
-**20. (Placeholder) Deploy budget-guard.** — To be marked
-Wait for B.O.B.'s steps. You can carry on with Part 6 meanwhile.
+**R5. Next month: put the budget back.** — Phone OK (desktop mode)
+On or after the 1st, set the budget back to **$10** and, if you unticked it, tick **Connect a Pub/Sub topic to this budget** again (topic `budget-guard`). Press **Save**.
 
 ---
 
 ## Part 6 — Create Firestore and Storage (both in us-east1)
 
-**21. Create the Firestore database.** — Phone OK
+**27. Create the Firestore database.** — Phone OK
 - Left menu: **Databases & Storage → Firestore**. (Older layouts show **Build → Firestore Database**.)
 - Press **Create database**.
 - If asked for an edition, choose **Standard edition**.
@@ -236,7 +331,7 @@ Wait for B.O.B.'s steps. You can carry on with Part 6 meanwhile.
 - Rules: choose **Start in production mode**. The deploy will replace these with the portal's real rules from `firestore.rules`.
 - Press **Create**.
 
-**22. Create Storage.** — Phone OK
+**28. Create Storage.** — Phone OK
 - Left menu: **Databases & Storage → Storage**.
 - Press **Get started**. If you haven't upgraded yet, Firebase asks you to upgrade first (step 11).
 - **Location:** choose **`US-EAST1`**, the same as Firestore. It gets Google Cloud Storage's "Always Free" amount.
@@ -250,17 +345,17 @@ Wait for B.O.B.'s steps. You can carry on with Part 6 meanwhile.
 
 GitHub uses this robot account to publish the site and rules. This is done in the **Google Cloud console**, which uses the same Google account and project.
 
-**23. Open Service Accounts.** — Phone OK
+**29. Open Service Accounts.** — Phone OK
 - Go to https://console.cloud.google.com/iam-admin/serviceaccounts
 - At the top, make sure the project selector shows **YOUR-PROJECT-ID** (for example `mcl-portal`). If not, tap it and pick the project.
 
-**24. Create the account.** — Phone OK
+**30. Create the account.** — Phone OK
 - Press **+ Create service account**.
 - **Service account name:** `github-deploy`. The ID fills in as `github-deploy`.
 - **Description:** `Deploys mcl-portal from GitHub Actions`.
 - Press **Create and continue**.
 
-**25. Give it roles.** — Phone OK
+**31. Give it roles.** — Phone OK
 Under **Grant this service account access to project**, use **Select a role** and **+ Add another role** to add these roles. Type each name into the search box:
 
 - **Firebase Admin**
@@ -270,7 +365,7 @@ Then press **Continue**, then **Done**.
 
 *Why these:* the README lists the smaller set **Firebase Hosting Admin**, **Firebase Rules Admin** and **Service Account User**, "or Firebase Admin". The deploy publishes Hosting, Firestore rules **and** Storage rules. I could not confirm that the smaller set is enough for the Storage part, so **Firebase Admin** is the safer choice (*Unverified until the first deploy runs*). If you prefer the smaller set and the deploy later fails with a "permission" error, add **Firebase Admin**.
 
-**26. Make a JSON key.** — Easier on a computer
+**32. Make a JSON key.** — Easier on a computer
 - In the list, press the **email address** of the new account. It looks like `github-deploy@YOUR-PROJECT-ID.iam.gserviceaccount.com`.
 - Open the **Keys** tab.
 - Press **Add key → Create new key**.
@@ -293,14 +388,14 @@ Then press **Continue**, then **Done**.
 
 The portal's Storage rules read data from Firestore (`firestore.get(...)` in `storage.rules`). The first time such rules are published, Firebase asks you to **grant a permission**. The GitHub deploy runs unattended and can't press that button. So do the first publish yourself, in the console.
 
-**27. Paste the Storage rules.** — Easier on a computer (Phone OK with care)
+**33. Paste the Storage rules.** — Easier on a computer (Phone OK with care)
 - Open the rules file on GitHub: https://github.com/bhartman21/mcl-portal/blob/main/storage.rules
 - Press the **Copy raw file** button (two overlapping squares), or press **Raw**, then select all and copy. On a phone, **Raw** plus Select All is the easiest way.
 - In the Firebase console: **Databases & Storage → Storage → Rules** tab.
 - Select everything in the editor, delete it, and paste the copied rules.
 - Press **Publish**.
 
-**28. Accept the permission prompt.** — Phone OK
+**34. Accept the permission prompt.** — Phone OK
 - After **Publish**, Firebase should show a message about letting Storage rules read Firestore. Press the button to **grant / attach the permission**. *Unverified:* the exact wording.
 - If no prompt appears, do it by hand in Google Cloud: https://console.cloud.google.com/iam-admin/iam → tick **Include Google-provided role grants** → find **Cloud Storage for Firebase Service Agent** → pencil (edit) → **+ Add another role** → **Firebase Rules Firestore Service Agent** → **Save**. *Unverified* (from a third-party guide, not Firebase's own page).
 
@@ -310,20 +405,20 @@ You don't need to paste the Firestore rules. The GitHub deploy publishes `firest
 
 ## Part 9 — Add the 7 GitHub secrets
 
-**29. Open the secrets page.** — Phone OK (desktop mode)
+**35. Open the secrets page.** — Phone OK (desktop mode)
 Go to https://github.com/bhartman21/mcl-portal/settings/secrets/actions
 (Or: repo → **Settings** → **Secrets and variables** → **Actions**.) On a phone in normal mobile view, the **Settings** tab may be hidden. Use desktop mode.
 
-**30. Add each secret.** — Phone OK, except the first one (Easier on a computer)
+**36. Add each secret.** — Phone OK, except the first one (Easier on a computer)
 For each row, press **New repository secret**, type the **Name** exactly as shown (all capitals), paste the **Secret** value, and press **Add secret**.
 
 | Name (type exactly) | Where the value comes from |
 |---------------------|----------------------------|
-| `FIREBASE_SERVICE_ACCOUNT` | The **entire contents** of the JSON key file from step 26, from `{` to `}`. |
+| `FIREBASE_SERVICE_ACCOUNT` | The **entire contents** of the JSON key file from step 32, from `{` to `}`. |
 | `FIREBASE_PROJECT_ID` | Your project ID, for example `mcl-portal`. Same as `projectId` in the config (step 7). |
 | `FIREBASE_API_KEY` | `apiKey` from the config (step 7). |
 | `FIREBASE_AUTH_DOMAIN` | `authDomain` from the config, for example `mcl-portal.firebaseapp.com`. |
-| `FIREBASE_STORAGE_BUCKET` | `storageBucket` from the config, for example `mcl-portal.firebasestorage.app`. It must match the bucket name on the Storage **Files** tab (step 22). |
+| `FIREBASE_STORAGE_BUCKET` | `storageBucket` from the config, for example `mcl-portal.firebasestorage.app`. It must match the bucket name on the Storage **Files** tab (step 28). |
 | `FIREBASE_MESSAGING_SENDER_ID` | `messagingSenderId` from the config. |
 | `FIREBASE_APP_ID` | `appId` from the config. |
 
@@ -339,7 +434,7 @@ Tips:
 
 The two automation files, `ci.yml` (checks) and `deploy.yml` (publishes the site), are parked in `ci/github-workflows/`. GitHub only runs them from `.github/workflows/`. They were parked because the command-line login that pushed them lacked GitHub's `workflow` permission. **The GitHub website doesn't have that limit**, so you can move them there.
 
-**31. Move `deploy.yml`.** — Phone OK (desktop mode), easier on a computer
+**37. Move `deploy.yml`.** — Phone OK (desktop mode), easier on a computer
 - Open https://github.com/bhartman21/mcl-portal/blob/main/ci/github-workflows/deploy.yml
 - Press the **pencil** (Edit this file).
 - Click into the **file name box** at the top, before `deploy.yml`. Press **Backspace** until `ci/` and `github-workflows/` are both gone. Each Backspace at the start removes one folder.
@@ -347,20 +442,22 @@ The two automation files, `ci.yml` (checks) and `deploy.yml` (publishes the site
 - Don't change the file's contents.
 - Press **Commit changes…** and choose **Commit directly to the `main` branch**. Or choose a new branch and pull request if you'd like B.O.B. to review.
 
-**32. Move `ci.yml` the same way.** — Phone OK (desktop mode)
+**38. Move `ci.yml` the same way.** — Phone OK (desktop mode)
 Same steps for https://github.com/bhartman21/mcl-portal/blob/main/ci/github-workflows/ci.yml → **`.github/workflows/ci.yml`**.
+
+**After PR #34 merges (optional):** there will be a third file, `ci/github-workflows/deploy-functions.yml` (the optional budget-guard deploy from step 24). Move it the same way to **`.github/workflows/deploy-functions.yml`** only if B.O.B. says to use it. It only runs when someone presses **Run workflow**.
 
 Moving the files removes them from `ci/github-workflows/`. The leftover `ci/github-workflows/README.md` can be deleted later by B.O.B.
 
 **Alternative:** let B.O.B. do it from the command line. It runs `gh auth refresh -h github.com -s workflow`, which shows an 8-character code. You open **https://github.com/login/device** on your phone, type the code, and approve. That approval works fine on a phone.
 
-**Order tip:** do Part 9 (secrets) **before** Part 10. Then the first push to `main` deploys straight away. If you did Part 10 first, that's fine: see step 33.
+**Order tip:** do Part 9 (secrets) **before** Part 10. Then the first push to `main` deploys straight away. If you did Part 10 first, that's fine: see step 39.
 
 ---
 
 ## Part 11 — Run the first deploy
 
-**33. Start the deploy.** — Phone OK
+**39. Start the deploy.** — Phone OK
 - Moving `deploy.yml` onto `main` starts a deploy by itself.
 - To run it again by hand: https://github.com/bhartman21/mcl-portal/actions → **Deploy to Firebase Hosting** (left list) → **Run workflow** → **Run workflow**.
 - Wait for a green check (a few minutes). A red X means it failed. Open it and send P.A.T. or B.O.B. a screenshot of the red step. **Don't** copy the whole log into public places, though GitHub hides secret values in logs.
@@ -371,13 +468,13 @@ Moving the files removes them from `ci/github-workflows/`. The leftover `ci/gith
 
 There are no built-in admin emails. You promote yourself once, by hand.
 
-**34. Sign in to the live site.** — Phone OK
+**40. Sign in to the live site.** — Phone OK
 - Open **https://mcl-portal.web.app** (or `https://YOUR-PROJECT-ID.web.app`).
 - Press **Member Sign In**, type your email, press **Send Sign-In Link**.
 - Open the email and tap the link **on the same phone and browser**. If you open it somewhere else, the page asks you to type your email again. That's expected.
 - You're now signed in as an ordinary member. This creates your record in Firestore.
 
-**35. Give yourself `siteAdmin` in Firestore.** — Phone OK (fiddly; easier on a computer)
+**41. Give yourself `siteAdmin` in Firestore.** — Phone OK (fiddly; easier on a computer)
 - Firebase console → **Databases & Storage → Firestore** → **Data** tab.
 - Tap the **`users`** collection. Tap your document. Its ID is a long code (your user ID). Check that its `email` field is yours.
 - Find the **`roles`** field. It is an array that currently holds `"member"`.
@@ -387,7 +484,7 @@ There are no built-in admin emails. You promote yourself once, by hand.
 
 This is the only time roles are edited outside the app. The console ignores the security rules, so be careful not to change anything else.
 
-**36. Reload the portal.** — Phone OK
+**42. Reload the portal.** — Phone OK
 - Refresh https://mcl-portal.web.app (sign in again if asked).
 - On your first load as an admin, the app writes the registration setting (`settings/registration` with mode `open`) and fills in the Florida detachments.
 - If the detachment list is empty, go to **Admin → Detachment Directory** and press **Seed DoF Detachments**.
@@ -397,21 +494,22 @@ This is the only time roles are edited outside the app. The console ignores the 
 
 ## Part 13 — Check that it all worked
 
-**37. Quick checks.** — Phone OK
+**43. Quick checks.** — Phone OK
 
 | Check | What you should see |
 |-------|---------------------|
 | Open https://mcl-portal.web.app | The portal home page, **without** a "Local Demo Mode" badge in the header. |
 | Sign in | The sign-in email arrives and the link signs you in. |
-| Header after step 35 | An **Admin** menu appears. |
-| **Admin → Detachment Directory** | The Florida list, with #54 Morris F. Dixon Jr. and S/Sgt Ted Archambault marked as needing verification. |
+| Header after step 41 | An **Admin** menu appears. |
+| **Admin → Detachment Directory** | The Florida detachment list, including #54 Morris F. Dixon Jr. (The plan now lists 51 detachments, with S/Sgt Ted Archambault as #819. Until the app is updated, it may still show Archambault as needing verification, with no number.) |
 | Firestore → Data | `users`, `settings` and `detachments` collections exist. |
 | Storage → Rules | The rules you pasted are shown (they mention `ad-images`). |
 | GitHub → Actions | Green checks on **Deploy to Firebase Hosting** (and **CI**). |
 | Firebase console → Usage and billing | Near $0. |
-| Google Cloud → Billing → **Budgets & alerts** | The `mcl-portal $10 monthly` budget, with alerts at $2, $5, $8 and $10 and a Pub/Sub topic connected. |
+| Google Cloud → Billing → **Budgets & alerts** | The `mcl-portal $10/month` budget, with alerts at $2, $5, $8 and $10 and the `budget-guard` topic connected. |
+| Firebase console → Functions | **budgetGuard** is listed (after step 26), and the dry-run test lines from step 25 are in its logs. |
 
-If you still see the "Local Demo Mode" badge, the site was built without the secrets. Check that all 7 secret names are spelled exactly right, then re-run the deploy (step 33).
+If you still see the "Local Demo Mode" badge, the site was built without the secrets. Check that all 7 secret names are spelled exactly right, then re-run the deploy (step 39).
 
 ---
 
@@ -423,22 +521,27 @@ If you still see the "Local Demo Mode" badge, the site was built without the sec
 | 2 Web app | Phone OK |
 | 3 Email link + domains | Phone OK |
 | 4 Blaze upgrade (step 11) | Phone OK |
-| 4 Budget name, scope, amount, emails (steps 12–15, 17, 19) | Phone OK (desktop mode) |
+| 4 Budget name, scope, amount, emails, finish (steps 12–15, 17, 18) | Phone OK (desktop mode) |
 | 4 Four alert rows (step 16) | Easier on a computer, Phone OK with care |
-| 4 Pub/Sub topic (step 18) | Easier on a computer, Phone OK with care |
-| 4 Re-link billing (R1–R4, only if the shutoff fires) | Phone OK (desktop mode) |
-| 5 budget-guard | Placeholder. To be marked when B.O.B.'s steps arrive |
+| 5 Enable 8 APIs (step 19) | Phone OK (desktop mode) |
+| 5 Create topic (step 20) | Phone OK |
+| 5 Connect topic to budget (step 21) | Easier on a computer, Phone OK with care |
+| 5 budget-guard account + roles, check (steps 22–23) | Phone OK |
+| 5 Deploy in dry run (step 24) | **Needs a computer** (terminal) or B.O.B.'s help. Waits for PR #34 |
+| 5 Dry-run test (step 25) | Easier on a computer. Console route works on a phone with care |
+| 5 Arm it (step 26) | **Needs a computer** (terminal) or B.O.B.'s help |
+| 5 Re-link billing (R1–R5, only if the shutoff fires) | Phone OK (desktop mode). Same-month choice is *Pending Billy's decision* |
 | 6 Firestore, Storage | Phone OK |
 | 7 Service account + roles | Phone OK |
-| 7 JSON key (step 26) | **Easier on a computer**. Phone workaround above, *Unverified* |
+| 7 JSON key (step 32) | **Easier on a computer**. Phone workaround above, *Unverified* |
 | 8 Storage rules paste + grant | Easier on a computer, Phone OK with care |
-| 9 GitHub secrets | Phone OK (desktop mode). The `FIREBASE_SERVICE_ACCOUNT` paste depends on step 26 |
+| 9 GitHub secrets | Phone OK (desktop mode). The `FIREBASE_SERVICE_ACCOUNT` paste depends on step 32 |
 | 10 Move workflows | Phone OK (desktop mode), easier on a computer |
 | 11 Deploy | Phone OK |
 | 12 First admin | Phone OK, fiddly |
 | 13 Checks | Phone OK |
 
-Nothing in this list **requires** a computer (budget-guard is not known yet). The one step most likely to defeat a phone is copying the whole JSON key file (step 26) into the `FIREBASE_SERVICE_ACCOUNT` secret. If your phone won't let you select and copy the file's text, do steps 26 and 30 (that one secret only) on a computer.
+**Two steps truly need a computer:** deploying budget-guard (step 24) and arming it (step 26). They need a terminal, which a phone's browser can't run. Do them on a computer or with B.O.B.'s help. Everything else can be done on a phone. The step most likely to defeat a phone is copying the whole JSON key file (step 32) into the `FIREBASE_SERVICE_ACCOUNT` secret. If your phone won't let you select and copy the file's text, do steps 32 and 36 (that one secret only) on a computer.
 
 ## What I could not verify
 
@@ -446,14 +549,26 @@ Marked *Unverified* above:
 - The exact label of the "create project" button.
 - Whether the "Also set up Firebase Hosting" box still appears.
 - Where the **Upgrade** button sits.
-- Whether a "turn on the Pub/Sub API" prompt appears when creating the topic (step 18).
 - Adding extra email recipients from a phone (step 17).
-- Whether budget-guard fires again if billing is re-linked while the month is still over $10.
+- The exact API titles in the API Library (step 19). Searching by ID works either way.
+- The **Firebase console → Functions → budgetGuard → Logs** path (step 25). It comes from B.O.B.'s README, not from Google's docs.
+- The optional GitHub "Deploy budget-guard" workflow (step 24). It's untested and needs extra permissions.
 - The wording of the Storage permission prompt, and the manual IAM role names.
 - Whether the smaller README role set is enough.
 - Firestore array-editing controls.
 - Copying the key file on iPhone and Android.
 
-Not decided yet (placeholders): the Pub/Sub topic name (`BUDGET-TOPIC-NAME`) and all budget-guard steps (Part 5).
+Not tested by anyone yet: a real budget-guard deploy or a real shutoff. B.O.B. tested on the emulator only, because the Firebase project doesn't exist yet.
 
-Menu paths **Security → Authentication** and **Databases & Storage → Firestore / Storage** come from Firebase's own docs (updated Nov 12, 2026). The service-account key steps, the **Budgets & alerts** screens (Create budget, Alerts only, Scope, Specified amount / Target amount, Percent of budget, Trigger on, Add threshold, Email alerts to billing admins and users, Connect a Pub/Sub topic to this budget, Create a topic, Finish) and the re-link steps (My projects → Change billing → Set account) come from Google Cloud's docs, checked Nov 15, 2026.
+**Pending Billy's decision:** how to re-link billing within the same month while still over $10 (Option A: raise the budget, or Option B: disconnect the topic). See Part 5.
+
+Sources:
+- Menu paths **Security → Authentication** and **Databases & Storage → Firestore / Storage** come from Firebase's own docs (updated Nov 12, 2026).
+- From Google Cloud's docs, checked Nov 15, 2026:
+  - the service-account key steps;
+  - the **Budgets & alerts** screens (Create budget, Alerts only, Scope, Specified amount / Target amount, Percent of budget, Trigger on, Add threshold, Email alerts to billing admins and users, Connect a Pub/Sub topic to this budget, Finish);
+  - the API Library **Enable** button;
+  - Pub/Sub **Create topic** and **Messages → Publish message**;
+  - IAM **Grant access** / **Add another role**;
+  - the re-link steps (My projects → Change billing → Set account).
+- budget-guard's topic name, roles, deploy steps, test messages, and re-link behavior come from `functions/budget-guard/README.md` and PR #34 (B.O.B.).
