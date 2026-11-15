@@ -65,6 +65,7 @@ Runnable app on Firebase Hosting (or local `ng serve`) with login, role claims/d
 - [ ] Email-link sign-in completes on a different device: prompt for the email with a visible input.
 - [ ] Hide the "Continue with Google" button until Google sign-in is approved (email link only at launch).
 - [ ] In-app labels follow the current phase order (Ad Book = Phase 1, VAVS = Phase 2).
+- [ ] Cleaner header per STYLE_GUIDE.md "App header layout" (Nov 15, 2026): three zones, account avatar menu with theme picker, Ribbon Rack to footer, demo-mode strip, no overflow at 1200–1440px.
 - [ ] Deploy pipeline (GitHub Actions → Firebase Hosting).
 - [ ] App README with run/deploy steps.
 

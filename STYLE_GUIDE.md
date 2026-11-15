@@ -69,12 +69,36 @@ $headings-font-family: Georgia, "Times New Roman", serif;
 }
 ```
 
+## App header layout (decided Nov 15, 2026)
+
+Billy asked for a cleaner header after screenshots showed it overflowing when signed in at 1366px (user chip clipped, horizontal scroll, "Ribbon Rack" wrapping). The header has **three zones and nothing else**:
+
+| Zone | Contents |
+|------|----------|
+| Left | Crest + "Marine Corps League" / "Department of Florida • Member Portal" (links home; no separate Home link) |
+| Center | Primary links only: **VAVS**, **Ad Book** (short labels, icons optional, `text-nowrap`). Admins also get an **Admin** dropdown (Users & Roles, Detachments, Activity, Registration Settings). |
+| Right | Admins: bell icon with unread badge (links `/admin/activity`). Signed in: one round **initials avatar button** that opens an account menu. Signed out: a theme icon button plus **Sign In**. |
+
+**Account menu** (dropdown from the avatar, right-aligned): name and email, role label, status badge if pending or suspended, theme picker (Light / Dark / Fun as a 3-option segmented control), divider, **Sign Out**.
+
+**Moved out of the bar:**
+- The theme switcher goes into the account menu (signed out: a single icon button with a small Light/Dark/Fun menu).
+- **Ribbon Rack** moves to the footer and the home-page card (it is an external site; it doesn't need top-level nav weight). Replaces the earlier "same nav weight" row in Component conventions.
+- **Local Demo Mode** becomes a thin full-width strip above the header (gold text on navy-deep, one line, "Local Demo Mode: data stays in this browser"), shown only in demo mode.
+
+**Behavior and checks:**
+- Collapse to the hamburger below the `xl` breakpoint (1200px), not `lg`. In the collapsed menu, the order is primary links, Admin links, then account items and Sign Out.
+- No horizontal scroll and no wrapped nav labels at 1200, 1280, 1366, and 1440px wide, signed out and signed in as each demo role (longest case: Department Admin with a long display name; truncate the name with an ellipsis in the menu only).
+- Header height stays one row (about 64–72px) on desktop. The scarlet blood stripe stays.
+- Keyboard: avatar and Admin menus open with Enter/Space, close with Esc, and focus returns to the button. `aria-expanded` is set on both. Bell has an aria-label with the unread count.
+- Visual: keep navy bar, gold subtitle, scarlet active-link underline (replace the filled red "Home" pill).
+
 ## Component conventions
 
 | UI | Guidance |
 |----|----------|
 | App header | `bg` navy `#142c49`, optional top/bottom scarlet accent; white text; gold subtitle |
-| External Ribbon Rack link | Same nav weight as internal links; open in same or new tab (**inferred** same tab); do not imply in-app route |
+| External Ribbon Rack link | Footer and home-page card only (see App header layout); opens in a new tab with an external-link icon; do not imply in-app route |
 | Primary button | Scarlet `#A62D3B` (custom `.btn-mcl` or remapped danger) — **don’t** ship default Bootstrap blue as primary brand |
 | Secondary button | Outline navy |
 | Cards / worksheets | White on `#F5F4F0`; gold top border optional on stat cards |
