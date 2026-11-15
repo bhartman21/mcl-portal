@@ -178,7 +178,7 @@ npm run deploy:functions
 
 ## CI deployer permissions (deploy-functions.yml)
 
-This section is only needed if you use the optional manual workflow `ci/github-workflows/deploy-functions.yml` instead of deploying from your own machine. That workflow uses the same GitHub secret as the Hosting deploy, `FIREBASE_SERVICE_ACCOUNT`. Call the service account behind that key (or behind Workload Identity Federation, if you switch to it) the **CI deployer**, for example `firebase-deployer@<PROJECT_ID>.iam.gserviceaccount.com`.
+This section is only needed if you use the optional manual workflow `ci/github-workflows/deploy-functions.yml` instead of deploying from your own machine. That workflow uses the same GitHub secret as the Hosting deploy, `FIREBASE_SERVICE_ACCOUNT`. Call the service account behind that key (or behind Workload Identity Federation, if you switch to it) the **CI deployer**, `github-deploy@<PROJECT_ID>.iam.gserviceaccount.com` (the name the admin guide uses).
 
 It assumes you did the **first** deploy yourself (step 5). After that, CI only updates an existing 2nd-gen function with a Pub/Sub trigger and a custom runtime service account.
 
@@ -199,7 +199,7 @@ It assumes you did the **first** deploy yourself (step 5). After that, CI only u
 - `resourcemanager.projects.setIamPolicy` (Project IAM Admin): only the first 2nd-gen event deploy edits the project policy (below), and you do that one in step 5.
 
 ```bash
-DEPLOYER=firebase-deployer@${PROJECT_ID}.iam.gserviceaccount.com   # the account behind FIREBASE_SERVICE_ACCOUNT
+DEPLOYER=github-deploy@${PROJECT_ID}.iam.gserviceaccount.com   # the account behind FIREBASE_SERVICE_ACCOUNT
 PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
 BUILD_SA=${PROJECT_NUMBER}-compute@developer.gserviceaccount.com
 
