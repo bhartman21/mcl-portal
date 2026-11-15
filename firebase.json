@@ -19,6 +19,27 @@
   "storage": {
     "rules": "storage.rules"
   },
+  "functions": [
+    {
+      "source": "functions/budget-guard",
+      "codebase": "budget-guard",
+      "runtime": "nodejs22",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "src",
+        "test",
+        "coverage",
+        "*.log",
+        "tsconfig*.json",
+        "vitest.config.mts",
+        ".env.example"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run build"
+      ]
+    }
+  ],
   "emulators": {
     "auth": {
       "port": 9099
@@ -28,6 +49,12 @@
     },
     "storage": {
       "port": 9199
+    },
+    "functions": {
+      "port": 5001
+    },
+    "pubsub": {
+      "port": 8085
     },
     "hosting": {
       "port": 5000

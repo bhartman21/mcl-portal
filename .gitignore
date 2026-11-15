@@ -56,3 +56,7 @@ ui-debug.log
 database-debug.log
 pubsub-debug.log
 .firebase/
+
+# Cloud Functions (functions/<codebase>/): dependencies and compiled output
+functions/*/node_modules/
+functions/*/lib/

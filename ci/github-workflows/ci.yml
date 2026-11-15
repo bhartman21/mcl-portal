@@ -50,3 +50,30 @@ jobs:
       # Committed environments hold placeholders only, so this build runs in demo mode.
       - name: Production build
         run: npx ng build --configuration production
+
+  # budget-guard Cloud Function (functions/budget-guard): its own install, type check, tests and build.
+  budget-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: functions/budget-guard
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: functions/budget-guard/package-lock.json
+
+      - run: npm ci
+
+      - name: Type check
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build

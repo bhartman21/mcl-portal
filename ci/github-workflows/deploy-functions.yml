@@ -1,0 +1,87 @@
+name: Deploy budget-guard (Cloud Function)
+
+# Manual only. Deploys just the budget-guard codebase (functions/budget-guard), never Hosting
+# or rules. The usual path is for the owner to deploy from their own machine
+# (functions/budget-guard/README.md). This workflow is optional.
+#
+# Required repository secrets (same as deploy.yml):
+#   FIREBASE_SERVICE_ACCOUNT   JSON key of the deploy service account. Beyond the Hosting deploy
+#                              roles, it needs Cloud Functions Admin and Service Account User on
+#                              budget-guard@<project>.iam.gserviceaccount.com (see the README).
+#   FIREBASE_PROJECT_ID        e.g. mcl-portal
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Deploy in dry-run mode (logs only, never detaches billing)'
+        type: boolean
+        default: true
+      topic:
+        description: 'Pub/Sub topic the budget publishes to'
+        type: string
+        default: budget-guard
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-budget-guard
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+    steps:
+      - name: Check deploy secrets
+        id: check
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ] || [ -z "$FIREBASE_PROJECT_ID" ]; then
+            echo "::notice title=Deploy skipped::Add FIREBASE_SERVICE_ACCOUNT and FIREBASE_PROJECT_ID first."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.ready == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.ready == 'true'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/budget-guard/package-lock.json
+
+      - name: Install
+        if: steps.check.outputs.ready == 'true'
+        run: npm ci && npm run functions:install
+
+      - name: Test
+        if: steps.check.outputs.ready == 'true'
+        run: npm run functions:test
+
+      - name: Write deploy-time parameters (not secrets)
+        if: steps.check.outputs.ready == 'true'
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          TOPIC: ${{ inputs.topic }}
+        run: |
+          printf 'BUDGET_GUARD_TOPIC=%s\nBUDGET_GUARD_DRY_RUN=%s\n' "$TOPIC" "$DRY_RUN" \
+            > "functions/budget-guard/.env.$FIREBASE_PROJECT_ID"
+
+      - name: Deploy budget-guard only
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          creds="$RUNNER_TEMP/firebase-sa.json"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$creds"
+          export GOOGLE_APPLICATION_CREDENTIALS="$creds"
+          npx firebase deploy --only functions:budget-guard \
+            --project "$FIREBASE_PROJECT_ID" --non-interactive
+          rm -f "$creds"
