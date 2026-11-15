@@ -31,6 +31,12 @@ They only describe what is built in the portal today. Anything not built yet is 
 | [Detachment directory](./admin-guide/detachments.md) | Administrators | Built |
 | [VAVS reps](./admin-guide/vavs-reps.md) | Detachment and Department VAVS reps | **Planned — not available yet** |
 
+## For the site owner
+
+| Guide | Status |
+|-------|--------|
+| [Firebase setup checklist (phone-first)](./admin-guide/firebase-setup.md) | One-time owner setup |
+
 ## What has changed
 
 See the [release notes](./release-notes.md).
