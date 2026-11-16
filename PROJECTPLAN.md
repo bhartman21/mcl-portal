@@ -60,13 +60,13 @@ Runnable app on Firebase Hosting (or local `ng serve`) with login, role claims/d
 - [ ] User profile document + role assignment model (see `ROLES_AND_PERMISSIONS.md`), including registration-mode lock-down switch.
 - [ ] `siteAdmin` role and admin grant rules (siteAdmin grants any level; nationalAdmin grants national/department; departmentAdmin grants department only), enforced in rules with emulator tests; one-time first-admin bootstrap makes Billy siteAdmin (decided Nov 14, 2026).
 - [ ] Detachment directory publicly readable (active entries only), including signed out.
-- [ ] Seed `detachments` from R.U.D.Y.'s directory (`docs/research/MCL_Department_of_Florida_Detachments.csv`, 51 active detachments, Nov 15, 2026): #54 = **Morris F Dixon Jr.** (Clearwater); S/Sgt Ted Archambault = **#819** (Crystal River). Fix the current seed: DeLong is #1267 (not #55); #58 is Indian River and Smedley is #64; #567 is Holiday; #755 is Tamarac and Gator is #990; #1055 Lou Ehlers is not in Florida (awaiting Billy). Mark the 3 single-source rows (#549, #1072, #1476) `needsVerification: true`.
+- [x] Seed `detachments` from R.U.D.Y.'s directory (`docs/research/MCL_Department_of_Florida_Detachments.csv`, 51 active detachments, Nov 15, 2026): #54 = **Morris F Dixon Jr.** (Clearwater); S/Sgt Ted Archambault = **#819** (Crystal River). Fix the current seed: DeLong is #1267 (not #55); #58 is Indian River and Smedley is #64; #567 is Holiday; #755 is Tamarac and Gator is #990; #1055 Lou Ehlers is not in Florida (awaiting Billy). Mark the 3 single-source rows (#549, #1072, #1476) `needsVerification: true`. Merged in PR #35 (Nov 16, 2026); #1055 still flagged pending Billy (OPEN_QUESTIONS #21).
 - [ ] Admin UI: users, roles, detachments (create, edit, deactivate), registration mode.
 - [ ] Email-link sign-in completes on a different device: prompt for the email with a visible input.
 - [ ] Hide the "Continue with Google" button until Google sign-in is approved (email link only at launch).
 - [ ] In-app labels follow the current phase order (Ad Book = Phase 1, VAVS = Phase 2).
-- [ ] Cleaner header per STYLE_GUIDE.md "App header layout" (Nov 15, 2026): three zones, account avatar menu with theme picker, Ribbon Rack to footer, demo-mode strip, no overflow at 1200–1440px.
-- [ ] Cost cap (decided Nov 15, 2026): Blaze plan, $10/month budget with alerts at $2/$5/$8/$10, and the `budget-guard` Cloud Function that detaches billing at $10. Include a dry-run test and owner steps in the Firebase setup guide.
+- [x] Cleaner header per STYLE_GUIDE.md "App header layout" (Nov 15, 2026): three zones, account avatar menu with theme picker, Ribbon Rack to footer, demo-mode strip, no overflow at 1200–1440px. Merged in PRs #28 and #31 (Nov 16, 2026).
+- [x] Cost cap (decided Nov 15, 2026): Blaze plan, $10/month budget with alerts at $2/$5/$8/$10, and the `budget-guard` Cloud Function that detaches billing at $10. Include a dry-run test and owner steps in the Firebase setup guide. Function merged in PR #34 (Nov 16, 2026); owner setup steps are in PR #30, which still needs fixes.
 - [ ] Deploy pipeline (GitHub Actions → Firebase Hosting).
 - [ ] App README with run/deploy steps.
 
