@@ -78,29 +78,30 @@ gcloud services enable \
 gcloud pubsub topics create "$TOPIC" --project "$PROJECT_ID"
 ```
 
-### 3. Create the $20/month budget, alerts at 20/50/80/100%, linked to the topic
+### 3. Edit the existing $20/month budget and connect the topic
 
-In the console: go to **Billing → Budgets & alerts → Create budget**.
-- **Name:** `mcl-portal $20/month`.
-- **Scope:** Projects = **`mcl-portal` only**. This matters: the shutoff uses this budget's cost, so other projects must not count toward it.
-- **Amount:** Specified amount, **$20**, monthly.
-- **Thresholds:** 20%, 50%, 80%, 100%, all of type **Actual** ($4, $10, $16, $20).
+Billy already has a $20/month budget, with alerts at 20/50/80/100% ($4, $10, $16, $20). **Don't create a new budget.** Open the one that already exists, check it, and connect the `budget-guard` topic from step 2. (This matches the owner guide in `docs/admin-guide/firebase-setup.md`, which calls it "your $20 budget"; its name in the console is whatever you chose.)
+
+In the console: go to **Billing → Budgets & alerts** and open **your $20 budget** (press its name; don't press **Create budget**). About **Spend cap** budgets: Google's newer spend cap budgets only cover a few services (Gemini, Vertex AI, Cloud Run, Cloud Run functions). They do **not** cover Firestore, Storage or Hosting. Your **alerts-only** budget plus budget-guard is the right setup.
+
+- **Scope:** **Time range** = **Monthly**. **Projects** = **`mcl-portal` only**. This matters: the shutoff uses this budget's cost, so other projects must not count toward it. If other projects are selected, untick them so only `mcl-portal` is left. If the budget covers the whole billing account, spending in some other project could trip the portal shutoff. If you also want an alert for the whole billing account, make a **separate** budget for that, and **never** connect the `budget-guard` topic to it.
+- **Amount:** Budget type **Specified amount**, target amount **$20**, monthly.
+- **Thresholds:** four rows, all with **Trigger on** set to **Actual**: 20% ($4), 50% ($10), 80% ($16), 100% ($20). Add or fix a row if one is missing or different.
 - **Notifications:** keep "Email alerts to billing admins and users". Tick **"Connect a Pub/Sub topic to this budget"** and choose project `mcl-portal`, topic `budget-guard`.
-- Click **Finish**. The console gives the billing service permission to publish to the topic.
+- Click **Save**. The console gives the billing service permission to publish to the topic.
 
-Or with gcloud (threshold percents are fractions):
+Or with gcloud, list budgets to get the ID, then update the existing budget (don't run `budgets create`):
 
 ```bash
-gcloud billing budgets create \
+gcloud billing budgets list --billing-account="$BILLING_ACCOUNT_ID"
+# Set BUDGET_ID to your $20 budget's ID from the list, then:
+gcloud billing budgets update "$BUDGET_ID" \
   --billing-account="$BILLING_ACCOUNT_ID" \
-  --display-name="mcl-portal \$20/month" \
-  --budget-amount=20USD \
-  --calendar-period=month \
   --filter-projects="projects/${PROJECT_ID}" \
-  --threshold-rule=percent=0.2 --threshold-rule=percent=0.5 \
-  --threshold-rule=percent=0.8 --threshold-rule=percent=1.0 \
   --notifications-rule-pubsub-topic="projects/${PROJECT_ID}/topics/${TOPIC}"
 ```
+
+Check the amount and the four Actual thresholds in the console if the list output doesn't already show $20 and 20/50/80/100%.
 
 ### 4. Create the service account and grant the roles
 
@@ -243,7 +244,7 @@ The spec says billed services stop "until Billy re-links billing". **Decided (No
 
 To re-enable within the same month, raise the budget first (it lives on the billing account, so editing it works even while the project has no billing), keep the topic connected, then re-link:
 
-1. **Billing → Budgets & alerts → `mcl-portal $20/month`**, then **raise the amount** above the current month-to-date cost (for example $30) and keep the topic connected, so the guard still protects the new limit.
+1. **Billing → Budgets & alerts → your $20 budget**, then **raise the amount** above the current month-to-date cost (for example $30) and keep the topic connected, so the guard still protects the new limit.
 2. **Billing → Account management → My projects**, find `mcl-portal`, then **Change billing** and pick your billing account.
 3. At the start of next month, set the budget back to $20.
 
