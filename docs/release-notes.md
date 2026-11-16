@@ -32,8 +32,8 @@ These changes were merged between 8:05 and 8:07 AM Eastern. The portal is still 
 
 **Behind the scenes: cost cap** (for the site owner)
 
-- The portal will use Firebase's pay-as-you-go plan with a $10-a-month budget. Email alerts go out at $2, $5, $8 and $10.
-- A small helper called budget-guard turns billing off if the month reaches $10, so the site would go offline. Members won't see anything unless that happens.
+- The portal will use Firebase's pay-as-you-go plan with a $20-a-month budget (raised from $10 on November 16). Email alerts go out at $4, $10, $16 and $20.
+- A small helper called budget-guard turns billing off if the month reaches $20, so the site would go offline. Members won't see anything unless that happens.
 - Setup steps are in the owner's Firebase setup checklist.
 
 ---
