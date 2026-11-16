@@ -94,4 +94,4 @@ See `features/RIBBON_RACK.md` and PROJECTPLAN “Future / optional”.
 | Payment | Not in MVP |
 | VAVS roles | Members log own; det/dept reps monitor & modify; audit trail |
 
-22. **Budget-guard re-link:** if Billy re-links billing while the month's cost is still over $10, `budget-guard` detaches it again. Add an override switch, or is "raise the budget first, then re-link" enough?
+22. ~~**Budget-guard re-link**~~ **Decided (Nov 16, 2026): no override; raise the budget first, then re-link.** Original question: if Billy re-links billing while the month's cost is still over $10, `budget-guard` detaches it again. Add an override switch, or is "raise the budget first, then re-link" enough?
