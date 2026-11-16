@@ -1,0 +1,482 @@
+[
+  {
+    "role": "signed-out",
+    "width": 1200,
+    "pass": false,
+    "innerWidth": 1200,
+    "scrollWidth": 1202,
+    "overflow": true,
+    "navHeight": 130,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Member Sign In"
+    ],
+    "clipped": [
+      "Member Sign In"
+    ]
+  },
+  {
+    "role": "signed-out",
+    "width": 1280,
+    "pass": false,
+    "innerWidth": 1280,
+    "scrollWidth": 1280,
+    "overflow": false,
+    "navHeight": 130,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Member Sign In"
+    ],
+    "clipped": []
+  },
+  {
+    "role": "signed-out",
+    "width": 1366,
+    "pass": false,
+    "innerWidth": 1366,
+    "scrollWidth": 1366,
+    "overflow": false,
+    "navHeight": 130,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Member Sign In"
+    ],
+    "clipped": []
+  },
+  {
+    "role": "signed-out",
+    "width": 1440,
+    "pass": false,
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "overflow": false,
+    "navHeight": 82,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Member Sign In"
+    ],
+    "clipped": []
+  },
+  {
+    "role": "member",
+    "width": 1200,
+    "pass": false,
+    "innerWidth": 1200,
+    "scrollWidth": 1225,
+    "overflow": true,
+    "navHeight": 130,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": [
+      "Sign Out"
+    ]
+  },
+  {
+    "role": "member",
+    "width": 1280,
+    "pass": false,
+    "innerWidth": 1280,
+    "scrollWidth": 1280,
+    "overflow": false,
+    "navHeight": 130,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": []
+  },
+  {
+    "role": "member",
+    "width": 1366,
+    "pass": false,
+    "innerWidth": 1366,
+    "scrollWidth": 1366,
+    "overflow": false,
+    "navHeight": 130,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": []
+  },
+  {
+    "role": "member",
+    "width": 1440,
+    "pass": false,
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "overflow": false,
+    "navHeight": 97,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": []
+  },
+  {
+    "role": "member-pending",
+    "width": 1200,
+    "pass": false,
+    "innerWidth": 1200,
+    "scrollWidth": 1297,
+    "overflow": true,
+    "navHeight": 130,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": [
+      "Sign Out"
+    ]
+  },
+  {
+    "role": "member-pending",
+    "width": 1280,
+    "pass": false,
+    "innerWidth": 1280,
+    "scrollWidth": 1337,
+    "overflow": true,
+    "navHeight": 130,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": [
+      "Sign Out"
+    ]
+  },
+  {
+    "role": "member-pending",
+    "width": 1366,
+    "pass": false,
+    "innerWidth": 1366,
+    "scrollWidth": 1380,
+    "overflow": true,
+    "navHeight": 130,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": [
+      "Sign Out"
+    ]
+  },
+  {
+    "role": "member-pending",
+    "width": 1440,
+    "pass": false,
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "overflow": false,
+    "navHeight": 106,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": []
+  },
+  {
+    "role": "detachmentVavsRep",
+    "width": 1200,
+    "pass": false,
+    "innerWidth": 1200,
+    "scrollWidth": 1246,
+    "overflow": true,
+    "navHeight": 130,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": [
+      "Sign Out"
+    ]
+  },
+  {
+    "role": "detachmentVavsRep",
+    "width": 1280,
+    "pass": false,
+    "innerWidth": 1280,
+    "scrollWidth": 1286,
+    "overflow": true,
+    "navHeight": 130,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": [
+      "Sign Out"
+    ]
+  },
+  {
+    "role": "detachmentVavsRep",
+    "width": 1366,
+    "pass": false,
+    "innerWidth": 1366,
+    "scrollWidth": 1366,
+    "overflow": false,
+    "navHeight": 130,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": []
+  },
+  {
+    "role": "detachmentVavsRep",
+    "width": 1440,
+    "pass": false,
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "overflow": false,
+    "navHeight": 97,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": []
+  },
+  {
+    "role": "adBookApprover",
+    "width": 1200,
+    "pass": false,
+    "innerWidth": 1200,
+    "scrollWidth": 1241,
+    "overflow": true,
+    "navHeight": 130,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": [
+      "Sign Out"
+    ]
+  },
+  {
+    "role": "adBookApprover",
+    "width": 1280,
+    "pass": false,
+    "innerWidth": 1280,
+    "scrollWidth": 1281,
+    "overflow": true,
+    "navHeight": 130,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": [
+      "Sign Out"
+    ]
+  },
+  {
+    "role": "adBookApprover",
+    "width": 1366,
+    "pass": false,
+    "innerWidth": 1366,
+    "scrollWidth": 1366,
+    "overflow": false,
+    "navHeight": 130,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": []
+  },
+  {
+    "role": "adBookApprover",
+    "width": 1440,
+    "pass": false,
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "overflow": false,
+    "navHeight": 97,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": []
+  },
+  {
+    "role": "departmentAdmin",
+    "width": 1200,
+    "pass": false,
+    "innerWidth": 1200,
+    "scrollWidth": 1387,
+    "overflow": true,
+    "navHeight": 130,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": [
+      "Sign Out"
+    ]
+  },
+  {
+    "role": "departmentAdmin",
+    "width": 1280,
+    "pass": false,
+    "innerWidth": 1280,
+    "scrollWidth": 1427,
+    "overflow": true,
+    "navHeight": 130,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": [
+      "Sign Out"
+    ]
+  },
+  {
+    "role": "departmentAdmin",
+    "width": 1366,
+    "pass": false,
+    "innerWidth": 1366,
+    "scrollWidth": 1470,
+    "overflow": true,
+    "navHeight": 130,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": [
+      "Sign Out"
+    ]
+  },
+  {
+    "role": "departmentAdmin",
+    "width": 1440,
+    "pass": false,
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "overflow": false,
+    "navHeight": 130,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": []
+  },
+  {
+    "role": "departmentAdmin-longname",
+    "width": 1200,
+    "pass": false,
+    "innerWidth": 1200,
+    "scrollWidth": 1414,
+    "overflow": true,
+    "navHeight": 194,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": [
+      "Sign Out"
+    ]
+  },
+  {
+    "role": "departmentAdmin-longname",
+    "width": 1280,
+    "pass": false,
+    "innerWidth": 1280,
+    "scrollWidth": 1454,
+    "overflow": true,
+    "navHeight": 194,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": [
+      "Sign Out"
+    ]
+  },
+  {
+    "role": "departmentAdmin-longname",
+    "width": 1366,
+    "pass": false,
+    "innerWidth": 1366,
+    "scrollWidth": 1497,
+    "overflow": true,
+    "navHeight": 194,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": [
+      "Sign Out"
+    ]
+  },
+  {
+    "role": "departmentAdmin-longname",
+    "width": 1440,
+    "pass": false,
+    "innerWidth": 1440,
+    "scrollWidth": 1444,
+    "overflow": true,
+    "navHeight": 194,
+    "wrapped": [
+      "VAVS Tracker",
+      "Ad Book Studio",
+      "Ribbon Rack",
+      "Sign Out"
+    ],
+    "clipped": [
+      "Sign Out"
+    ]
+  }
+]

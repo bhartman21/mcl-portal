@@ -1,0 +1,24 @@
+{
+  "name": "mcl-portal-budget-guard",
+  "private": true,
+  "description": "budget-guard: detaches Cloud Billing from the project when the $10/month budget is reached (ARCHITECTURE.md \"Pricing plan and cost cap\").",
+  "main": "lib/index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "lint": "tsc -p tsconfig.check.json"
+  },
+  "dependencies": {
+    "@googleapis/cloudbilling": "^14.0.1",
+    "firebase-admin": "^14.5.1",
+    "firebase-functions": "^7.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "~5.9.2",
+    "vitest": "^4.1.12"
+  }
+}

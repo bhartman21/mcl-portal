@@ -32,7 +32,12 @@
     }
     @if (isLockedForEdit()) {
       <div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
-        @if (current.status === 'submitted') {
+        @if (current.locked) {
+          <div data-testid="locked-ad-note">
+            <strong>Submission limit reached.</strong> This ad is locked. An administrator must reset it
+            before it can be edited or submitted again.
+          </div>
+        } @else if (current.status === 'submitted') {
           <div>
             This ad is currently <strong>submitted</strong>. Withdraw it to draft to make changes.
           </div>

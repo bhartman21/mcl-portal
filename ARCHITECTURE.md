@@ -29,6 +29,24 @@ RibbonRackBuilder (separate browser app / GH Pages) → its own Firebase project
 
 Decided Nov 9, 2026: launch on **Firebase Hosting default URL** (custom domain later optional).
 
+### Pricing plan and cost cap (decided Nov 15, 2026)
+
+The free Spark plan no longer fits: Cloud Storage (even the default bucket) requires the **Blaze** pay-as-you-go plan since Feb 3, 2026, and Spark allows only **5 email sign-in link emails per day** project-wide (Blaze: 25,000/day). Billy chose **Blaze with a hard $10/month ceiling**:
+
+| Item | Decision |
+|------|----------|
+| Plan | Blaze, linked to Billy's Cloud Billing account |
+| Region | `us-east1` for Firestore and Storage (Cloud Storage "Always Free" tier applies in us-central1/us-east1/us-west1) |
+| Expected cost | $0/month within no-cost allowances (estimate, not guaranteed) |
+| Budget alerts | Cloud Billing budget of $10/month with email alerts at 20%, 50%, 80%, 100% ($2, $5, $8, $10) |
+| Automatic shutoff | Budget publishes to a Pub/Sub topic; a small Cloud Function (`budget-guard`) detaches billing from the project when actual cost reaches $10 (Google's documented "disable billing with notifications" pattern) |
+| Shutoff effect | Billed services stop until Billy re-links billing; Google warns resources may not shut down cleanly, so alerts at $2/$5/$8 give time to react first |
+| Only Cloud Function | `budget-guard` is the only function; app features still use no Cloud Functions |
+| Guard details (B.O.B., PR #34) | Pub/Sub topic `budget-guard`; fires when cost >= budget; budget scoped to this project only; the function's service account has Project Billing Manager + Browser on the project (not Billing Account Admin); dry-run flag defaults to false, but the first deploy runs with dry run on to test it |
+| Re-linking while over budget | **Decided (Nov 16, 2026):** no override. The guard detaches billing again if it's re-linked while that month's cost is still over $10, so raise the budget first, then re-link |
+
+Email sign-in link stays the sign-in method (no change to the app).
+
 ## Angular application structure (target)
 
 ```
@@ -145,12 +163,12 @@ public/
   name: string;                // e.g. 'PFC BRUCE W CARTER'
   displayName: string;         // full label for selects
   active: boolean;
-  needsVerification?: boolean; // e.g. S/Sgt Ted Archambault until number confirmed
+  needsVerification?: boolean; // single-source rows, e.g. #549, #1072, #1476
   notes?: string;
 }
 ```
 
-Seed from VAVS sample options. **#54 = Morris F Dixon Jr. Detachment** (confirmed Nov 9, 2026). Seed S/Sgt Ted Archambault as a separate doc with `needsVerification: true` and no number.
+Seed from R.U.D.Y.'s Department of Florida directory (`docs/research/MCL_Department_of_Florida_Detachments.csv`, 51 active detachments, Nov 15, 2026; sources: mcldof.org district page and the National detachment locator). **#54 = Morris F Dixon Jr. Detachment** (confirmed Nov 9, 2026). S/Sgt Ted Archambault is **#819** (Crystal River). Rows found on only one source get `needsVerification: true`.
 
 ### `vavsPeriods/{id}`
 
@@ -325,7 +343,7 @@ Append-only (no update or delete). Readable by department, national, and site ad
 
 ### `notifications/{id}`
 
-In-app only (no email on the Spark plan). Created when an admin self-approves an ad, one per other admin. Shown as a badge and on `/admin/activity`.
+In-app only (no email; the app has no server-side email sending). Created when an admin self-approves an ad, one per other admin. Shown as a badge and on `/admin/activity`.
 
 ```ts
 {

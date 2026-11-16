@@ -72,11 +72,13 @@ npx ng build --configuration production
 - `.github/workflows/ci.yml` runs on every PR and push to `main`: `npm ci`, lint, unit tests, rules tests, production build.
 - `.github/workflows/deploy.yml` runs on push to `main` (and manually). It writes `environment.local.ts` from secrets, runs `npm run build:firebase`, then `firebase deploy --only hosting,firestore:rules,storage`. **Until every secret below exists, the job skips with a notice instead of failing.**
 
+Deploys run as a dedicated service account named **`github-deploy`** (the same name the Firebase setup guide uses).
+
 Required repository secrets (Settings → Secrets and variables → Actions):
 
 | Secret | Value |
 |--------|-------|
-| `FIREBASE_SERVICE_ACCOUNT` | JSON key for a deploy service account (roles: Firebase Hosting Admin, Firebase Rules Admin, Service Account User; or Firebase Admin) |
+| `FIREBASE_SERVICE_ACCOUNT` | JSON key for the `github-deploy` service account (roles: Firebase Hosting Admin and Firebase Rules Admin, or Firebase Admin). Service Account User isn't needed because Hosting has no rewrites to a function or Cloud Run. |
 | `FIREBASE_PROJECT_ID` | e.g. `mcl-portal` |
 | `FIREBASE_API_KEY` | web app `apiKey` |
 | `FIREBASE_AUTH_DOMAIN` | e.g. `mcl-portal.firebaseapp.com` |
@@ -91,8 +93,8 @@ Manual deploy from a workstation: `npx firebase login`, then `npm run config:env
 1. Create the Firebase project (preferred id `mcl-portal`). Do **not** reuse `mcl-rack-builder`.
 2. Add a **Web app**; copy its config into the GitHub secrets above (and your `.env.local`).
 3. **Authentication → Sign-in method:** enable **Email/Password** and its **Email link (passwordless sign-in)** option.
-4. **Authentication → Settings → Authorized domains:** keep `mcl-portal.web.app` / `mcl-portal.firebaseapp.com`; add `localhost` for local testing and any custom domain later.
-5. Create **Cloud Firestore** (production mode) and **Cloud Storage** (default bucket). Spark (free) plan is enough.
+4. **Authentication → Settings → Authorized domains:** keep `mcl-portal.web.app` / `mcl-portal.firebaseapp.com`; add `localhost` for local testing (new projects no longer include it by default) and any custom domain later.
+5. Upgrade to the **Blaze** plan (required for Cloud Storage since Feb 3, 2026, and for more than 5 sign-in link emails/day), set the $10/month budget and shutoff from ARCHITECTURE.md "Pricing plan and cost cap", then create **Cloud Firestore** (production mode) and **Cloud Storage** (default bucket), both in `us-east1`.
 6. Create the deploy service account key and add `FIREBASE_SERVICE_ACCOUNT`. Storage rules use cross-service `firestore.get()`, which needs a one-time permission grant: do the first Storage rules publish interactively (`npx firebase deploy --only storage --project <id>` after `firebase login`, or paste `storage.rules` in the console) and accept the prompt, so the non-interactive CI deploy doesn't stop on it.
 7. Push to `main` (or run the Deploy workflow manually).
 
@@ -102,7 +104,7 @@ There are no hard-coded admin emails. Roles live in `users/{uid}` and only an ex
 
 1. Open the deployed site and sign in with the email link. This creates `users/{your uid}` with `roles: ['member']`.
 2. In Firebase console → Firestore → `users` → your document, edit `roles` to `["member", "siteAdmin"]` and make sure `status` is `"active"`. (The console bypasses security rules; this is the only time roles are edited outside the app.)
-3. Reload the portal. On first admin load the app writes `settings/registration` (`mode: 'open'`) and seeds the DoF `detachments` directory (#54 = Morris F. Dixon Jr.; S/Sgt Ted Archambault with `needsVerification: true` and no number). If the directory is still empty, use **Admin → Detachments → Seed DoF Detachments**.
+3. Reload the portal. On first admin load the app writes `settings/registration` (`mode: 'open'`) and seeds the DoF `detachments` directory (#54 = Morris F. Dixon Jr.; S/Sgt Ted Archambault = #819; full list of 51 detachments). If the directory is still empty, use **Admin → Detachment Directory → Seed DoF Detachments**.
 4. From then on, assign every other admin from **Admin → Users & Roles**. Each grant or revoke is written to `audits` (who, when, target user, before/after roles).
 
 ### Admin grant hierarchy (decided Nov 14, 2026)
