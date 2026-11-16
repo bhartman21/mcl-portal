@@ -156,6 +156,65 @@ textarea:focus-visible {
   outline-offset: 2px;
 }
 
+// App header theme picker (shell-header account menu / collapsed menu). Global to keep the
+// header component under its style budget.
+// Theme picker: 3-option segmented control (Light / Dark / Fun).
+.mcl-theme-switcher {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 999px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.mcl-theme-btn {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background-color: var(--bs-tertiary-bg);
+  }
+
+  &.active {
+    background-color: var(--mcl-navy);
+    color: #ffffff;
+  }
+}
+
+[data-mcl-theme='dark'] .mcl-theme-btn.active {
+  background-color: #cfb53b;
+  color: #040d1a;
+}
+
+.mcl-theme-switcher.on-navy {
+  border-color: rgba(255, 255, 255, 0.25);
+  background-color: rgba(0, 0, 0, 0.2);
+
+  .mcl-theme-btn {
+    color: rgba(255, 255, 255, 0.85);
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    &.active {
+      background-color: #ffffff;
+      color: #142c49;
+    }
+  }
+}
+
 @media print {
   body {
     background: #ffffff !important;
