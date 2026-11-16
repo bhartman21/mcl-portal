@@ -6,7 +6,7 @@ An approver may ask you to fix something in your ad. This is called a rejection.
 
 ### How you will know
 
-1. Open **Ad Book Studio**.
+1. Press **Ad Book** at the top of the page.
 2. Under **My Ads**, the ad shows the status **rejected**.
 3. A red box shows **Revision Requested:** and the approver's notes.
 
@@ -41,7 +41,9 @@ The ad still shows the status **rejected**. The **Edit** and **Submit** buttons 
 3. When they reset it, the ad goes back to **draft** with **Submission 0 of 3**.
 4. Fix the ad and submit it again. You get up to 3 more submissions.
 
-If you open a locked ad with **View** and try to save it, you will see: "Submission limit reached. An administrator must reset this ad before it can be edited."
+If you press **View**, the ad opens read-only. You can look at it, but you can't change it. The boxes are greyed out, and **Save Draft** and **Submit for Approval** are not shown. A box at the top says:
+
+**Submission limit reached.** This ad is locked. An administrator must reset it before it can be edited or submitted again.
 
 A locked ad can't be deleted.
 

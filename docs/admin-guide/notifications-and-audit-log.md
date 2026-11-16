@@ -8,8 +8,8 @@ For: Department Admins, National Admins, and Site Administrators.
 
 Use either:
 
-- The bell icon (**Notifications**) at the top of the page. A red number shows how many notifications are new.
-- **Admin → Notifications & Audit Log**.
+- The bell icon at the top right of the page. A red number shows how many notifications are new. On a phone or narrow screen, press the menu button (☰); it is listed as **Notifications**.
+- **Admin → Activity**.
 
 The **Notifications & Audit Log** page opens.
 

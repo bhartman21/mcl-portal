@@ -15,7 +15,7 @@ You must be signed in to use Ad Book Studio.
 ## Open Ad Book Studio
 
 1. Sign in. See [Signing in with an email link](./signing-in.md).
-2. Press **Ad Book Studio** at the top of the page. Or press **Open Ad Book Studio** on the home page.
+2. Press **Ad Book** at the top of the page. On a phone or narrow screen, press the menu button (☰) at the top right first. Or press **Open Ad Book Studio** on the home page.
 3. The **Convention & Event Ad Books** page opens.
 4. Your ads are listed under **My Ads**.
 

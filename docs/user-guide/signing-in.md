@@ -9,7 +9,7 @@ You do not need a password. The portal emails you a link. You click the link to 
 ## Sign in
 
 1. Open the portal home page.
-2. Press **Member Sign In**. You will find it on the home page and at the top right of every page.
+2. Press **Member Sign In** on the home page, or **Sign In** at the top right of any page. On a phone or narrow screen, press the menu button (☰) at the top right first.
 3. The **Member Sign In** page opens.
 4. In the **Email Address** box, type your email address.
 5. Press **Send Sign-In Link**.
@@ -30,8 +30,9 @@ This happens if you open the link on a different computer, phone, or browser tha
 
 ## After you sign in
 
-- Your name or email shows at the top right of the page.
-- Under your name you see your role, such as **MCL Member**.
+- A round button with your initials shows at the top right of the page. Press it to open your account menu.
+- The account menu shows your name or email and your role, such as **MCL Member**. It also has the **Theme** choices and **Sign Out**.
+- On a phone or narrow screen, press the menu button (☰). Your name, role, **Theme** and **Sign Out** are listed at the bottom.
 - The home page now shows **Open VAVS Tracker** and **Open Ad Book Studio**.
 
 ## If your account is waiting for approval
@@ -48,12 +49,12 @@ If you see **Account Suspended**, please contact your Department of Florida Admi
 
 ## Sign out
 
-1. Look at the top right of the page.
+1. Press the round button with your initials at the top right. On a phone or narrow screen, press the menu button (☰) instead.
 2. Press **Sign Out**.
 3. You return to the home page.
 
 ## Local Demo Mode (testing only)
 
-Until the portal is live, a **Local Demo Mode** badge shows at the top of every page. The sign-in page also shows a **Local Demo Mode (no Firebase)** box. Testers can pick a practice role there: **MCL Member**, **Detachment VAVS Rep**, **Ad Book Approver**, or **Department Admin**. Nothing is saved to a server in this mode.
+Until the portal is live, a strip above the header on every page says **Local Demo Mode: data stays in this browser**. The sign-in page also shows a **Local Demo Mode (no Firebase)** box. Testers can pick a practice role there: **MCL Member**, **Detachment VAVS Rep**, **Ad Book Approver**, or **Department Admin**. Nothing is saved to a server in this mode.
 
 Signing in with Google is not offered. The Department chose the email link.

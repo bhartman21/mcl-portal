@@ -13,7 +13,7 @@ Changing this setting only affects **new** sign-ins. People who already use the 
 
 ## Change the setting
 
-1. Press **Admin** at the top of the page.
+1. Press **Admin** at the top of the page. On a phone or narrow screen, press the menu button (☰) at the top right first. The Admin links are listed under **Admin**.
 2. Press **Registration Settings**.
 3. The **Portal Registration Settings** page opens.
 4. The current choice shows a badge that says **Active**.

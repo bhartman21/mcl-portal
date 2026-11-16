@@ -9,7 +9,7 @@ For: Ad Book Approvers, Department Admins, National Admins, and Site Administrat
 
 ## Open the Approval Queue
 
-1. Press **Ad Book Studio** at the top of the page.
+1. Press **Ad Book** at the top of the page. On a phone or narrow screen, press the menu button (☰) at the top right first.
 2. Press **Approval Queue**. A red number shows how many ads are waiting.
 3. The **Ad Approval Queue** page opens.
 

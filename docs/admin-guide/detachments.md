@@ -6,14 +6,15 @@ The portal keeps a list of Department of Florida detachments. Members see the ac
 
 ## Open the directory
 
-1. Press **Admin** at the top of the page.
-2. Press **Detachment Directory**.
+1. Press **Admin** at the top of the page. On a phone or narrow screen, press the menu button (☰) at the top right first. The Admin links are listed under **Admin**.
+2. Press **Detachments**.
+3. The **Detachment Directory** page opens.
 
 Or, on the home page, press **Manage Detachments**.
 
 ## On a brand-new portal: load the starter list
 
-The first time an administrator opens the portal, it fills in the Department of Florida list by itself.
+The first time an administrator opens the portal, it fills in the Department of Florida starter list (52 detachments) by itself.
 
 If the directory is still empty, you will see "The detachment directory is empty." Press **Seed DoF Detachments** to load the starter list.
 
@@ -46,7 +47,9 @@ You can confirm the number in either of two ways:
 
 Either way, the **Needs Verification** badge goes away.
 
-Today, the S/Sgt Ted Archambault Detachment is marked **Needs Verification**. Keep it separate from #54, which is the Morris F. Dixon Jr. Detachment.
+In the starter list, these detachments are marked **Needs Verification**: #549, #1055, #1072 and #1476.
+
+The SSgt. Ted Archambault Detachment is **#819** (Crystal River). Its number is already verified. Keep it separate from #54, which is the Morris F. Dixon Jr. Detachment.
 
 ## Turn a detachment off or on
 

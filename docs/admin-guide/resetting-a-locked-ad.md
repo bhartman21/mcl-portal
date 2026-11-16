@@ -10,7 +10,7 @@ Each ad can be submitted up to **3 times**. If an ad is rejected on its 3rd subm
 
 ## Reset the lock
 
-1. Open **Ad Book Studio**.
+1. Press **Ad Book** at the top of the page. On a phone or narrow screen, press the menu button (☰) at the top right first.
 2. Press **Approval Queue**.
 3. Scroll down to **Locked Ads**. This section only shows when there is at least one locked ad.
 4. Find the ad. It shows its title, who made it, and **Submission 3 of 3**.

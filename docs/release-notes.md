@@ -6,6 +6,38 @@ The portal is not live for members yet. These notes cover work saved to the proj
 
 ---
 
+## November 16, 2026 — New header, read-only locked ads, full detachment list, cost cap
+
+These changes were merged between 8:05 and 8:07 AM Eastern. The portal is still not live; you can try the app changes in **Local Demo Mode**.
+
+**New header** (fixes #27 and #29)
+
+- The header has three parts. The portal name on the left takes you home. **VAVS**, **Ad Book** and (for admins) **Admin** are in the middle. The bell and your account button are on the right.
+- When you're signed in, a round button with your initials opens your account menu. It shows your name, your role, the **Theme** choices (**Light**, **Dark**, **Fun**) and **Sign Out**.
+- When you're signed out, the header shows a **Sign In** button and a theme button.
+- The Admin menu items are now **Users & Roles**, **Detachments**, **Activity** and **Registration Settings**.
+- On a phone, the portal name and the menu button (☰) fit on one row.
+- The **Ribbon Rack Builder** link is on the home page and at the bottom of every page, no longer in the header.
+- In testing, a strip above the header says **Local Demo Mode: data stays in this browser**.
+
+**Locked ads are read-only** (fixes #32)
+
+- Opening a locked ad with **View** now shows it read-only. **Save Draft** and **Submit for Approval** are hidden. A box says: "**Submission limit reached.** This ad is locked. An administrator must reset it before it can be edited or submitted again."
+
+**Detachment directory**
+
+- The starter list now has the 52 Department of Florida detachments.
+- SSgt. Ted Archambault is **#819** (Crystal River), already verified.
+- #549, #1055, #1072 and #1476 are marked **Needs Verification**.
+
+**Behind the scenes: cost cap** (for the site owner)
+
+- The portal will use Firebase's pay-as-you-go plan with a $10-a-month budget. Email alerts go out at $2, $5, $8 and $10.
+- A small helper called budget-guard turns billing off if the month reaches $10, so the site would go offline. Members won't see anything unless that happens.
+- Setup steps are in the owner's Firebase setup checklist.
+
+---
+
 ## November 14, 2026 (afternoon) — Ad Book rules, admin roles, and sign-in fixes
 
 These changes were merged between 2:39 and 2:44 PM Eastern. The portal is still not live; you can try them in **Local Demo Mode**.

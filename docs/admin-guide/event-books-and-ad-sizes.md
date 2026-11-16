@@ -12,7 +12,7 @@ A program book holds approved ads for one event, such as the Department conventi
 
 ### Make a new book
 
-1. Open **Ad Book Studio**.
+1. Press **Ad Book** at the top of the page. On a phone or narrow screen, press the menu button (☰) at the top right first.
 2. Under **Event Program Books**, press **New Event Book**.
 3. Type the **Book Title**. Example: "2026 Fall Conference Program".
 4. Type the **Event Name**. Example: "DoF Fall Conference".
@@ -69,7 +69,7 @@ The preview shows Letter-size (8.5 × 11 inch) pages. Each page shows the book t
 
 ### Open the ad sizes page
 
-1. Open **Ad Book Studio**.
+1. Press **Ad Book** at the top of the page. On a phone or narrow screen, press the menu button (☰) at the top right first.
 2. Press **Ad Sizes**.
 3. The **Configurable Ad Sizes** page opens.
 
