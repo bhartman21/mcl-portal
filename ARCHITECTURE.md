@@ -168,7 +168,7 @@ public/
 }
 ```
 
-Seed from R.U.D.Y.'s Department of Florida directory (`docs/research/MCL_Department_of_Florida_Detachments.csv`, 51 active detachments, Nov 15, 2026; sources: mcldof.org district page and the National detachment locator). **#54 = Morris F Dixon Jr. Detachment** (confirmed Nov 9, 2026). S/Sgt Ted Archambault is **#819** (Crystal River). Rows found on only one source get `needsVerification: true`.
+Seed from R.U.D.Y.'s Department of Florida directory (`docs/research/MCL_Department_of_Florida_Detachments.csv`, 51 active detachments, Nov 15, 2026; sources: mcldof.org district page and the National detachment locator). **#54 = Morris F Dixon Jr. Detachment** (confirmed Nov 9, 2026). S/Sgt Ted Archambault is **#819** (Crystal River). Rows found on only one source get `needsVerification: true`. Working copy (temporary until the data lives in Firestore): [Google Sheet](https://docs.google.com/spreadsheets/d/1E55KFvRsgxLj-lxGHPHkIxkUy-NFJOhf9J6Nhh5Z2jE/edit), matching the CSV.
 
 ### `vavsPeriods/{id}`
 
