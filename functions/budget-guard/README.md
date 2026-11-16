@@ -235,7 +235,7 @@ If a deploy fails at the **build** step with a permission error, the Cloud Build
 
 ## If billing gets detached: re-enabling safely
 
-The spec says billed services stop "until Billy re-links billing". It doesn't say what happens if billing is re-linked while the month's cost is still at or over $10. **This is an open question for Billy.** Today's behavior, plainly:
+The spec says billed services stop "until Billy re-links billing". **Decided (Billy, Nov 15, 2026; OPEN_QUESTIONS #22): there is no override. To turn billing back on within the same month, raise the budget first, then re-link.** How it behaves:
 
 - Budgets send notifications to the topic **several times a day** for the rest of the month, carrying the month-to-date `costAmount`.
 - If you re-link billing while `costAmount` is still at or over the budget, the next notification detaches billing **again**, usually within hours. budget-guard has no override, by design.
