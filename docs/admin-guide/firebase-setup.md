@@ -189,9 +189,7 @@ Use **Add threshold** to add the fourth row. *Phone tip:* the rows are small. Tu
 
 ## Part 5 — Turn on the budget-guard shutoff
 
-budget-guard is a small robot (a Cloud Function, the project's only one). When the budget reports that this month's cost has **reached $10**, it turns billing off for the project. It can turn billing **off** but can never turn it back **on**, and it has no access to your billing account. It was written by B.O.B. Its full technical steps are in `functions/budget-guard/README.md`.
-
-> **Where the code lives:** budget-guard is in the repo on `main`, in `functions/budget-guard/`. Its technical steps are in `functions/budget-guard/README.md`.
+budget-guard is a small robot (a Cloud Function, the project's only one). When the budget reports that this month's cost has **reached $10**, it turns billing off for the project. It can turn billing **off** but can never turn it back **on**, and it has no access to your billing account. It was written by B.O.B. Its code is on `main` in `functions/budget-guard/`, and its full technical steps are in `functions/budget-guard/README.md`.
 
 > **Some of this needs a computer.** Deploying budget-guard (steps 24 and 27) needs a terminal with Google's and Firebase's command-line tools. That can't be done from a phone's web browser. Do those steps on a computer, or ask B.O.B. to walk you through them. Everything else in this Part has a console route that works on a phone.
 
