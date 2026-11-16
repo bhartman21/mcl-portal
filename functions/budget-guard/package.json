@@ -1,7 +1,7 @@
 {
   "name": "mcl-portal-budget-guard",
   "private": true,
-  "description": "budget-guard: detaches Cloud Billing from the project when the $10/month budget is reached (ARCHITECTURE.md \"Pricing plan and cost cap\").",
+  "description": "budget-guard: detaches Cloud Billing from the project when the $20/month budget is reached (ARCHITECTURE.md \"Pricing plan and cost cap\").",
   "main": "lib/index.js",
   "engines": {
     "node": "22"

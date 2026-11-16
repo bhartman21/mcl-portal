@@ -12,7 +12,7 @@ import { handleBudgetNotification } from './budget-guard';
 /** Pub/Sub topic the Cloud Billing budget publishes to. */
 export const budgetTopic = defineString('BUDGET_GUARD_TOPIC', {
   default: 'budget-guard',
-  description: 'Pub/Sub topic (in this project) that the $10/month Cloud Billing budget publishes to.',
+  description: 'Pub/Sub topic (in this project) that the $20/month Cloud Billing budget publishes to.',
 });
 
 /** When true, only logs what it would do and never detaches billing. */
