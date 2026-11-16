@@ -95,6 +95,11 @@
         <div class="col-lg-7">
           <div class="mcl-card mcl-card-navy p-4 h-100">
             <h2 class="h6 fw-bold mb-3">Placed Ads ({{ placedAds().length }})</h2>
+            @if (b.status === 'open' && ownsAdInBook() && placedAds().length > 1) {
+              <p class="mcl-muted small mb-2" data-testid="own-ad-order-note">
+                You have your own ad in this book, so a different approver must set the page order.
+              </p>
+            }
             @if (placedAds().length === 0) {
               <p class="mcl-muted small mb-0">No ads placed in this book yet.</p>
             } @else {
@@ -112,7 +117,9 @@
                         <button
                           type="button"
                           class="btn btn-outline-secondary"
-                          title="Move up"
+                          [title]="ownsAdInBook() ? reorderBlockedTitle : 'Move up'"
+                          [attr.aria-label]="ownsAdInBook() ? reorderBlockedTitle : 'Move up'"
+                          [disabled]="ownsAdInBook()"
                           (click)="move(item.ad.id, -1)"
                         >
                           <i class="bi bi-arrow-up"></i>
@@ -120,7 +127,9 @@
                         <button
                           type="button"
                           class="btn btn-outline-secondary"
-                          title="Move down"
+                          [title]="ownsAdInBook() ? reorderBlockedTitle : 'Move down'"
+                          [attr.aria-label]="ownsAdInBook() ? reorderBlockedTitle : 'Move down'"
+                          [disabled]="ownsAdInBook()"
                           (click)="move(item.ad.id, 1)"
                         >
                           <i class="bi bi-arrow-down"></i>

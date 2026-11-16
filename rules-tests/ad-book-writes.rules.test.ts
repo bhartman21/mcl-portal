@@ -4,7 +4,7 @@
  * Ad Book rule must still hold when Firestore + Storage are the source of truth.
  */
 import { assertFails, assertSucceeds, RulesTestEnvironment } from '@firebase/rules-unit-testing';
-import { deleteDoc, doc, Firestore, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { deleteDoc, deleteField, doc, Firestore, getDoc, increment, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { getBytes, ref } from 'firebase/storage';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
@@ -252,11 +252,11 @@ describe('#4 books: placement, locking, and undo', () => {
   it('an approver places an approved ad in an open book; a locked book refuses placements (AC 4)', async () => {
     await approvedAd();
     await newBook('b1');
-    await assertFails(placeAdBatch(db('alice'), { id: 'b1', adIds: [] }, AD).commit());
+    await assertFails(placeAdBatch(db('alice'), { id: 'b1', adIds: [] }, AD, 'alice').commit());
     await assertSucceeds(setBookStatusBatch(db('approver'), 'b1', 'locked').commit());
-    await assertFails(placeAdBatch(db('approver'), { id: 'b1', adIds: [] }, AD).commit());
+    await assertFails(placeAdBatch(db('approver'), { id: 'b1', adIds: [] }, AD, 'alice').commit());
     await assertSucceeds(setBookStatusBatch(db('approver'), 'b1', 'open').commit());
-    await assertSucceeds(placeAdBatch(db('approver'), { id: 'b1', adIds: [] }, AD).commit());
+    await assertSucceeds(placeAdBatch(db('approver'), { id: 'b1', adIds: [] }, AD, 'alice').commit());
     expect(await bookDoc('b1')).toMatchObject({ adIds: [AD] });
     expect(await adDoc()).toMatchObject({ bookId: 'b1' });
   });
@@ -266,12 +266,12 @@ describe('#4 books: placement, locking, and undo', () => {
     await assertSucceeds(submit('alice', 1));
     await newBook('b1');
     await newBook('b2');
-    await assertFails(placeAdBatch(db('approver'), { id: 'b1', adIds: [] }, AD).commit());
+    await assertFails(placeAdBatch(db('approver'), { id: 'b1', adIds: [] }, AD, 'alice').commit());
     await assertSucceeds(approveAdBatch(db('approver'), AD, actor('approver')).commit());
     // Book list alone, without the ad's bookId, is refused.
     await assertFails(updateDoc(doc(db('approver'), 'adBooks', 'b1'), { adIds: [AD] }));
-    await assertSucceeds(placeAdBatch(db('approver'), { id: 'b1', adIds: [] }, AD).commit());
-    await assertFails(placeAdBatch(db('approver'), { id: 'b2', adIds: [] }, AD).commit());
+    await assertSucceeds(placeAdBatch(db('approver'), { id: 'b1', adIds: [] }, AD, 'alice').commit());
+    await assertFails(placeAdBatch(db('approver'), { id: 'b2', adIds: [] }, AD, 'alice').commit());
   });
 
   it('#43: an approver-owner cannot place (or remove) their own approved ad; another approver can', async () => {
@@ -280,12 +280,12 @@ describe('#4 books: placement, locking, and undo', () => {
     await assertSucceeds(create('approver'));
     await assertSucceeds(submit('approver', 1));
     await assertSucceeds(approveAdBatch(db('approver2'), AD, actor('approver2')).commit());
-    await assertFails(placeAdBatch(db('approver'), { id: 'b1', adIds: [] }, AD).commit());
+    await assertFails(placeAdBatch(db('approver'), { id: 'b1', adIds: [] }, AD, 'approver').commit());
     expect(await bookDoc('b1')).toMatchObject({ adIds: [] });
     // Another approver can place it; the owner cannot take it back out.
-    await assertSucceeds(placeAdBatch(db('approver2'), { id: 'b1', adIds: [] }, AD).commit());
-    await assertFails(unplaceAdBatch(db('approver'), { id: 'b1', adIds: [AD] }, AD).commit());
-    await assertSucceeds(unplaceAdBatch(db('approver2'), { id: 'b1', adIds: [AD] }, AD).commit());
+    await assertSucceeds(placeAdBatch(db('approver2'), { id: 'b1', adIds: [] }, AD, 'approver').commit());
+    await assertFails(unplaceAdBatch(db('approver'), { id: 'b1', adIds: [AD] }, AD, 'approver').commit());
+    await assertSucceeds(unplaceAdBatch(db('approver2'), { id: 'b1', adIds: [AD] }, AD, 'approver').commit());
   });
 
   it('#43: an admin who self-approved their own ad cannot place it; another approver can', async () => {
@@ -295,20 +295,96 @@ describe('#4 books: placement, locking, and undo', () => {
     await assertSucceeds(
       selfApproveAdBatch(db('admin'), { id: AD, title: 't' }, actor('admin'), 'Deadline', ['admin2']).batch.commit()
     );
-    await assertFails(placeAdBatch(db('admin'), { id: 'b1', adIds: [] }, AD).commit());
-    await assertSucceeds(placeAdBatch(db('approver'), { id: 'b1', adIds: [] }, AD).commit());
+    await assertFails(placeAdBatch(db('admin'), { id: 'b1', adIds: [] }, AD, 'admin').commit());
+    await assertSucceeds(placeAdBatch(db('approver'), { id: 'b1', adIds: [] }, AD, 'admin').commit());
     expect(await bookDoc('b1')).toMatchObject({ adIds: [AD] });
+  });
+
+  /** A second approved ad, written directly (rules off), owned by `owner`. */
+  async function seedApprovedAd(id: string, owner: string): Promise<void> {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'ads', id), {
+        title: id, sizeId: 'full', status: 'approved', createdBy: owner, createdByType: 'member',
+        imagePath: `ad-images/${owner}/${id}/1-art.png`, submissionCount: 1, reviewedBy: 'admin2',
+      });
+    });
+  }
+
+  it('#45: an owner-approver cannot drop their own ad with a book-only write', async () => {
+    await approvedAd();
+    await seedApprovedAd('own', 'approver');
+    await newBook('b1');
+    await assertSucceeds(placeAdBatch(db('approver2'), { id: 'b1', adIds: [] }, AD, 'alice').commit());
+    await assertSucceeds(placeAdBatch(db('approver2'), { id: 'b1', adIds: [AD] }, 'own', 'approver').commit());
+    expect(await bookDoc('b1')).toMatchObject({ adIds: [AD, 'own'], ownerCounts: { alice: 1, approver: 1 } });
+    const bookRef = doc(db('approver'), 'adBooks', 'b1');
+    await assertFails(updateDoc(bookRef, { adIds: [AD] }));
+    await assertFails(updateDoc(bookRef, { adIds: [AD], 'ownerCounts.approver': increment(-1) }));
+    await assertFails(updateDoc(bookRef, { adIds: [] }));
+    // Paired with clearing bookId is still refused for the owner (the ad side needs !isOwner too).
+    await assertFails(unplaceAdBatch(db('approver'), { id: 'b1', adIds: [AD, 'own'] }, 'own', 'approver').commit());
+    expect(await bookDoc('b1')).toMatchObject({ adIds: [AD, 'own'] });
+  });
+
+  it('#45: removal must clear the ad\u2019s bookId in the same batch and keep ownerCounts right', async () => {
+    await approvedAd();
+    await newBook('b1');
+    await assertSucceeds(placeAdBatch(db('approver'), { id: 'b1', adIds: [] }, AD, 'alice').commit());
+    const bookRef = doc(db('approver2'), 'adBooks', 'b1');
+    // Book-only removal by a non-owner approver: bookId would go stale, refused.
+    await assertFails(updateDoc(bookRef, { adIds: [] }));
+    await assertFails(updateDoc(bookRef, { adIds: [], 'ownerCounts.alice': increment(-1) }));
+    // Paired, but the owner count not decremented (or the wrong owner's): refused.
+    const fs = db('approver2');
+    let b = writeBatch(fs);
+    b.update(doc(fs, 'adBooks', 'b1'), { adIds: [] });
+    b.update(doc(fs, 'ads', AD), { bookId: deleteField() });
+    await assertFails(b.commit());
+    b = writeBatch(fs);
+    b.update(doc(fs, 'adBooks', 'b1'), { adIds: [], 'ownerCounts.bob': increment(-1) });
+    b.update(doc(fs, 'ads', AD), { bookId: deleteField() });
+    await assertFails(b.commit());
+    // The app's paired unplace works.
+    await assertSucceeds(unplaceAdBatch(fs, { id: 'b1', adIds: [AD] }, AD, 'alice').commit());
+    expect(await bookDoc('b1')).toMatchObject({ adIds: [], ownerCounts: { alice: 0 } });
+    expect((await adDoc())['bookId']).toBeUndefined();
+    // Placing also needs the paired ad write and the owner count.
+    await assertFails(updateDoc(bookRef, { adIds: [AD], 'ownerCounts.alice': increment(1) }));
+    b = writeBatch(fs);
+    b.update(doc(fs, 'adBooks', 'b1'), { adIds: [AD] });
+    b.update(doc(fs, 'ads', AD), { bookId: 'b1' });
+    await assertFails(b.commit());
+  });
+
+  it('#46: nobody who owns an ad in a book can reorder it; a non-owner approver can', async () => {
+    await approvedAd();
+    await seedApprovedAd('own', 'approver');
+    await newBook('b1');
+    await assertSucceeds(placeAdBatch(db('approver2'), { id: 'b1', adIds: [] }, AD, 'alice').commit());
+    await assertSucceeds(placeAdBatch(db('approver2'), { id: 'b1', adIds: [AD] }, 'own', 'approver').commit());
+    // The owner moves their ad to the front: refused (also with ownerCounts tampered).
+    await assertFails(reorderBookBatch(db('approver'), 'b1', ['own', AD]).commit());
+    await assertFails(
+      updateDoc(doc(db('approver'), 'adBooks', 'b1'), { adIds: ['own', AD], 'ownerCounts.approver': 0 })
+    );
+    expect(await bookDoc('b1')).toMatchObject({ adIds: [AD, 'own'] });
+    // A non-owner approver can reorder, but not reorder while appending or removing.
+    await assertSucceeds(reorderBookBatch(db('approver2'), 'b1', ['own', AD]).commit());
+    expect(await bookDoc('b1')).toMatchObject({ adIds: ['own', AD] });
+    await seedApprovedAd('ad3', 'bob');
+    await assertFails(placeAdBatch(db('approver2'), { id: 'b1', adIds: [AD, 'own'] }, 'ad3', 'bob').commit());
+    await assertSucceeds(placeAdBatch(db('approver2'), { id: 'b1', adIds: ['own', AD] }, 'ad3', 'bob').commit());
   });
 
   it('reorder and removal work on open books, never on locked or printed books', async () => {
     await approvedAd();
     await newBook('b1');
-    await assertSucceeds(placeAdBatch(db('approver'), { id: 'b1', adIds: [] }, AD).commit());
+    await assertSucceeds(placeAdBatch(db('approver'), { id: 'b1', adIds: [] }, AD, 'alice').commit());
     await assertSucceeds(reorderBookBatch(db('approver'), 'b1', [AD]).commit());
     await assertSucceeds(setBookStatusBatch(db('approver'), 'b1', 'printed').commit());
-    await assertFails(unplaceAdBatch(db('approver'), { id: 'b1', adIds: [AD] }, AD).commit());
+    await assertFails(unplaceAdBatch(db('approver'), { id: 'b1', adIds: [AD] }, AD, 'alice').commit());
     await assertSucceeds(setBookStatusBatch(db('approver'), 'b1', 'open').commit());
-    await assertSucceeds(unplaceAdBatch(db('approver'), { id: 'b1', adIds: [AD] }, AD).commit());
+    await assertSucceeds(unplaceAdBatch(db('approver'), { id: 'b1', adIds: [AD] }, AD, 'alice').commit());
     expect(await bookDoc('b1')).toMatchObject({ adIds: [] });
     expect((await adDoc())['bookId']).toBeUndefined();
   });
@@ -316,7 +392,7 @@ describe('#4 books: placement, locking, and undo', () => {
   it('admin undo: reason, audited, back to submitted, count unchanged; locked book first (AC 13)', async () => {
     await approvedAd();
     await newBook('b1');
-    await assertSucceeds(placeAdBatch(db('approver'), { id: 'b1', adIds: [] }, AD).commit());
+    await assertSucceeds(placeAdBatch(db('approver'), { id: 'b1', adIds: [] }, AD, 'alice').commit());
     await assertSucceeds(setBookStatusBatch(db('approver'), 'b1', 'locked').commit());
     const book = { id: 'b1', adIds: [AD] };
     await assertFails(undoReviewBatch(db('admin'), await ad(), actor('admin'), 'Wrong version', book).batch.commit());

@@ -429,6 +429,26 @@ describe('AdBookService review rules (#3)', async () => {
       }
     });
 
+    it('#46: an owner cannot reorder a book holding their ad; a non-owner approver can', async () => {
+      auth.signInAs('approver', ['member', 'adBookApprover']);
+      const own = await createAd('approver');
+      auth.signInAs('alice', ['member']);
+      const other = await createAd('alice');
+      auth.signInAs('admin', ['member', 'departmentAdmin']);
+      await service.approveAd(own);
+      await service.approveAd(other);
+      const book = service.adBooks()[0];
+      await service.addAdToBook(book.id, other);
+      await service.addAdToBook(book.id, own);
+      auth.signInAs('approver', ['member', 'adBookApprover']);
+      expect(service.ownsAdInBook(service.getBookById(book.id)!)).toBe(true);
+      expect(() => service.moveAdInBook(book.id, own, -1)).toThrow(/page order/);
+      auth.signInAs('approver2', ['member', 'adBookApprover']);
+      expect(service.ownsAdInBook(service.getBookById(book.id)!)).toBe(false);
+      await service.moveAdInBook(book.id, own, -1);
+      expect(service.getBookById(book.id)!.adIds).toEqual([own, other]);
+    });
+
     it('members cannot create books or change sizes', () => {
       auth.signInAs('alice');
       expect(() => service.createBook({ title: 't', eventName: 'e' })).toThrow(/Approvers or Admins/);

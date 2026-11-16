@@ -430,7 +430,7 @@ describe('#3 ads: admin undo review (AC 13)', () => {
   });
 
   it('an ad in an open book can be undone; it comes out of the book in the same batch (#4)', async () => {
-    await seed(env, { 'adBooks/b1': { title: 'Convention', status: 'open', adIds: ['ad1'] } });
+    await seed(env, { 'adBooks/b1': { title: 'Convention', status: 'open', adIds: ['ad1'], ownerCounts: { alice: 1 } } });
     await seedAd('alice', 'approved', { reviewedBy: 'approver', bookId: 'b1' });
     // Leaving it listed in the book (or keeping bookId) is refused.
     await assertFails(undoBatch('admin'));
@@ -444,7 +444,7 @@ describe('#3 ads: admin undo review (AC 13)', () => {
       lastAuditId: 'audit-open-book',
       updatedAt: '2026-11-14T02:00:00Z',
     });
-    batch.update(doc(fs, 'adBooks/b1'), { adIds: [] });
+    batch.update(doc(fs, 'adBooks/b1'), { adIds: [], 'ownerCounts.alice': 0 });
     batch.set(doc(fs, 'audits', 'audit-open-book'), {
       entityType: 'ad',
       entityId: 'ad1',

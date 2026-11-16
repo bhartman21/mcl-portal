@@ -11,7 +11,9 @@ import {
   deleteField,
   doc,
   DocumentData,
+  FieldPath,
   Firestore,
+  increment,
   serverTimestamp,
   WriteBatch,
   writeBatch,
@@ -26,6 +28,11 @@ import {
   AuditEntry,
   MAX_AD_SUBMISSIONS,
 } from '../models/ad-book.model';
+
+/** `ownerCounts.{uid}` on a book, as a FieldPath so any uid is a safe key. */
+function ownerCountPath(uid: string): FieldPath {
+  return new FieldPath('ownerCounts', uid);
+}
 
 export interface Actor {
   uid: string;
@@ -219,7 +226,7 @@ export function rejectAdBatch(
  */
 export function undoReviewBatch(
   db: Firestore,
-  ad: Pick<AdItem, 'id' | 'status' | 'bookId'>,
+  ad: Pick<AdItem, 'id' | 'status' | 'bookId' | 'createdBy'>,
   actor: Actor,
   reason: string,
   placedIn?: Pick<AdBook, 'id' | 'adIds'>
@@ -240,10 +247,15 @@ export function undoReviewBatch(
     updatedAt: serverTimestamp(),
   });
   if (placedIn && placedIn.adIds.includes(ad.id)) {
-    batch.update(doc(db, 'adBooks', placedIn.id), {
-      adIds: placedIn.adIds.filter((x) => x !== ad.id),
-      updatedAt: serverTimestamp(),
-    });
+    batch.update(
+      doc(db, 'adBooks', placedIn.id),
+      'adIds',
+      placedIn.adIds.filter((x) => x !== ad.id),
+      ownerCountPath(ad.createdBy),
+      increment(-1),
+      'updatedAt',
+      serverTimestamp()
+    );
   }
   batch.set(auditRef, {
     entityType: 'ad',
@@ -336,32 +348,50 @@ export function setBookStatusBatch(db: Firestore, bookId: string, status: AdBook
   return batch;
 }
 
-/** Place an approved ad at the end of an open book: book.adIds + ad.bookId in one batch. */
+/**
+ * Place an approved ad at the end of an open book: book.adIds (+ the owner's count in
+ * book.ownerCounts) and ad.bookId in one batch. `ownerUid` is the ad's createdBy.
+ */
 export function placeAdBatch(
   db: Firestore,
   book: Pick<AdBook, 'id' | 'adIds'>,
-  adId: string
+  adId: string,
+  ownerUid: string
 ): WriteBatch {
   const batch = writeBatch(db);
-  batch.update(doc(db, 'adBooks', book.id), {
-    adIds: [...book.adIds, adId],
-    updatedAt: serverTimestamp(),
-  });
+  batch.update(
+    doc(db, 'adBooks', book.id),
+    'adIds',
+    [...book.adIds, adId],
+    ownerCountPath(ownerUid),
+    increment(1),
+    'updatedAt',
+    serverTimestamp()
+  );
   batch.update(doc(db, 'ads', adId), { bookId: book.id, updatedAt: serverTimestamp() });
   return batch;
 }
 
-/** Take an ad out of a book that is not locked/printed. */
+/**
+ * Take an ad out of a book that is not locked/printed: book.adIds (- the owner's count) and the
+ * ad's bookId cleared in one batch. `ownerUid` is the ad's createdBy.
+ */
 export function unplaceAdBatch(
   db: Firestore,
   book: Pick<AdBook, 'id' | 'adIds'>,
-  adId: string
+  adId: string,
+  ownerUid: string
 ): WriteBatch {
   const batch = writeBatch(db);
-  batch.update(doc(db, 'adBooks', book.id), {
-    adIds: book.adIds.filter((x) => x !== adId),
-    updatedAt: serverTimestamp(),
-  });
+  batch.update(
+    doc(db, 'adBooks', book.id),
+    'adIds',
+    book.adIds.filter((x) => x !== adId),
+    ownerCountPath(ownerUid),
+    increment(-1),
+    'updatedAt',
+    serverTimestamp()
+  );
   batch.update(doc(db, 'ads', adId), { bookId: deleteField(), updatedAt: serverTimestamp() });
   return batch;
 }
@@ -426,6 +456,10 @@ export function bookFromDoc(id: string, d: DocumentData): AdBook {
     ...(d as Omit<AdBook, 'id'>),
     id,
     adIds: Array.isArray(d['adIds']) ? (d['adIds'] as string[]) : [],
+    ownerCounts:
+      d['ownerCounts'] && typeof d['ownerCounts'] === 'object'
+        ? (d['ownerCounts'] as Record<string, number>)
+        : {},
     createdAt: toIso(d['createdAt']) ?? '',
     updatedAt: toIso(d['updatedAt']) ?? '',
   };

@@ -276,6 +276,23 @@ service cloud.firestore {
         return resource.data.status in ['locked', 'printed'];
       }
 
+      // ownerCounts: uid -> how many ads in adIds that user owns. It changes only with a
+      // placement (+1) or removal (-1) of one of that user's ads, so the rules can tell whether
+      // the caller owns any ad in the book without reading every ad (issue #46).
+      function oldCounts() {
+        return resource.data.get('ownerCounts', {});
+      }
+
+      function newCounts() {
+        return request.resource.data.get('ownerCounts', {});
+      }
+
+      function countsChangeBy(uid, delta) {
+        return newCounts().diff(oldCounts()).affectedKeys().hasOnly([uid])
+          && newCounts().get(uid, 0) == oldCounts().get(uid, 0) + delta
+          && newCounts().get(uid, 0) >= 0;
+      }
+
       // Issue #4: one approved ad appended to an open book, paired (same batch) with
       // ads/{adId}.bookId == this book (see the ads placement transition).
       function appendsOnePlacedAd() {
@@ -283,19 +300,39 @@ service cloud.firestore {
         let adId = newIds()[n];
         let ad = getAfter(/databases/$(database)/documents/ads/$(adId)).data;
         return newIds().size() == n + 1
+          // the rest stay in their order (no reorder on the side)
+          && newIds().removeAll([adId]) == oldIds()
           && !(adId in oldIds())
-          && newIds().toSet().hasAll(oldIds().toSet())
           && request.resource.data.status == 'open'
           && ad.status == 'approved'
           && ad.get('bookId', '') == bookId
           // Issue #43: nobody places their own ad.
-          && ad.createdBy != request.auth.uid;
+          && ad.createdBy != request.auth.uid
+          && countsChangeBy(ad.createdBy, 1);
       }
 
-      // Reorder or remove ads (no duplicates, nothing new).
-      function reordersOrRemoves() {
-        return newIds().toSet().size() == newIds().size()
-          && oldIds().toSet().hasAll(newIds().toSet());
+      // Issue #45: exactly one ad removed (order of the rest kept), paired (same batch) with that
+      // ad's bookId no longer pointing here, and never by the ad's owner.
+      function removesOneUnplacedAd() {
+        let removed = oldIds().removeAll(newIds());
+        let adPath = /databases/$(database)/documents/ads/$(removed[0]);
+        let ad = getAfter(adPath).data;
+        return removed.size() == 1
+          && newIds().size() == oldIds().size() - 1
+          && newIds() == oldIds().removeAll(removed)
+          && existsAfter(adPath)
+          && ad.get('bookId', '') != bookId
+          && ad.createdBy != request.auth.uid
+          && countsChangeBy(ad.createdBy, -1);
+      }
+
+      // Issue #46: page order follows adIds, so a reorder (same ids, new order) is refused to
+      // anyone who owns an ad in this book.
+      function reordersOnly() {
+        return newIds().size() == oldIds().size()
+          && newIds().toSet() == oldIds().toSet()
+          && newCounts() == oldCounts()
+          && oldCounts().get(request.auth.uid, 0) == 0;
       }
 
       allow read: if isActiveUser() && (
@@ -306,11 +343,12 @@ service cloud.firestore {
       // New books start empty.
       allow create: if isBookEditor()
         && request.resource.data.status in bookStatuses()
-        && request.resource.data.get('adIds', []) == [];
+        && request.resource.data.get('adIds', []) == []
+        && request.resource.data.get('ownerCounts', {}) == {};
       allow update: if isBookEditor()
         && request.resource.data.status in bookStatuses()
-        && (newIds() == oldIds()
-            || (!frozen() && (appendsOnePlacedAd() || reordersOrRemoves())));
+        && ((newIds() == oldIds() && newCounts() == oldCounts())
+            || (!frozen() && (appendsOnePlacedAd() || removesOneUnplacedAd() || reordersOnly())));
       allow delete: if isBookEditor();
     }
 

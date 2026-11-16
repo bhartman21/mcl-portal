@@ -44,6 +44,15 @@ export class AdBookDetailComponent {
     return result;
   });
 
+  /** #46: you have an ad in this book, so a different approver sets the page order. */
+  readonly ownsAdInBook = computed(() => {
+    const b = this.book();
+    return !!b && this.adBook.ownsAdInBook(b);
+  });
+
+  readonly reorderBlockedTitle =
+    'You have your own ad in this book, so a different approver must set the page order';
+
   /** Unplaced approved ads (an ad sits in one book at a time). */
   private readonly unplacedApprovedAds = computed(() =>
     this.adBook.approvedAds().filter((a) => !this.adBook.bookContaining(a.id))

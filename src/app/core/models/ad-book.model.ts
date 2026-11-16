@@ -23,6 +23,11 @@ export interface AdBook {
   status: AdBookStatus;
   pageSize: 'letter';
   adIds: string[];
+  /**
+   * How many ads in `adIds` each user owns (uid -> count), kept in step with every placement and
+   * removal and checked by firestore.rules. Owners of any ad in a book cannot reorder it (#46).
+   */
+  ownerCounts?: Record<string, number>;
   createdBy: string;
   createdAt: string;
   updatedAt: string;

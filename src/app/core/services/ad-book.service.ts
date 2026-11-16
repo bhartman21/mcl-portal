@@ -791,6 +791,13 @@ export class AdBookService {
     if (locked) {
       throw new Error(`Remove this ad from the locked book "${locked.title}" before undoing.`);
     }
+    const placed = this.bookContaining(id);
+    if (placed && this.isOwnAd(ad)) {
+      // #45: nobody takes their own ad out of a book, and undo would.
+      throw new Error(
+        `This is your own ad and it is in "${placed.title}". A different approver must remove it from the book before you undo.`
+      );
+    }
 
     const now = new Date().toISOString();
     const updated: AdItem = {
@@ -966,7 +973,7 @@ export class AdBookService {
       throw new Error(`This ad is already in "${other.title}". Remove it from that book first.`);
     }
 
-    if (this.db) return this.commit(placeAdBatch(this.db, book, adId));
+    if (this.db) return this.commit(placeAdBatch(this.db, book, adId, ad.createdBy));
     const now = new Date().toISOString();
     this._adBooks.update((books) =>
       books.map((b) => (b.id === bookId ? { ...b, adIds: [...b.adIds, adId], updatedAt: now } : b))
@@ -986,13 +993,14 @@ export class AdBookService {
     const book = this.getBookById(bookId);
     if (!book || !book.adIds.includes(adId)) return Promise.resolve();
     const ad = this.getAdById(adId);
-    if (ad && this.isOwnAd(ad)) {
+    if (!ad) throw new Error('Ad not found.');
+    if (this.isOwnAd(ad)) {
       throw new Error("You can't remove your own ad from a book. A different approver must do it.");
     }
     if (book.status === 'locked' || book.status === 'printed') {
       throw new Error('Reopen this book before removing ads from it.');
     }
-    if (this.db) return this.commit(unplaceAdBatch(this.db, book, adId));
+    if (this.db) return this.commit(unplaceAdBatch(this.db, book, adId, ad.createdBy));
     const now = new Date().toISOString();
     this._adBooks.update((books) =>
       books.map((b) =>
@@ -1006,10 +1014,29 @@ export class AdBookService {
     return Promise.resolve();
   }
 
+  /**
+   * #46: page order follows adIds, so nobody who owns an ad in a book may reorder that book
+   * (firestore.rules checks book.ownerCounts).
+   */
+  ownsAdInBook(book: Pick<AdBook, 'adIds' | 'ownerCounts'>): boolean {
+    const uid = this.auth.user()?.uid;
+    if (!uid) return false;
+    if ((book.ownerCounts?.[uid] ?? 0) > 0) return true;
+    return book.adIds.some((id) => {
+      const ad = this.getAdById(id);
+      return !!ad && this.isOwnAd(ad);
+    });
+  }
+
   moveAdInBook(bookId: string, adId: string, direction: -1 | 1): Promise<void> {
     this.requireBookEditor('reorder a book');
     const book = this.getBookById(bookId);
     if (!book || book.status === 'locked' || book.status === 'printed') return Promise.resolve();
+    if (this.ownsAdInBook(book)) {
+      throw new Error(
+        'You have your own ad in this book, so a different approver must set the page order.'
+      );
+    }
     const idx = book.adIds.indexOf(adId);
     const nextIdx = idx + direction;
     if (idx < 0 || nextIdx < 0 || nextIdx >= book.adIds.length) return Promise.resolve();
