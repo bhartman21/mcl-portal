@@ -32,13 +32,13 @@ Blaze needs a credit or debit card. It still includes the free usage amounts. A 
 
 > ### ⚠️ Read this: what the $10 shutoff does
 >
-> **If the shutoff fires at $10, the portal goes offline.** Sign-in, ads, the database and image storage all stop. The site stays down **until you re-link billing** (see "If the shutoff fires: re-link billing" at the end of Part 5).
+> **If the shutoff fires at $10, the portal goes offline.** Sign-in, ads, the database and image storage all stop. The site stays down until you bring billing back. **Within the same month, you must raise the budget first, then re-link billing.** Re-linking alone doesn't work while this month's cost is still $10 or more (see "If the shutoff fires: bring billing back" at the end of Part 5).
 >
 > Google warns that turning billing off can **shut things down roughly**: "Resources might be irretrievably deleted," and there is "no guarantee of service recovery." ([Google Cloud docs](https://cloud.google.com/billing/docs/how-to/disable-billing-with-notifications))
 >
 > **That is why the early alerts matter.** If you get the $2, $5 or $8 email, tell P.A.T. or B.O.B. right away, so the cause can be found and fixed before the shutoff is needed.
 >
-> Also: if billing is re-linked while the month is still at $10 or more, the shutoff fires again within hours. See the **Pending** note in Part 5.
+> Also: if billing is re-linked while the month's cost is still $10 or more, the shutoff fires again, usually within hours. There is no override switch (decided Nov 16, 2026).
 >
 > Google reports costs with a delay (often hours, sometimes more than a day). The bill can end up a little over $10 before the shutoff happens.
 
@@ -191,7 +191,7 @@ Use **Add threshold** to add the fourth row. *Phone tip:* the rows are small. Tu
 
 budget-guard is a small robot (a Cloud Function, the project's only one). When the budget reports that this month's cost has **reached $10**, it turns billing off for the project. It can turn billing **off** but can never turn it back **on**, and it has no access to your billing account. It was written by B.O.B. Its full technical steps are in `functions/budget-guard/README.md`.
 
-> **⏳ Depends on PR #34.** budget-guard's code is in pull request #34 (branch `feat/budget-guard`), which **has not merged yet**. Steps 19–23 only use the Google Cloud console and are safe to do any time after Part 4. **Wait for PR #34 to merge before steps 24–27.**
+> **Where the code lives:** budget-guard is in the repo on `main`, in `functions/budget-guard/`. Its technical steps are in `functions/budget-guard/README.md`.
 
 > **Some of this needs a computer.** Deploying budget-guard (steps 24 and 27) needs a terminal with Google's and Firebase's command-line tools. That can't be done from a phone's web browser. Do those steps on a computer, or ask B.O.B. to walk you through them. Everything else in this Part has a console route that works on a phone.
 
@@ -246,7 +246,7 @@ This is a separate robot account from the GitHub deploy one in Part 7. It gets *
 - Find `budget-guard@YOUR-PROJECT-ID.iam.gserviceaccount.com`. It should show **Project Billing Manager** and **Browser**.
 - If a role is missing, press the **pencil** (edit) on that row → **+ Add another role** → pick it → **Save**. If the account isn't listed, press **Grant access**, paste its email as the principal, add both roles, and **Save**.
 
-**24. Deploy budget-guard in "dry run" (practice) mode — the first deploy, by you.** — **Needs a computer.** Wait for PR #34 to merge.
+**24. Deploy budget-guard in "dry run" (practice) mode — the first deploy, by you.** — **Needs a computer.**
 - **This first deploy must be done by you, signed in as the project Owner, from a terminal on a computer.** It can't be done from a phone, and it can't be done by the GitHub workflow. On this first deploy, the Firebase tools add some one-time permissions to the project for Google's own helper accounts, and they ask you to set a clean-up rule for old container images. The GitHub robot account isn't allowed to do either. Only **later** deploys can use the GitHub workflow (step 33).
 - In dry run, budget-guard only **writes down** what it would do. It never turns billing off.
 - On a computer with Node.js 22, the Google Cloud CLI (`gcloud`) and a copy of the repo, follow **step 5 ("Deploy the function, first in dry run")** in `functions/budget-guard/README.md`. It signs you in to Firebase once, writes a small settings file `functions/budget-guard/.env.YOUR-PROJECT-ID` with `BUDGET_GUARD_DRY_RUN=true`, and runs `npm run deploy:functions`. That file holds two plain settings, not secrets, and is never uploaded to GitHub.
@@ -304,37 +304,41 @@ Other notes from B.O.B.:
 - The normal GitHub site deploy (Part 11) **never** deploys budget-guard, and budget-guard's deploy never touches the website.
 - budget-guard checks the budget's real numbers. If a notification is missing its numbers, it ignores it and writes an error to the log.
 
-### If the shutoff fires: re-link billing
+### If the shutoff fires: bring billing back
 
 When budget-guard turns billing off, the portal is offline. You will have had the $2, $5 and $8 emails first.
 
-> **⏳ Re-linking billing while still over $10 — Pending Billy's decision.**
+> **The rule (decided Nov 16, 2026): there is no override. To turn billing back on in the same month, first raise the budget, then re-link billing.**
 >
-> Budgets keep sending updates to budget-guard **several times a day** for the rest of the month. If you re-link billing while this month's cost is still $10 or more, the **next update turns billing off again, usually within hours**. budget-guard has no override, on purpose.
+> Budgets keep sending updates to budget-guard **several times a day** for the rest of the month. If you re-link billing while this month's cost is still at or above the budget, the **next update turns billing off again, usually within hours**. That's why the budget must go up **before** you re-link. At the start of the next month the cost resets to $0, so re-linking then is safe without changing the budget.
 >
-> B.O.B.'s safe way, within the same month: **change the budget first, then re-link billing.** Either:
-> - **Option A:** raise the budget amount above this month's cost so far (for example to $20) and keep the topic connected, so the shutoff still protects you at the new limit; or
-> - **Option B:** untick **Connect a Pub/Sub topic to this budget** for the rest of the month (email alerts only, no automatic shutoff).
->
-> At the start of next month the cost resets to $0, so re-linking then is safe without changing anything. **Billy hasn't chosen between A and B yet.** Until he does, ask B.O.B. before re-linking within the same month.
+> Sources: `ARCHITECTURE.md` ("Re-linking while over budget"), `OPEN_QUESTIONS.md` #22, and `functions/budget-guard/README.md` ("If billing gets detached: re-enabling safely").
 
 **R1. Find out what happened.** — Phone OK
 Tell P.A.T. or B.O.B. Find out what caused the spending before turning billing back on.
 
-**R2. If it's still the same month: change the budget first.** — Phone OK (desktop mode). *Pending Billy's decision (A or B above).*
-**Billing → Budgets & alerts → `mcl-portal $10/month`**. Either raise the **Target amount** (Option A) or untick **Connect a Pub/Sub topic to this budget** (Option B). Press **Save**. This works even while the project's billing is off, because the budget belongs to your billing account.
+**R2. Same month? Raise the budget first.** — Phone OK (desktop mode)
+- Go to **Billing → Budgets & alerts** and open **`mcl-portal $10/month`**.
+- Raise the **Target amount** above this month's cost so far (for example to `20`).
+- Leave **Connect a Pub/Sub topic to this budget** ticked (topic `budget-guard`), so the shutoff still protects you at the new limit.
+- Press **Save**.
+- This works even while the project's billing is off, because the budget belongs to your billing account.
+- If it's already a new month, skip this step.
 
-**R3. Re-link billing.** — Phone OK (desktop mode)
-Go to https://console.cloud.google.com/billing/projects (Google Cloud console → **Billing** → **Manage billing accounts** → **My projects** tab). Find **YOUR-PROJECT-ID**; it will say **Billing is disabled**. In that row, press the **Actions** menu (⋮) → **Change billing** → choose your billing account → **Set account**.
-(Another way: in the Firebase console, upgrade the project to **Blaze** again, as in step 11.)
+**R3. Then re-link billing.** — Phone OK (desktop mode)
+- Only after R2.
+- Go to https://console.cloud.google.com/billing/projects (Google Cloud console → **Billing** → **Manage billing accounts** → **My projects** tab).
+- Find **YOUR-PROJECT-ID**; it will say **Billing is disabled**.
+- In that row, press the **Actions** menu (⋮) → **Change billing** → choose your billing account → **Set account**.
+- (Another way: in the Firebase console, upgrade the project to **Blaze** again, as in step 11.)
 
 **R4. Wait and check.** — Phone OK
 - Google says it can take **up to 24 hours** for things to start again, and some services may need a manual restart. Ask B.O.B. to check.
 - Open https://mcl-portal.web.app and sign in to test.
 - Some data might not come back. Google warns resources may be deleted while billing is off.
 
-**R5. Next month: put the budget back.** — Phone OK (desktop mode)
-On or after the 1st, set the budget back to **$10** and, if you unticked it, tick **Connect a Pub/Sub topic to this budget** again (topic `budget-guard`). Press **Save**.
+**R5. Next month: put the budget back to $10.** — Phone OK (desktop mode)
+On or after the 1st, open the budget again, set the **Target amount** back to `10`, check that the `budget-guard` topic is still connected, and press **Save**.
 
 ---
 
@@ -499,7 +503,7 @@ The two automation files, `ci.yml` (checks) and `deploy.yml` (publishes the site
 **40. Move `ci.yml` the same way.** — Phone OK (desktop mode)
 Same steps for https://github.com/bhartman21/mcl-portal/blob/main/ci/github-workflows/ci.yml → **`.github/workflows/ci.yml`**.
 
-**After PR #34 merges (optional):** there will be a third file, `ci/github-workflows/deploy-functions.yml` (the optional budget-guard deploy; its extra roles are in step 33). Move it the same way to **`.github/workflows/deploy-functions.yml`** only if B.O.B. says to use it. It only runs when someone presses **Run workflow**.
+**Optional:** there is a third file, `ci/github-workflows/deploy-functions.yml` (the optional budget-guard deploy; its extra roles are in step 33). Move it the same way to **`.github/workflows/deploy-functions.yml`** only if B.O.B. says to use it. It only runs when someone presses **Run workflow**.
 
 Moving the files removes them from `ci/github-workflows/`. The leftover `ci/github-workflows/README.md` can be deleted later by B.O.B.
 
@@ -524,7 +528,7 @@ There are no built-in admin emails. You promote yourself once, by hand.
 
 **42. Sign in to the live site.** — Phone OK
 - Open **https://mcl-portal.web.app** (or `https://YOUR-PROJECT-ID.web.app`).
-- Press **Member Sign In**, type your email, press **Send Sign-In Link**.
+- Press **Member Sign In** on the home page, or **Sign In** at the top right. (On a phone, open the menu button ☰ at the top right first.) Type your email and press **Send Sign-In Link**.
 - Open the email and tap the link **on the same phone and browser**. If you open it somewhere else, the page asks you to type your email again. That's expected.
 - You're now signed in as an ordinary member. This creates your record in Firestore.
 
@@ -541,7 +545,7 @@ This is the only time roles are edited outside the app. The console ignores the 
 **44. Reload the portal.** — Phone OK
 - Refresh https://mcl-portal.web.app (sign in again if asked).
 - On your first load as an admin, the app writes the registration setting (`settings/registration` with mode `open`) and fills in the Florida detachments.
-- If the detachment list is empty, go to **Admin → Detachment Directory** and press **Seed DoF Detachments**.
+- If the detachment list is empty, go to **Admin → Detachments** (the page is titled **Detachment Directory**) and press **Seed DoF Detachments**. On a phone, open ☰ first; the Admin links are listed under **Admin**.
 - From now on, give other people roles in the app: **Admin → Users & Roles**.
 
 ---
@@ -552,10 +556,10 @@ This is the only time roles are edited outside the app. The console ignores the 
 
 | Check | What you should see |
 |-------|---------------------|
-| Open https://mcl-portal.web.app | The portal home page, **without** a "Local Demo Mode" badge in the header. |
+| Open https://mcl-portal.web.app | The portal home page, with **no** "Local Demo Mode: data stays in this browser" strip above the header. |
 | Sign in | The sign-in email arrives and the link signs you in. |
 | Header after step 43 | An **Admin** menu appears. |
-| **Admin → Detachment Directory** | The Florida detachment list, including #54 Morris F. Dixon Jr. (The plan now lists 51 detachments, with S/Sgt Ted Archambault as #819. Until the app is updated, it may still show Archambault as needing verification, with no number.) |
+| **Admin → Detachments** (page title **Detachment Directory**) | The Florida starter list of 52 detachments, including #54 Morris F. Dixon Jr. and #819 SSgt. Ted Archambault (Crystal River), already verified. A few rows (#549, #1055, #1072, #1476) show **Needs Verification**; that's expected. |
 | Firestore → Data | `users`, `settings` and `detachments` collections exist. |
 | Storage → Rules | The rules you pasted are shown (they mention `ad-images`). |
 | GitHub → Actions | Green checks on **Deploy to Firebase Hosting** (and **CI**). |
@@ -563,7 +567,7 @@ This is the only time roles are edited outside the app. The console ignores the 
 | Google Cloud → Billing → **Budgets & alerts** | The `mcl-portal $10/month` budget, with alerts at $2, $5, $8 and $10 and the `budget-guard` topic connected. |
 | Firebase console → Functions | **budgetGuard** is listed (after step 27), and the dry-run test lines from step 26 are in its logs. |
 
-If you still see the "Local Demo Mode" badge, the site was built without the secrets. Check that all 7 secret names are spelled exactly right, then re-run the deploy (step 41).
+If you still see the "Local Demo Mode" strip above the header, the site was built without the secrets. Check that all 7 secret names are spelled exactly right, then re-run the deploy (step 41).
 
 ---
 
@@ -581,11 +585,11 @@ If you still see the "Local Demo Mode" badge, the site was built without the sec
 | 5 Create topic (step 20) | Phone OK |
 | 5 Connect topic to budget (step 21) | Easier on a computer, Phone OK with care |
 | 5 budget-guard account + roles, check (steps 22–23) | Phone OK |
-| 5 First deploy, dry run (step 24) | **Needs a computer.** You, as Owner, from a terminal. Not the GitHub workflow. Waits for PR #34 |
+| 5 First deploy, dry run (step 24) | **Needs a computer.** You, as Owner, from a terminal. Not the GitHub workflow |
 | 5 Cloud Run Invoker grant (step 25) | Easier on a computer, Phone OK in desktop mode with care (Cloud Run console) |
 | 5 Dry-run test (step 26) | Easier on a computer. Console route works on a phone with care |
 | 5 Arm it (step 27) | **Needs a computer** (terminal). Later, possibly the GitHub workflow, *Unverified* |
-| 5 Re-link billing (R1–R5, only if the shutoff fires) | Phone OK (desktop mode). Same-month choice is *Pending Billy's decision* |
+| 5 Bring billing back (R1–R5, only if the shutoff fires) | Phone OK (desktop mode). Same month: raise the budget first, then re-link |
 | 6 Firestore, Storage | Phone OK |
 | 7 Service account + roles | Phone OK |
 | 7 Optional GitHub budget-guard roles (step 33) | Phone OK (desktop mode), easier on a computer. Only if that workflow is used |
@@ -616,8 +620,6 @@ Marked *Unverified* above:
 
 Not tested by anyone yet: a real budget-guard deploy or a real shutoff. B.O.B. tested on the emulator only, because the Firebase project doesn't exist yet.
 
-**Pending Billy's decision:** how to re-link billing within the same month while still over $10 (Option A: raise the budget, or Option B: disconnect the topic). See Part 5.
-
 Sources:
 - Menu paths **Security → Authentication** and **Databases & Storage → Firestore / Storage** come from Firebase's own docs (updated Nov 12, 2026).
 - From Google Cloud's docs, checked Nov 15, 2026:
@@ -629,4 +631,4 @@ Sources:
   - Cloud Run service **Permissions → Add principal**;
   - service account **Permissions → Principals with access to this service account → Grant access**;
   - the re-link steps (My projects → Change billing → Set account).
-- budget-guard's topic name, roles, deploy steps, the Cloud Run Invoker grant, the CI deployer roles, test messages, and re-link behavior come from `functions/budget-guard/README.md` (commit 427034f) and PR #34 (B.O.B.).
+- budget-guard's topic name, roles, deploy steps, the Cloud Run Invoker grant, the CI deployer roles, test messages, and re-link behavior come from `functions/budget-guard/README.md` on `main` (B.O.B., merged in PR #34). The no-override re-link rule is also in `ARCHITECTURE.md` and `OPEN_QUESTIONS.md` #22.
