@@ -405,6 +405,30 @@ describe('AdBookService review rules (#3)', async () => {
       expect(service.getAdById(id)!.bookId).toBeUndefined();
     });
 
+    it('#43: approvers and admins cannot place or remove their own approved ad', async () => {
+      for (const [uid, role] of [
+        ['approver', 'adBookApprover'],
+        ['admin', 'departmentAdmin'],
+      ] as const) {
+        auth.signInAs(uid, ['member', role]);
+        const id = await createAd(uid);
+        auth.signInAs('approver2', ['member', 'adBookApprover']);
+        await service.approveAd(id);
+        const book = service.adBooks()[0];
+        auth.signInAs(uid, ['member', role]);
+        const ad = service.getAdById(id)!;
+        expect(service.canPlaceAd(ad)).toBe(false);
+        expect(() => service.addAdToBook(book.id, id)).toThrow(/your own ad/);
+        auth.signInAs('approver2', ['member', 'adBookApprover']);
+        expect(service.canPlaceAd(service.getAdById(id)!)).toBe(true);
+        await service.addAdToBook(book.id, id);
+        auth.signInAs(uid, ['member', role]);
+        expect(() => service.removeAdFromBook(book.id, id)).toThrow(/your own ad/);
+        auth.signInAs('approver2', ['member', 'adBookApprover']);
+        await service.removeAdFromBook(book.id, id);
+      }
+    });
+
     it('members cannot create books or change sizes', () => {
       auth.signInAs('alice');
       expect(() => service.createBook({ title: 't', eventName: 'e' })).toThrow(/Approvers or Admins/);

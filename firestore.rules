@@ -287,7 +287,9 @@ service cloud.firestore {
           && newIds().toSet().hasAll(oldIds().toSet())
           && request.resource.data.status == 'open'
           && ad.status == 'approved'
-          && ad.get('bookId', '') == bookId;
+          && ad.get('bookId', '') == bookId
+          // Issue #43: nobody places their own ad.
+          && ad.createdBy != request.auth.uid;
       }
 
       // Reorder or remove ads (no duplicates, nothing new).
@@ -499,8 +501,9 @@ service cloud.firestore {
 
       // Issue #4: an approver or admin places an approved ad in an open book, or takes it out of a
       // book that is not locked/printed; the book's adIds change in the same batch.
+      // Issue #43: never their own ad (same as approve/reject).
       allow update: if oldStatus() == 'approved' && newStatus() == 'approved'
-        && canReview()
+        && !isOwner() && canReview()
         && changedKeys().hasOnly(['bookId', 'updatedAt'])
         && changedKeys().hasAny(['bookId'])
         && (

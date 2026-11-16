@@ -957,6 +957,9 @@ export class AdBookService {
     if (ad.status !== 'approved') {
       throw new Error('Only approved ads can be placed into a book.');
     }
+    if (this.isOwnAd(ad)) {
+      throw new Error("You can't place your own ad in a book. A different approver must place it.");
+    }
     if (book.adIds.includes(adId)) return Promise.resolve();
     const other = this.bookContaining(adId);
     if (other) {
@@ -973,10 +976,19 @@ export class AdBookService {
     return Promise.resolve();
   }
 
+  /** Approved ads the current user may place (issue #43: never their own). */
+  canPlaceAd(ad: AdItem): boolean {
+    return ad.status === 'approved' && this.canApprove() && !this.isOwnAd(ad);
+  }
+
   removeAdFromBook(bookId: string, adId: string): Promise<void> {
     this.requireBookEditor('remove ads from a book');
     const book = this.getBookById(bookId);
     if (!book || !book.adIds.includes(adId)) return Promise.resolve();
+    const ad = this.getAdById(adId);
+    if (ad && this.isOwnAd(ad)) {
+      throw new Error("You can't remove your own ad from a book. A different approver must do it.");
+    }
     if (book.status === 'locked' || book.status === 'printed') {
       throw new Error('Reopen this book before removing ads from it.');
     }

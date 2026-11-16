@@ -44,9 +44,19 @@ export class AdBookDetailComponent {
     return result;
   });
 
-  /** Approved ads not yet placed in any book (an ad sits in one book at a time). */
-  readonly availableApprovedAds = computed(() =>
+  /** Unplaced approved ads (an ad sits in one book at a time). */
+  private readonly unplacedApprovedAds = computed(() =>
     this.adBook.approvedAds().filter((a) => !this.adBook.bookContaining(a.id))
+  );
+
+  /** Ones the current user may place: never their own (issue #43). */
+  readonly availableApprovedAds = computed(() =>
+    this.unplacedApprovedAds().filter((a) => this.adBook.canPlaceAd(a))
+  );
+
+  /** The current user's own unplaced approved ads; a different approver must place them. */
+  readonly ownUnplacedAds = computed(() =>
+    this.unplacedApprovedAds().filter((a) => this.adBook.isOwnAd(a))
   );
 
   readonly pages = computed<BookletPage[]>(() => {

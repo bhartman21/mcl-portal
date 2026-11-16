@@ -45,6 +45,7 @@ beforeEach(async () => {
     alice: USERS.member,
     bob: USERS.member,
     approver: USERS.adApprover,
+    approver2: USERS.adApprover,
     admin: USERS.deptAdmin,
     admin2: USERS.deptAdmin,
     natAdmin: USERS.nationalAdmin,
@@ -271,6 +272,32 @@ describe('#4 books: placement, locking, and undo', () => {
     await assertFails(updateDoc(doc(db('approver'), 'adBooks', 'b1'), { adIds: [AD] }));
     await assertSucceeds(placeAdBatch(db('approver'), { id: 'b1', adIds: [] }, AD).commit());
     await assertFails(placeAdBatch(db('approver'), { id: 'b2', adIds: [] }, AD).commit());
+  });
+
+  it('#43: an approver-owner cannot place (or remove) their own approved ad; another approver can', async () => {
+    await newBook('b1');
+    // Approver-owned ad, approved by a different approver.
+    await assertSucceeds(create('approver'));
+    await assertSucceeds(submit('approver', 1));
+    await assertSucceeds(approveAdBatch(db('approver2'), AD, actor('approver2')).commit());
+    await assertFails(placeAdBatch(db('approver'), { id: 'b1', adIds: [] }, AD).commit());
+    expect(await bookDoc('b1')).toMatchObject({ adIds: [] });
+    // Another approver can place it; the owner cannot take it back out.
+    await assertSucceeds(placeAdBatch(db('approver2'), { id: 'b1', adIds: [] }, AD).commit());
+    await assertFails(unplaceAdBatch(db('approver'), { id: 'b1', adIds: [AD] }, AD).commit());
+    await assertSucceeds(unplaceAdBatch(db('approver2'), { id: 'b1', adIds: [AD] }, AD).commit());
+  });
+
+  it('#43: an admin who self-approved their own ad cannot place it; another approver can', async () => {
+    await newBook('b1');
+    await assertSucceeds(create('admin'));
+    await assertSucceeds(submit('admin', 1));
+    await assertSucceeds(
+      selfApproveAdBatch(db('admin'), { id: AD, title: 't' }, actor('admin'), 'Deadline', ['admin2']).batch.commit()
+    );
+    await assertFails(placeAdBatch(db('admin'), { id: 'b1', adIds: [] }, AD).commit());
+    await assertSucceeds(placeAdBatch(db('approver'), { id: 'b1', adIds: [] }, AD).commit());
+    expect(await bookDoc('b1')).toMatchObject({ adIds: [AD] });
   });
 
   it('reorder and removal work on open books, never on locked or printed books', async () => {
