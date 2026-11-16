@@ -44,10 +44,29 @@ export class AdBookDetailComponent {
     return result;
   });
 
-  readonly availableApprovedAds = computed(() => {
-    const placedIds = new Set(this.book()?.adIds ?? []);
-    return this.adBook.approvedAds().filter((a) => !placedIds.has(a.id));
+  /** #46: you have an ad in this book, so a different approver sets the page order. */
+  readonly ownsAdInBook = computed(() => {
+    const b = this.book();
+    return !!b && this.adBook.ownsAdInBook(b);
   });
+
+  readonly reorderBlockedTitle =
+    'You have your own ad in this book, so a different approver must set the page order';
+
+  /** Unplaced approved ads (an ad sits in one book at a time). */
+  private readonly unplacedApprovedAds = computed(() =>
+    this.adBook.approvedAds().filter((a) => !this.adBook.bookContaining(a.id))
+  );
+
+  /** Ones the current user may place: never their own (issue #43). */
+  readonly availableApprovedAds = computed(() =>
+    this.unplacedApprovedAds().filter((a) => this.adBook.canPlaceAd(a))
+  );
+
+  /** The current user's own unplaced approved ads; a different approver must place them. */
+  readonly ownUnplacedAds = computed(() =>
+    this.unplacedApprovedAds().filter((a) => this.adBook.isOwnAd(a))
+  );
 
   readonly pages = computed<BookletPage[]>(() => {
     const slots = this.placedAds();
@@ -75,24 +94,41 @@ export class AdBookDetailComponent {
     return this.adBook.getSizeById(sizeId)?.label ?? sizeId;
   }
 
-  setStatus(status: AdBookStatus): void {
-    const b = this.book();
-    if (!b) return;
-    this.adBook.updateBookStatus(b.id, status);
+  private async run(action: () => Promise<void>, fallback: string): Promise<void> {
+    this.errorMsg.set(null);
+    try {
+      await action();
+    } catch (err) {
+      this.errorMsg.set(err instanceof Error ? err.message : fallback);
+    }
   }
 
-  addSelectedAd(): void {
-    this.errorMsg.set(null);
+  setStatus(status: AdBookStatus): Promise<void> {
+    const b = this.book();
+    if (!b) return Promise.resolve();
+    return this.run(() => this.adBook.updateBookStatus(b.id, status), 'Unable to change the book status.');
+  }
+
+  addSelectedAd(): Promise<void> {
     const b = this.book();
     const adId = this.selectedAdToAdd || this.availableApprovedAds()[0]?.id;
-    if (!b || !adId) return;
-
-    try {
-      this.adBook.addAdToBook(b.id, adId);
+    if (!b || !adId) return Promise.resolve();
+    return this.run(async () => {
+      await this.adBook.addAdToBook(b.id, adId);
       this.selectedAdToAdd = '';
-    } catch (err) {
-      this.errorMsg.set(err instanceof Error ? err.message : 'Unable to add ad to book.');
-    }
+    }, 'Unable to add ad to book.');
+  }
+
+  move(adId: string, direction: -1 | 1): Promise<void> {
+    const b = this.book();
+    if (!b) return Promise.resolve();
+    return this.run(() => this.adBook.moveAdInBook(b.id, adId, direction), 'Unable to reorder the book.');
+  }
+
+  remove(adId: string): Promise<void> {
+    const b = this.book();
+    if (!b) return Promise.resolve();
+    return this.run(() => this.adBook.removeAdFromBook(b.id, adId), 'Unable to remove the ad.');
   }
 
   printBook(): void {

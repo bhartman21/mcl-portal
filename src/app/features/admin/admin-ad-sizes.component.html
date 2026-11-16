@@ -12,6 +12,10 @@
     </a>
   </div>
 
+  @if (errorMsg()) {
+    <div class="alert alert-danger small mb-4" role="alert">{{ errorMsg() }}</div>
+  }
+
   <!-- Add Custom Size -->
   <div class="mcl-card mcl-card-gold p-4 mb-4">
     <h2 class="h5 mcl-serif mb-3">Add Custom Size</h2>
@@ -108,7 +112,7 @@
                 <button
                   type="button"
                   class="btn btn-sm btn-mcl-outline"
-                  (click)="adBook.toggleAdSizeActive(s.id)"
+                  (click)="toggle(s.id)"
                 >
                   {{ s.active ? 'Deactivate' : 'Activate' }}
                 </button>

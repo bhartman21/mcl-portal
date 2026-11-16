@@ -119,6 +119,20 @@
           } @else if (imageName()) {
             <div class="form-text">Loaded: {{ imageName() }}</div>
           }
+          @if (adBook.uploadProgress() !== null) {
+            <div
+              class="progress mt-2"
+              role="progressbar"
+              aria-label="Image upload progress"
+              [attr.aria-valuenow]="adBook.uploadProgress()"
+              aria-valuemin="0"
+              aria-valuemax="100"
+            >
+              <div class="progress-bar" [style.width.%]="adBook.uploadProgress()">
+                {{ adBook.uploadProgress() }}%
+              </div>
+            </div>
+          }
         </div>
 
         @if (pdfPageCount() > 1) {
@@ -199,7 +213,7 @@
           </div>
         </div>
 
-        @if (imageUrl()) {
+        @if (canExport()) {
           <div class="d-flex flex-wrap gap-2 mb-3">
             <button type="button" class="btn btn-sm btn-mcl-outline flex-grow-1" (click)="saveAsPng()">
               <i class="bi bi-file-earmark-image me-1"></i>Save as PNG
@@ -212,10 +226,10 @@
 
         @if (!isLockedForEdit()) {
           <div class="d-flex flex-wrap gap-2">
-            <button type="button" class="btn btn-mcl-outline flex-grow-1" (click)="saveDraft()" [disabled]="converting()">
+            <button type="button" class="btn btn-mcl-outline flex-grow-1" (click)="saveDraft()" [disabled]="converting() || saving()">
               <i class="bi bi-save me-1"></i>Save Draft
             </button>
-            <button type="button" class="btn btn-mcl flex-grow-1" (click)="saveAndSubmit()" [disabled]="converting()">
+            <button type="button" class="btn btn-mcl flex-grow-1" (click)="saveAndSubmit()" [disabled]="converting() || saving()">
               <i class="bi bi-send me-1"></i>Submit for Approval
             </button>
           </div>
@@ -236,7 +250,7 @@
               </span>
             </h2>
           </div>
-          @if (fit() === 'cover' && imageUrl() && !isLockedForEdit()) {
+          @if (fit() === 'cover' && displayUrl() && !isLockedForEdit()) {
             <span class="badge bg-light text-dark border small">
               <i class="bi bi-arrows-move me-1"></i>Drag image to reposition
             </span>
@@ -247,15 +261,15 @@
           <div
             class="mcl-preview-frame"
             [style.aspect-ratio]="selectedSize().widthIn + ' / ' + selectedSize().heightIn"
-            [class.mcl-draggable]="fit() === 'cover' && !!imageUrl() && !isLockedForEdit()"
+            [class.mcl-draggable]="fit() === 'cover' && !!displayUrl() && !isLockedForEdit()"
             (pointerdown)="onDragStart($event)"
             (pointermove)="onDragMove($event)"
             (pointerup)="onDragEnd()"
             (pointercancel)="onDragEnd()"
           >
-            @if (imageUrl()) {
+            @if (displayUrl(); as src) {
               <img
-                [src]="imageUrl()"
+                [src]="src"
                 [alt]="title || 'Ad preview'"
                 class="mcl-preview-img"
                 draggable="false"

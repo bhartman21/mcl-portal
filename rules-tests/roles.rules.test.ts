@@ -430,7 +430,7 @@ describe('siteAdmin has every nationalAdmin permission', () => {
     await assertSucceeds(setDoc(doc(db, 'settings/branding'), { name: 'MCL DoF' }));
     await assertSucceeds(setDoc(doc(db, 'detachments/dof-999'), { name: 'New', number: '999', active: true }));
     await assertSucceeds(setDoc(doc(db, 'adSizes/full'), { label: 'Full page', active: true }));
-    await assertSucceeds(setDoc(doc(db, 'adBooks/b1'), { title: 'Convention 2027' }));
+    await assertSucceeds(setDoc(doc(db, 'adBooks/b1'), { title: 'Convention 2027', status: 'open', adIds: [] }));
     await assertSucceeds(getDoc(doc(db, 'ads/a1')));
     await assertSucceeds(getDoc(doc(db, 'vavsEntries/e1')));
     await assertSucceeds(updateDoc(doc(db, 'vavsEntries/e1'), { vaHours: 2 }));
