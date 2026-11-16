@@ -15,9 +15,9 @@ Each step is marked:
 
 ---
 
-## Before you start: cost and the $10 cap
+## Before you start: cost and the $20 cap
 
-**Decision (Billy, Nov 15, 2026):** use the **Blaze** plan with a **$10/month budget, email alerts, and an automatic billing shutoff**. See `ARCHITECTURE.md`, section "Pricing plan and cost cap".
+**Decision (Billy, Nov 15, 2026; raised from $10 to $20 on Nov 16, 2026):** use the **Blaze** plan with a **$20/month budget, email alerts, and an automatic billing shutoff**. See `ARCHITECTURE.md`, section "Pricing plan and cost cap".
 
 Why Blaze and not the free Spark plan:
 
@@ -26,21 +26,21 @@ Why Blaze and not the free Spark plan:
 
 Blaze needs a credit or debit card. It still includes the free usage amounts. A small DoF portal should cost **$0 a month**, but that is an estimate, not a promise. Your protection (Part 4 and Part 5):
 
-- Email alerts at **$2, $5, $8 and $10** in a month.
-- At **$10**, a small helper called **budget-guard** turns billing off for the project. That stops all charges.
+- Email alerts at **$4, $10, $16 and $20** in a month.
+- At **$20**, a small helper called **budget-guard** turns billing off for the project. That stops all charges.
 - Firestore and Storage go in **`us-east1`** (Part 6). It gets Google Cloud Storage's "Always Free" amount.
 
-> ### ⚠️ Read this: what the $10 shutoff does
+> ### ⚠️ Read this: what the $20 shutoff does
 >
-> **If the shutoff fires at $10, the portal goes offline.** Sign-in, ads, the database and image storage all stop. The site stays down until you bring billing back. **Within the same month, you must raise the budget first, then re-link billing.** Re-linking alone doesn't work while this month's cost is still $10 or more (see "If the shutoff fires: bring billing back" at the end of Part 5).
+> **If the shutoff fires at $20, the portal goes offline.** Sign-in, ads, the database and image storage all stop. The site stays down until you bring billing back. **Within the same month, you must raise the budget first, then re-link billing.** Re-linking alone doesn't work while this month's cost is still $20 or more (see "If the shutoff fires: bring billing back" at the end of Part 5).
 >
 > Google warns that turning billing off can **shut things down roughly**: "Resources might be irretrievably deleted," and there is "no guarantee of service recovery." ([Google Cloud docs](https://cloud.google.com/billing/docs/how-to/disable-billing-with-notifications))
 >
-> **That is why the early alerts matter.** If you get the $2, $5 or $8 email, tell P.A.T. or B.O.B. right away, so the cause can be found and fixed before the shutoff is needed.
+> **That is why the early alerts matter.** If you get the $4, $10 or $16 email, tell P.A.T. or B.O.B. right away, so the cause can be found and fixed before the shutoff is needed.
 >
-> Also: if billing is re-linked while the month's cost is still $10 or more, the shutoff fires again, usually within hours. There is no override switch (decided Nov 16, 2026).
+> Also: if billing is re-linked while the month's cost is still $20 or more, the shutoff fires again, usually within hours. There is no override switch (decided Nov 16, 2026).
 >
-> Google reports costs with a delay (often hours, sometimes more than a day). The bill can end up a little over $10 before the shutoff happens.
+> Google reports costs with a delay (often hours, sometimes more than a day). The bill can end up a little over $20 before the shutoff happens.
 
 ---
 
@@ -128,68 +128,65 @@ Left menu: **Security → Authentication**. (Older layouts show **Build → Auth
 
 ---
 
-## Part 4 — Upgrade to Blaze and set the $10 budget
+## Part 4 — Upgrade to Blaze and check your $20 budget
 
-Do this **before** creating Firestore and Storage, so the alerts are in place before anything can cost money. This Part sets up the budget and its email alerts. Part 5 connects the budget to the automatic shutoff.
+You **already have** a $20/month budget, with alerts at 20/50/80/100% ($4, $10, $16, $20). This Part doesn't create a new budget. You **open the one you have and check it** (steps 12–18). Do this **before** creating Firestore and Storage, so the alerts are in place before anything can cost money. Part 5 then connects this same budget to the automatic shutoff.
 
 **11. Upgrade to Blaze.** — Phone OK
-- In the Firebase console, find the plan name **Spark** (usually at the bottom of the left menu) and press **Upgrade**. *Unverified:* the exact button location.
-- Choose **Blaze (pay as you go)**. Link or create a **Cloud Billing account** and enter your card.
-- The upgrade screen may offer a budget alert. You can skip it. You will make the real $10 budget in the next steps. (If you already made one, edit that one instead of making a second, so you don't get double emails.)
+- In the Firebase console, find the plan name **Spark** (usually at the bottom of the left menu) and press **Upgrade**. *Unverified:* the exact button location. If it already says **Blaze**, skip to step 12.
+- Choose **Blaze (pay as you go)**. Link the **Cloud Billing account** that holds your $20 budget.
+- The upgrade screen may offer a budget alert. **Skip it.** You already have your $20 budget, and a second one would send double emails.
 - You must be the project **Owner** to do this. The person who created the project is the Owner. You will also be the billing account's **Billing Account Administrator**, which Part 5 needs.
 
 **12. Open Budgets & alerts.** — Phone OK (desktop mode)
 - Go to https://console.cloud.google.com/billing/budgets
-- If asked which billing account, pick the one you just linked.
+- If asked which billing account, pick the one linked to the project.
 - Or by menu: Google Cloud console menu ☰ → **Billing** → (if asked, **Go to linked billing account**) → under **Cost management**, **Budgets & alerts**.
-- Press **Create budget**.
 
-**13. Name the budget.** — Phone OK (desktop mode)
-- In the **Define** section, choose **Alerts only**.
-- **Name:** `mcl-portal $10/month`.
-- Press **Next**.
-- Why not **Spend cap**? Google's newer spend cap budgets only cover a few services (Gemini, Vertex AI, Cloud Run, Cloud Run functions). They do **not** cover Firestore, Storage or Hosting. So the portal uses budget-guard instead.
+**13. Open your existing $20 budget.** — Phone OK (desktop mode)
+- Press the **name** of your $20 budget in the list. It opens for editing. (Its name is whatever you chose; this guide calls it "your $20 budget".)
+- Don't press **Create budget**. One budget is all you need.
+- About **Spend cap** budgets: Google's newer spend cap budgets only cover a few services (Gemini, Vertex AI, Cloud Run, Cloud Run functions). They do **not** cover Firestore, Storage or Hosting. Your **alerts-only** budget plus budget-guard is the right setup.
 
-**14. Set the scope.** — Phone OK (desktop mode)
-- **Time range:** **Monthly** (the default).
-- **Projects:** select **only YOUR-PROJECT-ID** (for example `mcl-portal`). This matters: the shutoff acts on this budget's total, so other projects on your billing account must not count toward it.
-- **Services:** leave all services selected.
+**14. Check the scope: this project only.** — Phone OK (desktop mode)
+- **Time range:** **Monthly**.
+- **Projects:** only **YOUR-PROJECT-ID** (for example `mcl-portal`) should be selected. If other projects are selected, untick them so only YOUR-PROJECT-ID is left.
+- **Services:** all services selected.
 - Leave the other settings as they are.
-- Press **Next**.
 
-**15. Set the amount.** — Phone OK
+> **If your budget covers the whole billing account:** check this when **Projects** shows all projects, or "Select all", or the project you need isn't the only one picked. Then the budget adds up spending from **every** project on that billing account. Once budget-guard is connected (Part 5), spending in some other project could push the total to $20 and switch the **portal** off. So change **Projects** to **only YOUR-PROJECT-ID**. If you also want an alert for the whole billing account, make a **separate** budget for that, and **never** connect the `budget-guard` topic to it.
+
+**15. Check the amount.** — Phone OK
 - **Budget type:** **Specified amount**.
-- **Target amount:** `10`.
-- Press **Next**.
+- **Target amount:** `20`.
 
-**16. Set the four alerts.** — Easier on a computer (Phone OK with care)
-Google starts you with three rows: 50%, 90% and 100%. Change them to these four. For each row, type the **Percent of budget**; the amount fills in by itself. Set **Trigger on** to **Actual** for all four.
+**16. Check the four alerts.** — Phone OK to check; Easier on a computer if you need to change rows
+There should be four rows, all with **Trigger on** set to **Actual**:
 
 | Percent of budget | Amount | Trigger on |
 |-------------------|--------|------------|
-| 20 | $2 | Actual |
-| 50 | $5 | Actual |
-| 80 | $8 | Actual |
-| 100 | $10 | Actual |
+| 20 | $4 | Actual |
+| 50 | $10 | Actual |
+| 80 | $16 | Actual |
+| 100 | $20 | Actual |
 
-Use **Add threshold** to add the fourth row. *Phone tip:* the rows are small. Turn the phone sideways and zoom in.
+If a row is missing or different, type the **Percent of budget** (the amount fills in by itself), or use **Add threshold**. *Phone tip:* the rows are small. Turn the phone sideways and zoom in.
 
-**17. Choose who gets the emails.** — Phone OK
-- Under **Manage notifications**, leave **Email alerts to billing admins and users** ticked. You are the billing admin, so the emails come to you.
-- Leave **Connect a Pub/Sub topic to this budget** unticked for now. You connect it in step 21, after the topic exists.
+**17. Keep the email alerts.** — Phone OK
+- Under **Manage notifications**, keep **Email alerts to billing admins and users** ticked. You are the billing admin, so the emails come to you.
+- Leave **Connect a Pub/Sub topic to this budget** as it is for now. You connect it in step 21, after the topic exists.
 - To send the emails to a second address too (for example P.A.T.'s), Google offers **Link Monitoring email notification channels to this budget**. That is optional and takes extra setup. *Unverified* on a phone.
 
-**18. Save and check.** — Phone OK
-- Press **Finish**.
-- The budget now shows in the **Budgets & alerts** list.
-- Google says the first email can take **several hours**. Budgets count in US Pacific time and reset on the 1st of each month.
+**18. Save.** — Phone OK
+- If you changed anything, press **Save**. If nothing needed changing, you can leave the page.
+- Budgets count in US Pacific time and reset on the 1st of each month.
 - **Until Part 5 is finished, this budget only sends emails. It does not stop spending.**
 
 ---
 
 ## Part 5 — Turn on the budget-guard shutoff
 
-budget-guard is a small robot (a Cloud Function, the project's only one). When the budget reports that this month's cost has **reached $10**, it turns billing off for the project. It can turn billing **off** but can never turn it back **on**, and it has no access to your billing account. It was written by B.O.B. Its code is on `main` in `functions/budget-guard/`, and its full technical steps are in `functions/budget-guard/README.md`.
+budget-guard is a small robot (a Cloud Function, the project's only one). When the budget reports that this month's cost has **reached $20** (the budget amount), it turns billing off for the project. It can turn billing **off** but can never turn it back **on**, and it has no access to your billing account. It was written by B.O.B. Its code is on `main` in `functions/budget-guard/`, and its full technical steps are in `functions/budget-guard/README.md`.
 
 > **Some of this needs a computer.** Deploying budget-guard (steps 24 and 27) needs a terminal with Google's and Firebase's command-line tools. That can't be done from a phone's web browser. Do those steps on a computer, or ask B.O.B. to walk you through them. Everything else in this Part has a console route that works on a phone.
 
@@ -219,7 +216,7 @@ A "topic" is the mailbox the budget drops its messages into for budget-guard.
 - Leave the other settings as they are, and press **Create**.
 
 **21. Connect the topic to the budget.** — Easier on a computer (Phone OK with care)
-- Go back to **Budgets & alerts** (step 12) and open the **`mcl-portal $10/month`** budget.
+- Go back to **Budgets & alerts** (step 12) and open **your $20 budget**, the same one you checked in steps 13–18.
 - In the **Actions** section, under **Manage notifications**, tick **Connect a Pub/Sub topic to this budget**.
 - **Project:** press **Select a project** and choose **YOUR-PROJECT-ID**.
 - Under **Select a Pub/Sub topic**, choose **`budget-guard`**.
@@ -231,7 +228,7 @@ This is a separate robot account from the GitHub deploy one in Part 7. It gets *
 - Go to https://console.cloud.google.com/iam-admin/serviceaccounts, in project **YOUR-PROJECT-ID**.
 - Press **+ Create service account**.
 - **Service account name:** `budget-guard`. The ID fills in as `budget-guard`. Its email becomes `budget-guard@YOUR-PROJECT-ID.iam.gserviceaccount.com`.
-- **Description:** `Turns billing off at $10/month`.
+- **Description:** `Turns billing off at the monthly budget`.
 - Press **Create and continue**.
 - Under **Grant this service account access to project**, add exactly these two roles:
   - **Project Billing Manager**
@@ -267,24 +264,24 @@ This is a separate robot account from the GitHub deploy one in Part 7. It gets *
 - These console steps follow Google's Cloud Run docs ("Control access on an individual service"). B.O.B.'s README gives a terminal command instead (step 5b). It looks up the service name automatically (normally `budgetguard`) and grants on whatever name it finds, so it works either way.
 
 **26. Test it safely in dry run.** — Easier on a computer (console route works on a phone with care)
-Send budget-guard two fake budget messages, one at $2 and one at $10, and check what it wrote down.
+Send budget-guard two fake budget messages, one at $4 and one at $20, and check what it wrote down.
 - Go to **Pub/Sub → Topics** (step 20) and open **`budget-guard`**.
 - Open **Messages** and press **Publish message**.
 - Paste this into **Message body**, exactly, then press **Publish**:
 
 ```
-{"budgetDisplayName":"mcl-portal $10/month (TEST)","costAmount":2.00,"budgetAmount":10.00,"currencyCode":"USD","alertThresholdExceeded":0.2}
+{"budgetDisplayName":"mcl-portal $20/month (TEST)","costAmount":4.00,"budgetAmount":20.00,"currencyCode":"USD","alertThresholdExceeded":0.2}
 ```
 
 - Press **Publish message** again, paste this one, and press **Publish**:
 
 ```
-{"budgetDisplayName":"mcl-portal $10/month (TEST)","costAmount":10.00,"budgetAmount":10.00,"currencyCode":"USD","alertThresholdExceeded":1.0}
+{"budgetDisplayName":"mcl-portal $20/month (TEST)","costAmount":20.00,"budgetAmount":20.00,"currencyCode":"USD","alertThresholdExceeded":1.0}
 ```
 
 - Check the log: **Firebase console → Functions → budgetGuard → Logs** (path from B.O.B.'s README; *Unverified* by me). After a minute or two you should see:
-  - `budget-guard: under budget (2 of 10); no action.`
-  - `budget-guard: DRY RUN. Budget reached (10 >= 10); would detach billing from projects/YOUR-PROJECT-ID. Nothing changed.`
+  - `budget-guard: under budget (4 of 20); no action.`
+  - `budget-guard: DRY RUN. Budget reached (20 >= 20); would detach billing from projects/YOUR-PROJECT-ID. Nothing changed.`
   - **No** line saying `could not read billing status`. If you see it, the **Browser** role (step 22) or the Cloud Billing API (step 19) is missing. Tell B.O.B.
 - **Troubleshooting: if nothing shows up in the logs at all,** the Cloud Run Invoker permission (step 25) is probably missing or hasn't taken effect yet. Check it, wait a few minutes (Pub/Sub keeps retrying), and look again.
 - Check billing is still on: **Billing → Manage billing accounts → My projects**. YOUR-PROJECT-ID should still show your billing account, not "Billing is disabled".
@@ -296,7 +293,7 @@ Send budget-guard two fake budget messages, one at $2 and one at $10, and check 
 - Later deploys like this one *could* instead use the optional GitHub workflow **Deploy budget-guard (Cloud Function)**, with **Deploy in dry-run mode** unticked. That needs the extra roles in step 33 and has not been tested yet (*Unverified*). The computer route is the safe one.
 - Now the shutoff is live.
 
-> **⚠️ Once it's armed, never publish a test message of $10 or more.** budget-guard will really turn billing off and the portal will go offline. To test again, switch back to dry run first (redeploy as in step 24), then test (step 26), then arm it again (step 27). A $2 test message is harmless.
+> **⚠️ Once it's armed, never publish a test message at or over the budget ($20 or more).** budget-guard will really turn billing off and the portal will go offline. To test again, switch back to dry run first (redeploy as in step 24), then test (step 26), then arm it again (step 27). A $4 test message is harmless.
 
 Other notes from B.O.B.:
 - The normal GitHub site deploy (Part 11) **never** deploys budget-guard, and budget-guard's deploy never touches the website.
@@ -304,7 +301,7 @@ Other notes from B.O.B.:
 
 ### If the shutoff fires: bring billing back
 
-When budget-guard turns billing off, the portal is offline. You will have had the $2, $5 and $8 emails first.
+When budget-guard turns billing off, the portal is offline. You will have had the $4, $10 and $16 emails first.
 
 > **The rule (decided Nov 16, 2026): there is no override. To turn billing back on in the same month, first raise the budget, then re-link billing.**
 >
@@ -316,8 +313,8 @@ When budget-guard turns billing off, the portal is offline. You will have had th
 Tell P.A.T. or B.O.B. Find out what caused the spending before turning billing back on.
 
 **R2. Same month? Raise the budget first.** — Phone OK (desktop mode)
-- Go to **Billing → Budgets & alerts** and open **`mcl-portal $10/month`**.
-- Raise the **Target amount** above this month's cost so far (for example to `20`).
+- Go to **Billing → Budgets & alerts** and open **your $20 budget**.
+- Raise the **Target amount** above this month's cost so far (for example to `40`).
 - Leave **Connect a Pub/Sub topic to this budget** ticked (topic `budget-guard`), so the shutoff still protects you at the new limit.
 - Press **Save**.
 - This works even while the project's billing is off, because the budget belongs to your billing account.
@@ -335,8 +332,8 @@ Tell P.A.T. or B.O.B. Find out what caused the spending before turning billing b
 - Open https://mcl-portal.web.app and sign in to test.
 - Some data might not come back. Google warns resources may be deleted while billing is off.
 
-**R5. Next month: put the budget back to $10.** — Phone OK (desktop mode)
-On or after the 1st, open the budget again, set the **Target amount** back to `10`, check that the `budget-guard` topic is still connected, and press **Save**.
+**R5. Next month: put the budget back to $20.** — Phone OK (desktop mode)
+On or after the 1st, open the budget again, set the **Target amount** back to `20`, check that the `budget-guard` topic is still connected, and press **Save**.
 
 ---
 
@@ -562,7 +559,7 @@ This is the only time roles are edited outside the app. The console ignores the 
 | Storage → Rules | The rules you pasted are shown (they mention `ad-images`). |
 | GitHub → Actions | Green checks on **Deploy to Firebase Hosting** (and **CI**). |
 | Firebase console → Usage and billing | Near $0. |
-| Google Cloud → Billing → **Budgets & alerts** | The `mcl-portal $10/month` budget, with alerts at $2, $5, $8 and $10 and the `budget-guard` topic connected. |
+| Google Cloud → Billing → **Budgets & alerts** | Your $20 budget, scoped to YOUR-PROJECT-ID only, with alerts at $4, $10, $16 and $20 and the `budget-guard` topic connected. |
 | Firebase console → Functions | **budgetGuard** is listed (after step 27), and the dry-run test lines from step 26 are in its logs. |
 
 If you still see the "Local Demo Mode" strip above the header, the site was built without the secrets. Check that all 7 secret names are spelled exactly right, then re-run the deploy (step 41).
@@ -577,8 +574,8 @@ If you still see the "Local Demo Mode" strip above the header, the site was buil
 | 2 Web app | Phone OK |
 | 3 Email link + domains | Phone OK |
 | 4 Blaze upgrade (step 11) | Phone OK |
-| 4 Budget name, scope, amount, emails, finish (steps 12–15, 17, 18) | Phone OK (desktop mode) |
-| 4 Four alert rows (step 16) | Easier on a computer, Phone OK with care |
+| 4 Open and check your existing $20 budget: scope, amount, emails, save (steps 12–15, 17, 18) | Phone OK (desktop mode) |
+| 4 Four alert rows, $4/$10/$16/$20 (step 16) | Phone OK to check; easier on a computer if you must change them |
 | 5 Enable 9 APIs (step 19) | Phone OK (desktop mode) |
 | 5 Create topic (step 20) | Phone OK |
 | 5 Connect topic to budget (step 21) | Easier on a computer, Phone OK with care |
@@ -622,7 +619,7 @@ Sources:
 - Menu paths **Security → Authentication** and **Databases & Storage → Firestore / Storage** come from Firebase's own docs (updated Nov 12, 2026).
 - From Google Cloud's docs, checked Nov 15, 2026:
   - the service-account key steps;
-  - the **Budgets & alerts** screens (Create budget, Alerts only, Scope, Specified amount / Target amount, Percent of budget, Trigger on, Add threshold, Email alerts to billing admins and users, Connect a Pub/Sub topic to this budget, Finish);
+  - the **Budgets & alerts** screens (opening a budget by its name to edit it, then **Save**; Alerts only, Scope, Specified amount / Target amount, Percent of budget, Trigger on, Add threshold, Email alerts to billing admins and users, Connect a Pub/Sub topic to this budget, Finish);
   - the API Library **Enable** button;
   - Pub/Sub **Create topic** and **Messages → Publish message**;
   - IAM **Grant access** / **Add another role**;
