@@ -94,7 +94,7 @@ Manual deploy from a workstation: `npx firebase login`, then `npm run config:env
 2. Add a **Web app**; copy its config into the GitHub secrets above (and your `.env.local`).
 3. **Authentication → Sign-in method:** enable **Email/Password** and its **Email link (passwordless sign-in)** option.
 4. **Authentication → Settings → Authorized domains:** keep `mcl-portal.web.app` / `mcl-portal.firebaseapp.com`; add `localhost` for local testing (new projects no longer include it by default) and any custom domain later.
-5. Upgrade to the **Blaze** plan (required for Cloud Storage since Feb 3, 2026, and for more than 5 sign-in link emails/day), set the $10/month budget and shutoff from ARCHITECTURE.md "Pricing plan and cost cap", then create **Cloud Firestore** (production mode) and **Cloud Storage** (default bucket), both in `us-east1`.
+5. Upgrade to the **Blaze** plan (required for Cloud Storage since Feb 3, 2026, and for more than 5 sign-in link emails/day), set the $20/month budget and shutoff from ARCHITECTURE.md "Pricing plan and cost cap", then create **Cloud Firestore** (production mode) and **Cloud Storage** (default bucket), both in `us-east1`.
 6. Create the deploy service account key and add `FIREBASE_SERVICE_ACCOUNT`. Storage rules use cross-service `firestore.get()`, which needs a one-time permission grant: do the first Storage rules publish interactively (`npx firebase deploy --only storage --project <id>` after `firebase login`, or paste `storage.rules` in the console) and accept the prompt, so the non-interactive CI deploy doesn't stop on it.
 7. Push to `main` (or run the Deploy workflow manually).
 
