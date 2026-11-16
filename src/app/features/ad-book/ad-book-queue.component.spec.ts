@@ -12,16 +12,16 @@ describe('AdBookQueueComponent review controls (#3)', () => {
   let auth: FakeAuth;
   let service: AdBookService;
 
-  function submitAs(uid: string, roles: RoleId[]): string {
+  async function submitAs(uid: string, roles: RoleId[]): Promise<string> {
     auth.signInAs(uid, roles);
-    const ad = service.createAd({
+    const ad = await service.createAd({
       title: `${uid} ad`,
       sizeId: 'full',
       imageUrl: 'data:image/png;base64,AAAA',
       fit: 'cover',
       position: { x: 50, y: 50 },
     });
-    service.submitAd(ad.id);
+    await service.submitAd(ad.id);
     return ad.id;
   }
 
@@ -48,24 +48,24 @@ describe('AdBookQueueComponent review controls (#3)', () => {
     service = TestBed.inject(AdBookService);
   });
 
-  it('hides approve and reject on an approver\u2019s own ad', () => {
-    submitAs('approver', ['member', 'adBookApprover']);
+  it('hides approve and reject on an approver\u2019s own ad', async () => {
+    await submitAs('approver', ['member', 'adBookApprover']);
     const el = render();
     expect(buttons(el).some((b) => b.includes('Approve'))).toBe(false);
     expect(buttons(el).some((b) => b.includes('Reject'))).toBe(false);
     expect(el.textContent).toContain('A different approver must review it');
   });
 
-  it('shows approve and reject on someone else\u2019s ad', () => {
-    submitAs('alice', ['member']);
+  it('shows approve and reject on someone else\u2019s ad', async () => {
+    await submitAs('alice', ['member']);
     auth.signInAs('approver', ['member', 'adBookApprover']);
     const el = render();
     expect(buttons(el)).toContain('Approve');
     expect(buttons(el).some((b) => b.includes('Reject'))).toBe(true);
   });
 
-  it('offers an admin only reason-gated self-approval on their own ad (no reject)', () => {
-    submitAs('admin', ['member', 'departmentAdmin']);
+  it('offers an admin only reason-gated self-approval on their own ad (no reject)', async () => {
+    await submitAs('admin', ['member', 'departmentAdmin']);
     const el = render();
     const self = Array.from(el.querySelectorAll('button')).find((b) =>
       b.textContent?.includes('Approve My Own Ad')
@@ -75,10 +75,10 @@ describe('AdBookQueueComponent review controls (#3)', () => {
     expect(buttons(el).some((b) => b.includes('Reject'))).toBe(false);
   });
 
-  it('shows Undo Review for admins on reviewed ads', () => {
-    const id = submitAs('alice', ['member']);
+  it('shows Undo Review for admins on reviewed ads', async () => {
+    const id = await submitAs('alice', ['member']);
     auth.signInAs('approver', ['member', 'adBookApprover']);
-    service.approveAd(id);
+    await service.approveAd(id);
     expect(buttons(render()).some((b) => b.includes('Undo Review'))).toBe(false);
     auth.signInAs('admin', ['member', 'departmentAdmin']);
     expect(buttons(render()).some((b) => b.includes('Undo Review'))).toBe(true);

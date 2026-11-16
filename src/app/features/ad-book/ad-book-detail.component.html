@@ -108,7 +108,7 @@
                           type="button"
                           class="btn btn-outline-secondary"
                           title="Move up"
-                          (click)="adBook.moveAdInBook(b.id, item.ad.id, -1)"
+                          (click)="move(item.ad.id, -1)"
                         >
                           <i class="bi bi-arrow-up"></i>
                         </button>
@@ -116,7 +116,7 @@
                           type="button"
                           class="btn btn-outline-secondary"
                           title="Move down"
-                          (click)="adBook.moveAdInBook(b.id, item.ad.id, 1)"
+                          (click)="move(item.ad.id, 1)"
                         >
                           <i class="bi bi-arrow-down"></i>
                         </button>
@@ -124,7 +124,7 @@
                           type="button"
                           class="btn btn-outline-danger"
                           title="Remove from book"
-                          (click)="adBook.removeAdFromBook(b.id, item.ad.id)"
+                          (click)="remove(item.ad.id)"
                         >
                           <i class="bi bi-x-lg"></i>
                         </button>

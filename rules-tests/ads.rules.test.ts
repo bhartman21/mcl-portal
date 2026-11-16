@@ -420,18 +420,40 @@ describe('#3 ads: admin undo review (AC 13)', () => {
       'adBooks/b1': { title: 'Convention', status: 'locked', adIds: ['ad1'] },
     });
     await seedAd('alice', 'approved', { reviewedBy: 'approver', bookId: 'b1' });
-    await assertFails(undoBatch('admin'));
+    const clearBook = { extra: { bookId: deleteField() } };
+    await assertFails(undoBatch('admin', clearBook));
     await seed(env, { 'adBooks/b1': { title: 'Convention', status: 'printed', adIds: ['ad1'] } });
-    await assertFails(undoBatch('admin'));
+    await assertFails(undoBatch('admin', clearBook));
     // Removed from the book: allowed.
     await seed(env, { 'adBooks/b1': { title: 'Convention', status: 'locked', adIds: [] } });
-    await assertSucceeds(undoBatch('admin'));
+    await assertSucceeds(undoBatch('admin', clearBook));
   });
 
-  it('an ad in an open book can be undone', async () => {
+  it('an ad in an open book can be undone; it comes out of the book in the same batch (#4)', async () => {
     await seed(env, { 'adBooks/b1': { title: 'Convention', status: 'open', adIds: ['ad1'] } });
     await seedAd('alice', 'approved', { reviewedBy: 'approver', bookId: 'b1' });
-    await assertSucceeds(undoBatch('admin'));
+    // Leaving it listed in the book (or keeping bookId) is refused.
+    await assertFails(undoBatch('admin'));
+    await assertFails(undoBatch('admin', { extra: { bookId: deleteField() } }));
+    const fs = db('admin');
+    const batch = writeBatch(fs);
+    batch.update(adRef(fs), {
+      status: 'submitted',
+      reviewedBy: deleteField(),
+      bookId: deleteField(),
+      lastAuditId: 'audit-open-book',
+      updatedAt: '2026-11-14T02:00:00Z',
+    });
+    batch.update(doc(fs, 'adBooks/b1'), { adIds: [] });
+    batch.set(doc(fs, 'audits', 'audit-open-book'), {
+      entityType: 'ad',
+      entityId: 'ad1',
+      action: 'undoReview',
+      actorUid: 'admin',
+      at: serverTimestamp(),
+      reason: 'Approved the wrong version',
+    });
+    await assertSucceeds(batch.commit());
   });
 });
 

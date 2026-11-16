@@ -1,11 +1,21 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { AdItem, AdSize } from '../../core/models/ad-book.model';
+import { dataUrlToBlob, PendingAdImage } from '../../core/ad-book/ad-image-storage';
+import { AdItem, AdSize, SEED_AD_SIZES } from '../../core/models/ad-book.model';
 import { AdBookService } from '../../core/services/ad-book.service';
 import { DocumentConverterService } from '../../core/services/document-converter.service';
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
+
+function readAsDataUrl(file: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error ?? new Error('Unable to read the file.'));
+    reader.readAsDataURL(file);
+  });
+}
 
 @Component({
   selector: 'app-ad-editor',
@@ -44,6 +54,15 @@ export class AdEditorComponent implements OnInit {
   readonly posX = signal<number>(50);
   readonly posY = signal<number>(50);
 
+  /**
+   * Artwork chosen in this session and not saved yet. It is uploaded to Firebase Storage on save
+   * (issue #4); the preview is a local data URL only.
+   */
+  private pendingImage: PendingAdImage | null = null;
+  readonly saving = signal(false);
+  /** Save as PNG/PDF works on freshly loaded artwork (a local data URL). */
+  readonly canExport = computed(() => !!this.imageUrl()?.startsWith('data:'));
+
   readonly converting = signal(false);
   readonly pdfPageCount = signal(0);
   readonly pdfCurrentPage = signal(1);
@@ -54,7 +73,8 @@ export class AdEditorComponent implements OnInit {
 
   readonly selectedSize = computed<AdSize>(() => {
     const found = this.adBook.getSizeById(this.sizeId);
-    return found ?? this.adBook.activeSizes()[0];
+    // Sizes load from Firestore; show the first seed size until they arrive.
+    return found ?? this.adBook.activeSizes()[0] ?? SEED_AD_SIZES[0];
   });
 
   private dragging = false;
@@ -68,17 +88,14 @@ export class AdEditorComponent implements OnInit {
     if (idParam) {
       const ad = this.adBook.getAdById(idParam);
       if (ad) {
-        this.adId.set(ad.id);
-        this.title = ad.title;
-        this.companyName = ad.companyName ?? '';
-        this.sizeId = ad.sizeId;
-        this.imageUrl.set(ad.imageUrl);
-        this.imageName.set(ad.imageName);
-        this.fit.set(ad.fit);
-        this.posX.set(ad.position.x);
-        this.posY.set(ad.position.y);
+        this.loadAd(ad);
       } else {
-        this.errorMsg.set('Ad not found.');
+        // With Firebase the ads may still be loading (direct link or page refresh).
+        void this.adBook.whenAdsLoaded().then(() => {
+          const loaded = this.adBook.getAdById(idParam);
+          if (loaded) this.loadAd(loaded);
+          else this.errorMsg.set('Ad not found.');
+        });
       }
     } else {
       const firstActive = this.adBook.activeSizes()[0];
@@ -86,6 +103,26 @@ export class AdEditorComponent implements OnInit {
         this.sizeId = firstActive.id;
       }
     }
+  }
+
+  private loadAd(ad: AdItem): void {
+    this.adId.set(ad.id);
+    this.title = ad.title;
+    this.companyName = ad.companyName ?? '';
+    this.sizeId = ad.sizeId;
+    this.imageName.set(ad.imageName);
+    this.fit.set(ad.fit);
+    this.posX.set(ad.position.x);
+    this.posY.set(ad.position.y);
+  }
+
+  /** Saved image: the editor follows the ad (Storage URLs resolve after the ad loads). */
+  readonly displayUrl = computed(() => this.imageUrl() ?? this.existingAd()?.imageUrl);
+
+  private setPending(blob: Blob, name: string, previewUrl: string): void {
+    this.pendingImage = { blob, name, previewUrl };
+    this.imageUrl.set(previewUrl);
+    this.imageName.set(name);
   }
 
   async onFileSelected(event: Event): Promise<void> {
@@ -126,12 +163,11 @@ export class AdEditorComponent implements OnInit {
     this.lastPdfFile = null;
 
     if (isImage) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        this.imageUrl.set(String(reader.result));
-        this.imageName.set(file.name);
-      };
-      reader.readAsDataURL(file);
+      try {
+        this.setPending(file, file.name, await readAsDataUrl(file));
+      } catch (err) {
+        this.errorMsg.set(err instanceof Error ? err.message : 'Unable to read the file.');
+      }
       return;
     }
 
@@ -140,8 +176,7 @@ export class AdEditorComponent implements OnInit {
       if (isPdf) {
         this.lastPdfFile = file;
         const result = await this.converter.convertPdfToPng(file, 1);
-        this.imageUrl.set(result.pngDataUrl);
-        this.imageName.set(file.name);
+        this.setPending(dataUrlToBlob(result.pngDataUrl), file.name, result.pngDataUrl);
         this.pdfPageCount.set(result.pageCount);
         this.fit.set('contain');
         this.notice.set(
@@ -149,8 +184,7 @@ export class AdEditorComponent implements OnInit {
         );
       } else if (isDocx) {
         const pngDataUrl = await this.converter.convertDocxToPng(file);
-        this.imageUrl.set(pngDataUrl);
-        this.imageName.set(file.name);
+        this.setPending(dataUrlToBlob(pngDataUrl), file.name, pngDataUrl);
         this.fit.set('contain');
         this.notice.set(
           'Converted Word (.docx) document to PNG for ad framing. You can also download as PNG or PDF below.'
@@ -173,7 +207,7 @@ export class AdEditorComponent implements OnInit {
     try {
       const result = await this.converter.convertPdfToPng(this.lastPdfFile, pageNum);
       this.pdfCurrentPage.set(pageNum);
-      this.imageUrl.set(result.pngDataUrl);
+      this.setPending(dataUrlToBlob(result.pngDataUrl), this.lastPdfFile.name, result.pngDataUrl);
     } catch (err) {
       this.errorMsg.set(
         err instanceof Error ? err.message : 'Unable to render PDF page.'
@@ -202,7 +236,7 @@ export class AdEditorComponent implements OnInit {
   }
 
   onDragStart(event: PointerEvent): void {
-    if (this.fit() !== 'cover' || !this.imageUrl() || this.isLockedForEdit()) return;
+    if (this.fit() !== 'cover' || !this.displayUrl() || this.isLockedForEdit()) return;
     this.dragging = true;
     this.dragStartX = event.clientX;
     this.dragStartY = event.clientY;
@@ -223,7 +257,7 @@ export class AdEditorComponent implements OnInit {
     this.dragging = false;
   }
 
-  saveDraft(): AdItem | null {
+  async saveDraft(): Promise<AdItem | null> {
     this.errorMsg.set(null);
     this.notice.set(null);
 
@@ -232,47 +266,50 @@ export class AdEditorComponent implements OnInit {
       return null;
     }
 
+    this.saving.set(true);
     try {
       const payload = {
         title: this.title,
         companyName: this.companyName,
         sizeId: this.sizeId,
-        imageUrl: this.imageUrl(),
-        imageName: this.imageName(),
         fit: this.fit(),
         position: { x: this.posX(), y: this.posY() },
+        ...(this.pendingImage ? { image: this.pendingImage } : {}),
       };
 
       let saved: AdItem;
       if (this.adId()) {
-        saved = this.adBook.updateAd(this.adId()!, payload);
+        saved = await this.adBook.updateAd(this.adId()!, payload);
       } else {
-        saved = this.adBook.createAd(payload);
+        saved = await this.adBook.createAd(payload);
         this.adId.set(saved.id);
       }
+      this.pendingImage = null;
       this.notice.set('Draft saved.');
       return saved;
     } catch (err) {
       this.errorMsg.set(err instanceof Error ? err.message : 'Unable to save draft.');
       return null;
+    } finally {
+      this.saving.set(false);
     }
   }
 
   async saveAndSubmit(): Promise<void> {
-    const saved = this.saveDraft();
+    const saved = await this.saveDraft();
     if (!saved) return;
     try {
-      this.adBook.submitAd(saved.id);
+      await this.adBook.submitAd(saved.id);
       await this.router.navigate(['/ad-book']);
     } catch (err) {
       this.errorMsg.set(err instanceof Error ? err.message : 'Unable to submit ad.');
     }
   }
 
-  recall(): void {
+  async recall(): Promise<void> {
     if (!this.adId()) return;
     try {
-      this.adBook.recallToDraft(this.adId()!);
+      await this.adBook.recallToDraft(this.adId()!);
       this.notice.set('Ad withdrawn to draft. You may now edit and resubmit.');
     } catch (err) {
       this.errorMsg.set(err instanceof Error ? err.message : 'Unable to withdraw ad.');

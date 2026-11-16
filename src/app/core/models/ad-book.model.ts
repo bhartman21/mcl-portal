@@ -41,6 +41,7 @@ export interface AdLockReset {
 
 export interface AdItem {
   id: string;
+  /** The book this approved ad is placed in (set by an approver with the placement). */
   bookId?: string;
   departmentId: 'dof';
   sizeId: string;
@@ -59,6 +60,12 @@ export interface AdItem {
   createdByName?: string;
   createdByType: 'member' | 'company' | 'guest';
   companyName?: string;
+  /** Storage object path `ad-images/{uid}/{adId}/{file}` (issue #4). */
+  imagePath?: string;
+  /**
+   * Display URL. With Firebase it is resolved at runtime from `imagePath` and never stored in
+   * Firestore; in local demo mode (no Firebase config) it holds the browser-only data URL.
+   */
   imageUrl?: string;
   imageName?: string;
   fit: 'cover' | 'contain';

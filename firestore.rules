@@ -254,12 +254,62 @@ service cloud.firestore {
     // security outline: members "read open books", approvers/admins R/W). Member queries must
     // filter on status == 'open'.
     match /adBooks/{bookId} {
+      function isBookEditor() {
+        return isAdmin() || hasRole('adBookApprover');
+      }
+
+      function bookStatuses() {
+        return ['draft', 'open', 'locked', 'printed'];
+      }
+
+      function oldIds() {
+        return resource.data.get('adIds', []);
+      }
+
+      function newIds() {
+        return request.resource.data.get('adIds', []);
+      }
+
+      // A locked or printed book takes no new placements and keeps its ads (AD_BOOK.md FR-A-4,
+      // AC 4); reopen it first.
+      function frozen() {
+        return resource.data.status in ['locked', 'printed'];
+      }
+
+      // Issue #4: one approved ad appended to an open book, paired (same batch) with
+      // ads/{adId}.bookId == this book (see the ads placement transition).
+      function appendsOnePlacedAd() {
+        let n = oldIds().size();
+        let adId = newIds()[n];
+        let ad = getAfter(/databases/$(database)/documents/ads/$(adId)).data;
+        return newIds().size() == n + 1
+          && !(adId in oldIds())
+          && newIds().toSet().hasAll(oldIds().toSet())
+          && request.resource.data.status == 'open'
+          && ad.status == 'approved'
+          && ad.get('bookId', '') == bookId;
+      }
+
+      // Reorder or remove ads (no duplicates, nothing new).
+      function reordersOrRemoves() {
+        return newIds().toSet().size() == newIds().size()
+          && oldIds().toSet().hasAll(newIds().toSet());
+      }
+
       allow read: if isActiveUser() && (
         resource.data.status == 'open' ||
         hasRole('adBookApprover') ||
         isAdmin()
       );
-      allow write: if isAdmin() || hasRole('adBookApprover');
+      // New books start empty.
+      allow create: if isBookEditor()
+        && request.resource.data.status in bookStatuses()
+        && request.resource.data.get('adIds', []) == [];
+      allow update: if isBookEditor()
+        && request.resource.data.status in bookStatuses()
+        && (newIds() == oldIds()
+            || (!frozen() && (appendsOnePlacedAd() || reordersOrRemoves())));
+      allow delete: if isBookEditor();
     }
 
     // ads: every update must match exactly one documented transition (features/AD_BOOK.md FR-A-3,
@@ -291,9 +341,19 @@ service cloud.firestore {
       }
 
       // Fields the owner edits in the ad editor.
+      // Issue #4: the image lives in Storage (imagePath); no image URL or data URL in Firestore.
+      // bookId is the approver's placement, not owner content.
       function contentKeys() {
-        return ['title', 'sizeId', 'bookId', 'companyName', 'imagePath', 'imageUrl', 'imageName',
+        return ['title', 'sizeId', 'companyName', 'imagePath', 'imageName',
                 'fit', 'position', 'createdByName', 'updatedAt'];
+      }
+
+      // imagePath must point at the owner's own folder for this ad (storage.rules ad-images path).
+      function imagePathOk() {
+        return !('imagePath' in request.resource.data)
+          || (request.resource.data.imagePath is string
+              && request.resource.data.imagePath.matches(
+                   'ad-images/' + request.auth.uid + '/' + adId + '/[^/]+'));
       }
 
       function reviewKeys() {
@@ -331,6 +391,15 @@ service cloud.firestore {
           && audit.actorUid == request.auth.uid;
       }
 
+      // After this write, the book named by the ad's old bookId still lists the ad.
+      function stillPlacedAfter() {
+        let bookId = resource.data.get('bookId', null);
+        let bookPath = /databases/$(database)/documents/adBooks/$(bookId);
+        return bookId is string && bookId.size() > 0
+          && existsAfter(bookPath)
+          && adId in getAfter(bookPath).data.get('adIds', []);
+      }
+
       // An approved ad placed in a locked (or printed) book must be removed from the book first.
       function placedInLockedBook() {
         let bookId = resource.data.get('bookId', null);
@@ -355,6 +424,7 @@ service cloud.firestore {
         && request.resource.data.get('submissionCount', 0) == 0
         && request.resource.data.get('maxSubmissions', 3) == 3
         && request.resource.data.get('locked', false) == false
+        && imagePathOk()
         && request.resource.data.keys().hasOnly(
              contentKeys().concat(['id', 'departmentId', 'status', 'createdBy', 'createdByType', 'createdAt',
                                    'submissionCount', 'maxSubmissions', 'locked']));
@@ -365,6 +435,7 @@ service cloud.firestore {
         && isOwner() && isActiveUser()
         && !isLocked()
         && (newStatus() == oldStatus() || (oldStatus() == 'rejected' && newStatus() == 'draft'))
+        && imagePathOk()
         && changedKeys().hasOnly(contentKeys().concat(['status']));
 
       // Owner submits a draft or rejected ad (may save content in the same write; clears notes).
@@ -374,6 +445,7 @@ service cloud.firestore {
         && !isLocked()
         && request.resource.data.get('submissionCount', 0) == submissionsUsed() + 1
         && request.resource.data.get('submissionCount', 0) <= maxSubmissions()
+        && imagePathOk()
         && changedKeys().hasOnly(contentKeys().concat(['status', 'submittedAt', 'rejectionNotes', 'submissionCount']))
         && absent('rejectionNotes');
 
@@ -416,12 +488,31 @@ service cloud.firestore {
       // fields cleared, submissionCount untouched, audited; not while placed in a locked book.
       allow update: if oldStatus() in ['approved', 'rejected'] && newStatus() == 'submitted'
         && isDeptOrHigherAdmin()
-        && changedKeys().hasOnly(reviewKeys().concat(['selfApproved', 'selfApprovalReason', 'lastAuditId', 'locked']))
+        && changedKeys().hasOnly(reviewKeys().concat(['selfApproved', 'selfApprovalReason', 'lastAuditId', 'locked', 'bookId']))
         && request.resource.data.get('locked', false) == false
         && absent('reviewedBy') && absent('reviewedByName') && absent('reviewedAt')
         && absent('rejectionNotes') && absent('selfApproved') && absent('selfApprovalReason')
         && auditedAs('undoReview')
-        && !placedInLockedBook();
+        && !placedInLockedBook()
+        // Issue #4: it also comes out of its (open) book in the same batch.
+        && absent('bookId') && !stillPlacedAfter();
+
+      // Issue #4: an approver or admin places an approved ad in an open book, or takes it out of a
+      // book that is not locked/printed; the book's adIds change in the same batch.
+      allow update: if oldStatus() == 'approved' && newStatus() == 'approved'
+        && canReview()
+        && changedKeys().hasOnly(['bookId', 'updatedAt'])
+        && changedKeys().hasAny(['bookId'])
+        && (
+          // place
+          (resource.data.get('bookId', '') == ''
+            && request.resource.data.bookId is string
+            && existsAfter(/databases/$(database)/documents/adBooks/$(request.resource.data.bookId))
+            && getAfter(/databases/$(database)/documents/adBooks/$(request.resource.data.bookId)).data.status == 'open'
+            && adId in getAfter(/databases/$(database)/documents/adBooks/$(request.resource.data.bookId)).data.get('adIds', []))
+          // remove
+          || (absent('bookId') && !stillPlacedAfter() && !placedInLockedBook())
+        );
 
       // Admin lock reset (AD_BOOK.md FR-A-3, AC 11): clears locked, submissionCount = 0, back to
       // draft, audited (who, when, reason).
