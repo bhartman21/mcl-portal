@@ -25,9 +25,13 @@ export class AdEditorComponent implements OnInit {
     this.adId() ? this.adBook.getAdById(this.adId()!) : undefined
   );
   readonly isNew = computed(() => !this.adId());
+  /**
+   * Read-only while submitted or approved, and while the ad is locked after its last allowed
+   * submission (AD_BOOK.md "Submission limit": only an admin reset unlocks it, #32).
+   */
   readonly isLockedForEdit = computed(() => {
-    const status = this.existingAd()?.status;
-    return status === 'submitted' || status === 'approved';
+    const ad = this.existingAd();
+    return ad?.status === 'submitted' || ad?.status === 'approved' || !!ad?.locked;
   });
 
   title = '';

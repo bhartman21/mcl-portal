@@ -12,8 +12,15 @@
     "build:firebase": "ng build --configuration production,firebase",
     "config:env": "node scripts/write-firebase-env.mjs",
     "config:emulators": "node scripts/write-firebase-env.mjs --emulators",
-    "emulators": "firebase emulators:start --project demo-mcl-portal",
-    "test:rules": "firebase emulators:exec --only firestore,storage --project demo-mcl-portal \"vitest run --config vitest.rules.config.mts\""
+    "emulators": "firebase emulators:start --only auth,firestore,storage,hosting --project demo-mcl-portal",
+    "test:rules": "firebase emulators:exec --only firestore,storage --project demo-mcl-portal \"vitest run --config vitest.rules.config.mts\"",
+    "deploy:hosting": "firebase deploy --only hosting,firestore:rules,storage",
+    "functions:install": "npm --prefix functions/budget-guard ci",
+    "functions:lint": "npm --prefix functions/budget-guard run lint",
+    "functions:test": "npm --prefix functions/budget-guard test",
+    "functions:build": "npm --prefix functions/budget-guard run build",
+    "deploy:functions": "firebase deploy --only functions:budget-guard",
+    "emulators:budget-guard": "npm run functions:build && firebase emulators:start --only functions,pubsub --project demo-mcl-portal"
   },
   "prettier": {
     "printWidth": 100,

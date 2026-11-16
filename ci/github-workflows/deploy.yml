@@ -1,7 +1,8 @@
 name: Deploy to Firebase Hosting
 
 # Builds with the Firebase web config from GitHub Actions secrets and deploys
-# Hosting + Firestore/Storage rules. Skips cleanly (green, with a notice) until
+# Hosting + Firestore/Storage rules only. It never deploys Cloud Functions; budget-guard
+# deploys separately (deploy-functions.yml or `npm run deploy:functions`). Skips cleanly (green, with a notice) until
 # the Firebase project exists and the secrets below are added. See README.
 #
 # Required repository secrets:
