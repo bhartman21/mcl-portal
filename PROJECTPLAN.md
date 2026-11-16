@@ -66,7 +66,7 @@ Runnable app on Firebase Hosting (or local `ng serve`) with login, role claims/d
 - [ ] Hide the "Continue with Google" button until Google sign-in is approved (email link only at launch).
 - [ ] In-app labels follow the current phase order (Ad Book = Phase 1, VAVS = Phase 2).
 - [x] Cleaner header per STYLE_GUIDE.md "App header layout" (Nov 15, 2026): three zones, account avatar menu with theme picker, Ribbon Rack to footer, demo-mode strip, no overflow at 1200–1440px. Merged in PRs #28 and #31 (Nov 16, 2026).
-- [x] Cost cap (decided Nov 15, 2026): Blaze plan, $10/month budget with alerts at $2/$5/$8/$10, and the `budget-guard` Cloud Function that detaches billing at $10. Include a dry-run test and owner steps in the Firebase setup guide. Function merged in PR #34 (Nov 16, 2026); owner setup steps are in PR #30, which still needs fixes.
+- [x] Cost cap (decided Nov 15, 2026): Blaze plan, $20/month budget (raised from $10 on Nov 16, 2026) with alerts at $4/$10/$16/$20, and the `budget-guard` Cloud Function that detaches billing at $20. Include a dry-run test and owner steps in the Firebase setup guide. Function merged in PR #34 (Nov 16, 2026); owner setup steps are in PR #30, which still needs fixes.
 - [ ] Deploy pipeline (GitHub Actions → Firebase Hosting).
 - [ ] App README with run/deploy steps.
 
