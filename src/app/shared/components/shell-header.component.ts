@@ -9,13 +9,20 @@ import { StatusBadgeComponent } from './status-badge.component';
 
 type HeaderMenu = 'admin' | 'account' | 'theme';
 
-/** Two-letter initials for the account avatar (first and last word of the name, else the email). */
+/** Name suffixes skipped when picking the last word for initials (matched case-insensitively, period optional). */
+const NAME_SUFFIXES = new Set(['jr', 'sr', 'ii', 'iii', 'iv']);
+
+/**
+ * Two-letter initials for the account avatar: first and last word of the name, skipping trailing
+ * suffixes (Jr, Sr, II, III, IV), else the email.
+ */
 export function initialsFor(displayName: string | null | undefined, email: string | null | undefined): string {
   const words = (displayName ?? '')
     .replace(/\([^)]*\)/g, ' ')
-    .split(/\s+/)
+    .split(/[\s,]+/)
     .map((w) => w.replace(/[^\p{L}\p{N}]/gu, ''))
     .filter((w) => w.length > 0);
+  while (words.length > 1 && NAME_SUFFIXES.has(words[words.length - 1].toLowerCase())) words.pop();
   if (words.length >= 2) return (words[0][0] + words[words.length - 1][0]).toUpperCase();
   if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
   const local = (email ?? '').split('@')[0].replace(/[^\p{L}\p{N}]/gu, '');

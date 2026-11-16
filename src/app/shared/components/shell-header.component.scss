@@ -26,11 +26,12 @@
   letter-spacing: 0.02em;
 }
 
+// Subtitle eases down below ~575px so it fits phones before it truncates (#29).
 .mcl-brand-subtitle {
-  font-size: 0.68rem;
+  font-size: clamp(0.62rem, 1.9vw, 0.68rem);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: clamp(0.4px, 0.17vw, 1px);
   color: var(--mcl-subtitle-color);
 }
 
@@ -72,6 +73,12 @@
 
 // Collapsed menu: active link marked with a left bar instead of an underline.
 @media (max-width: 1199.98px) {
+  // Brand and hamburger share one row at any phone width (#29): the brand takes the free
+  // space (overflow-hidden lets it shrink) and truncates its text; the toggler (flex-shrink-0) never wraps.
+  .mcl-brand {
+    flex: 1;
+  }
+
   .mcl-nav-link {
     display: flex;
 
@@ -235,8 +242,7 @@
   }
 
   .mcl-account-email,
-  .mcl-account-email,
-.mcl-account-label {
+  .mcl-account-label {
     color: rgba(255, 255, 255, 0.65);
   }
 
