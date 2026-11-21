@@ -1,8 +1,8 @@
 # budget-guard
 
-`budget-guard` is the portal's only Cloud Function. When the project's **$10/month** Cloud Billing budget says actual cost has reached $10, it **detaches billing from the project**. That is Billy's decision of Nov 15, 2026: "Go with Blaze plus a $10 automatic billing shutoff and budget alerts". See ARCHITECTURE.md "Pricing plan and cost cap" and PROJECTPLAN.md Phase 0 "Cost cap".
+`budget-guard` is the portal's only Cloud Function. When the project's **$20/month** Cloud Billing budget says actual cost has reached $20, it **detaches billing from the project**. Billy chose Blaze plus a $10 automatic billing shutoff on Nov 15, 2026, then raised the ceiling to **$20** on Nov 16, 2026 (he kept the $20 budget already on his billing account). See ARCHITECTURE.md "Pricing plan and cost cap" and PROJECTPLAN.md Phase 0 "Cost cap".
 
-It follows Google's [Disable billing usage with notifications](https://cloud.google.com/billing/docs/how-to/disable-billing-with-notifications) sample, with these changes: TypeScript, a dedicated least-privilege service account, a dry-run switch, and `>=` instead of `>`, so it triggers when cost *reaches* $10.
+It follows Google's [Disable billing usage with notifications](https://cloud.google.com/billing/docs/how-to/disable-billing-with-notifications) sample, with these changes: TypeScript, a dedicated least-privilege service account, a dry-run switch, and `>=` instead of `>`, so it triggers when cost *reaches* $20.
 
 | | |
 |---|---|
@@ -25,7 +25,7 @@ For each budget notification:
 4. In dry run, it logs `DRY RUN ... would detach billing from projects/<id>` and stops.
 5. Otherwise it calls Cloud Billing API v1 `projects.updateBillingInfo` with `billingAccountName: ""` (detach) and logs `billing DETACHED`. If the call fails, it logs the error and the run fails. Retries are off, and the next budget notification tries again.
 
-Detaching billing stops every billed service in the project, including this function, until the owner re-links billing. Google warns that resources may not shut down cleanly. The $2/$5/$8 email alerts give time to react first.
+Detaching billing stops every billed service in the project, including this function, until the owner re-links billing. Google warns that resources may not shut down cleanly. The $4/$10/$16 email alerts give time to react first.
 
 ## Roles (least privilege)
 
@@ -78,35 +78,36 @@ gcloud services enable \
 gcloud pubsub topics create "$TOPIC" --project "$PROJECT_ID"
 ```
 
-### 3. Create the $10/month budget, alerts at 20/50/80/100%, linked to the topic
+### 3. Edit the existing $20/month budget and connect the topic
 
-In the console: go to **Billing → Budgets & alerts → Create budget**.
-- **Name:** `mcl-portal $10/month`.
-- **Scope:** Projects = **`mcl-portal` only**. This matters: the shutoff uses this budget's cost, so other projects must not count toward it.
-- **Amount:** Specified amount, **$10**, monthly.
-- **Thresholds:** 20%, 50%, 80%, 100%, all of type **Actual** ($2, $5, $8, $10).
+Billy already has a $20/month budget, with alerts at 20/50/80/100% ($4, $10, $16, $20). **Don't create a new budget.** Open the one that already exists, check it, and connect the `budget-guard` topic from step 2. (This matches the owner guide in `docs/admin-guide/firebase-setup.md`, which calls it "your $20 budget"; its name in the console is whatever you chose.)
+
+In the console: go to **Billing → Budgets & alerts** and open **your $20 budget** (press its name; don't press **Create budget**). About **Spend cap** budgets: Google's newer spend cap budgets only cover a few services (Gemini, Vertex AI, Cloud Run, Cloud Run functions). They do **not** cover Firestore, Storage or Hosting. Your **alerts-only** budget plus budget-guard is the right setup.
+
+- **Scope:** **Time range** = **Monthly**. **Projects** = **`mcl-portal` only**. This matters: the shutoff uses this budget's cost, so other projects must not count toward it. If other projects are selected, untick them so only `mcl-portal` is left. If the budget covers the whole billing account, spending in some other project could trip the portal shutoff. If you also want an alert for the whole billing account, make a **separate** budget for that, and **never** connect the `budget-guard` topic to it.
+- **Amount:** Budget type **Specified amount**, target amount **$20**, monthly.
+- **Thresholds:** four rows, all with **Trigger on** set to **Actual**: 20% ($4), 50% ($10), 80% ($16), 100% ($20). Add or fix a row if one is missing or different.
 - **Notifications:** keep "Email alerts to billing admins and users". Tick **"Connect a Pub/Sub topic to this budget"** and choose project `mcl-portal`, topic `budget-guard`.
-- Click **Finish**. The console gives the billing service permission to publish to the topic.
+- Click **Save**. The console gives the billing service permission to publish to the topic.
 
-Or with gcloud (threshold percents are fractions):
+Or with gcloud, list budgets to get the ID, then update the existing budget (don't run `budgets create`):
 
 ```bash
-gcloud billing budgets create \
+gcloud billing budgets list --billing-account="$BILLING_ACCOUNT_ID"
+# Set BUDGET_ID to your $20 budget's ID from the list, then:
+gcloud billing budgets update "$BUDGET_ID" \
   --billing-account="$BILLING_ACCOUNT_ID" \
-  --display-name="mcl-portal \$10/month" \
-  --budget-amount=10USD \
-  --calendar-period=month \
   --filter-projects="projects/${PROJECT_ID}" \
-  --threshold-rule=percent=0.2 --threshold-rule=percent=0.5 \
-  --threshold-rule=percent=0.8 --threshold-rule=percent=1.0 \
   --notifications-rule-pubsub-topic="projects/${PROJECT_ID}/topics/${TOPIC}"
 ```
+
+Check the amount and the four Actual thresholds in the console if the list output doesn't already show $20 and 20/50/80/100%.
 
 ### 4. Create the service account and grant the roles
 
 ```bash
 gcloud iam service-accounts create budget-guard \
-  --display-name="budget-guard (detaches billing at \$10/month)" --project "$PROJECT_ID"
+  --display-name="budget-guard (detaches billing at \$20/month)" --project "$PROJECT_ID"
 
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:${SA}" --role="roles/billing.projectManager" --condition=None
@@ -151,17 +152,17 @@ With `BUDGET_GUARD_DRY_RUN=true` deployed, publish two fake notifications:
 
 ```bash
 gcloud pubsub topics publish "$TOPIC" --project "$PROJECT_ID" \
-  --message='{"budgetDisplayName":"mcl-portal $10/month (TEST)","costAmount":2.00,"budgetAmount":10.00,"currencyCode":"USD","alertThresholdExceeded":0.2}'
+  --message='{"budgetDisplayName":"mcl-portal $20/month (TEST)","costAmount":4.00,"budgetAmount":20.00,"currencyCode":"USD","alertThresholdExceeded":0.2}'
 gcloud pubsub topics publish "$TOPIC" --project "$PROJECT_ID" \
-  --message='{"budgetDisplayName":"mcl-portal $10/month (TEST)","costAmount":10.00,"budgetAmount":10.00,"currencyCode":"USD","alertThresholdExceeded":1.0}'
+  --message='{"budgetDisplayName":"mcl-portal $20/month (TEST)","costAmount":20.00,"budgetAmount":20.00,"currencyCode":"USD","alertThresholdExceeded":1.0}'
 
 gcloud functions logs read budgetGuard --gen2 --region "$REGION" --project "$PROJECT_ID" --limit 20
 ```
 
 (Or see **Firebase console → Functions → budgetGuard → Logs**.) What you should see:
 
-- `budget-guard: under budget (2 of 10); no action.`
-- `budget-guard: DRY RUN. Budget reached (10 >= 10); would detach billing from projects/mcl-portal. Nothing changed.`
+- `budget-guard: under budget (4 of 20); no action.`
+- `budget-guard: DRY RUN. Budget reached (20 >= 20); would detach billing from projects/mcl-portal. Nothing changed.`
 - **No** `could not read billing status` warning. That warning would mean the Browser role or the Cloud Billing API is missing.
 - If nothing shows at all, step 5b (Cloud Run Invoker) is probably missing or hasn't taken effect yet.
 
@@ -235,21 +236,19 @@ If a deploy fails at the **build** step with a permission error, the Cloud Build
 
 ## If billing gets detached: re-enabling safely
 
-The spec says billed services stop "until Billy re-links billing". **Decided (Billy, Nov 15, 2026; OPEN_QUESTIONS #22): there is no override. To turn billing back on within the same month, raise the budget first, then re-link.** How it behaves:
+The spec says billed services stop "until Billy re-links billing". **Decided (Nov 16, 2026; OPEN_QUESTIONS #22): no override; raise the budget first, then re-link.** How it behaves:
 
 - Budgets send notifications to the topic **several times a day** for the rest of the month, carrying the month-to-date `costAmount`.
 - If you re-link billing while `costAmount` is still at or over the budget, the next notification detaches billing **again**, usually within hours. budget-guard has no override, by design.
 - At the start of the next month `costAmount` resets, so re-linking then is safe.
 
-To re-enable within the same month, change the budget first (it lives on the billing account, so editing it works even while the project has no billing), then re-link:
+To re-enable within the same month, raise the budget first (it lives on the billing account, so editing it works even while the project has no billing), keep the topic connected, then re-link:
 
-1. **Billing → Budgets & alerts → `mcl-portal $10/month`**, then either:
-   - **raise the amount** above the current month-to-date cost (for example $20) and keep the topic connected, so the guard still protects the new limit; or
-   - **untick "Connect a Pub/Sub topic"** for the rest of the month (no automatic shutoff, email alerts only).
+1. **Billing → Budgets & alerts → your $20 budget**, then **raise the amount** above the current month-to-date cost (for example $30) and keep the topic connected, so the guard still protects the new limit.
 2. **Billing → Account management → My projects**, find `mcl-portal`, then **Change billing** and pick your billing account.
-3. At the start of next month, set the budget back to $10 and reconnect the topic if you disconnected it.
+3. At the start of next month, set the budget back to $20.
 
-Switching to dry run instead also works, but it means a redeploy, which needs billing turned on. That leaves a window where an incoming notification could detach billing again. Prefer changing the budget.
+Switching to dry run instead also works, but it means a redeploy, which needs billing turned on. That leaves a window where an incoming notification could detach billing again. Prefer raising the budget.
 
 ## If the project ID isn't `mcl-portal`
 
@@ -282,7 +281,7 @@ npm run emulators:budget-guard
 # in another terminal:
 curl -s -X POST -H 'Content-Type: application/json' \
   http://127.0.0.1:8085/v1/projects/demo-mcl-portal/topics/budget-guard:publish \
-  -d "{\"messages\":[{\"data\":\"$(printf '%s' '{"costAmount":10,"budgetAmount":10}' | base64 -w0)\"}]}"
+  -d "{\"messages\":[{\"data\":\"$(printf '%s' '{"costAmount":20,"budgetAmount":20}' | base64 -w0)\"}]}"
 ```
 
 The Cloud Billing client is `@googleapis/cloudbilling`. It's the stand-alone package for the same `cloudbilling` v1 API that `googleapis` exposes, about 1 MB instead of about 250 MB.
