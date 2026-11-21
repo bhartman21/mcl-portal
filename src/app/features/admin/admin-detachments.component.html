@@ -17,8 +17,8 @@
     <div class="alert alert-warning d-flex align-items-center gap-2 mb-4" role="alert">
       <i class="bi bi-exclamation-triangle-fill"></i>
       <div>
-        <strong>{{ unverifiedCount() }} detachment</strong> has an unconfirmed detachment number
-        and is marked <strong>Needs Verification</strong>.
+        <strong>{{ unverifiedBanner().subject }}</strong> {{ unverifiedBanner().verb }} an unconfirmed detachment number
+        and {{ unverifiedBanner().copula }} marked <strong>Needs Verification</strong>.
       </div>
     </div>
   }
@@ -76,8 +76,8 @@
   @if (!detachmentService.loading() && detachments().length === 0) {
     <div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4" role="status">
       <div>
-        The detachment directory is empty. Load the Department of Florida starter list
-        (#54 = Morris F. Dixon Jr.; S/Sgt Ted Archambault marked Needs Verification).
+        The detachment directory is empty. Load the Department of Florida starter list.
+        Some seeded rows are marked Needs Verification.
       </div>
       <button type="button" class="btn btn-sm btn-mcl" [disabled]="seeding()" (click)="seedDefaults()">
         <i class="bi bi-database-add me-1"></i>Seed DoF Detachments
