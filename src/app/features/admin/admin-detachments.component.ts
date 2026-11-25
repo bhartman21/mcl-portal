@@ -5,6 +5,14 @@ import { Detachment } from '../../core/models/detachment.model';
 import { DetachmentService } from '../../core/services/detachment.service';
 import { StatusBadgeComponent } from '../../shared/components/status-badge.component';
 
+/** Subject/verb/copula for the Needs Verification warning (1 vs many). */
+export function unverifiedBannerParts(count: number): { subject: string; verb: string; copula: string } {
+  if (count === 1) {
+    return { subject: '1 detachment', verb: 'has', copula: 'is' };
+  }
+  return { subject: `${count} detachments`, verb: 'have', copula: 'are' };
+}
+
 @Component({
   selector: 'app-admin-detachments',
   standalone: true,
@@ -16,6 +24,7 @@ export class AdminDetachmentsComponent {
 
   readonly detachments = this.detachmentService.detachments;
   readonly unverifiedCount = computed(() => this.detachmentService.unverifiedCount());
+  readonly unverifiedBanner = computed(() => unverifiedBannerParts(this.unverifiedCount()));
 
   newNumber = '';
   newName = '';
