@@ -373,16 +373,17 @@ GitHub uses this robot account to publish the site and rules. This is done in th
 - Press **Create and continue**.
 
 **32. Give it roles.** — Phone OK
-Under **Grant this service account access to project**, use **Select a role** and **+ Add another role** to add these roles. Type each name into the search box:
+Under **Grant this service account access to project**, use **Select a role** and **+ Add another role** to add these two roles. Type each name into the search box:
 
-- **Firebase Admin**
+- **Firebase Hosting Admin**
+- **Firebase Rules Admin**
 
 Then press **Continue**, then **Done**.
 
 **Don't** add **Service Account User** here. B.O.B. confirmed the website deploy (`deploy.yml`: Hosting plus the Firestore and Storage rules) doesn't need it. `firebase.json` only has the plain `/index.html` rewrite. Giving it on the whole project would let GitHub act as every robot account in the project.
 - *Caveat for later:* if a Hosting rewrite to a Cloud Function or Cloud Run service is ever added to `firebase.json`, `github-deploy` will need **Service Account User** on **that service's runtime account only**. Grant it on the single account, as in step 33, not on the project.
 
-*Why Firebase Admin:* the README lists **Firebase Hosting Admin** and **Firebase Rules Admin**, "or Firebase Admin". The deploy publishes Hosting, Firestore rules **and** Storage rules. I could not confirm that the smaller set is enough for the Storage part, so **Firebase Admin** is the safer choice (*Unverified until the first deploy runs*). If you prefer the smaller set and the deploy later fails with a "permission" error, add **Firebase Admin**.
+*If a later deploy fails with a "permission" error:* come back and add **Firebase Admin** as a fallback. On the IAM page, find the `github-deploy@…` row, press the **pencil**, press **+ Add another role**, pick **Firebase Admin**, and press **Save**. Start with the two roles above. Don't grant Firebase Admin unless you need it.
 
 **33. Optional: extra roles for the GitHub budget-guard workflow.** — Phone OK (desktop mode), easier on a computer
 **Only needed if you'll use the optional GitHub workflow `deploy-functions.yml` (Deploy budget-guard) for later deploys.** Skip it if you deploy budget-guard from your computer (steps 24 and 27). That workflow has **not been tested** against a real project yet (*Unverified*). It uses the same `FIREBASE_SERVICE_ACCOUNT` secret, so these roles go to **`github-deploy@YOUR-PROJECT-ID.iam.gserviceaccount.com`**. This list comes from B.O.B.'s README, section "CI deployer permissions (deploy-functions.yml)".
@@ -395,7 +396,7 @@ Then press **Continue**, then **Done**.
 | **Service Usage Consumer** (`roles/serviceusage.serviceUsageConsumer`) | the project | IAM page (below) |
 | **Service Account User** (`roles/iam.serviceAccountUser`) | **only** the account `budget-guard@YOUR-PROJECT-ID.iam.gserviceaccount.com` | one service account (below) |
 | **Service Account User** (`roles/iam.serviceAccountUser`) | **only** the Cloud Build account, by default `PROJECT-NUMBER-compute@developer.gserviceaccount.com` | one service account (below) |
-| Firebase project read (`firebase.projects.get`) | the project | Nothing to do. **Firebase Admin** (step 32) already covers it, as Firebase Hosting Admin would. |
+| Firebase project read (`firebase.projects.get`) | the project | Nothing to do. **Firebase Hosting Admin** (step 32) already covers it. **Firebase Admin** would also cover it, if you added that fallback. |
 
 **On the project** (the first two rows):
 - Go to https://console.cloud.google.com/iam-admin/iam, in project **YOUR-PROJECT-ID**.
@@ -485,7 +486,7 @@ Tips:
 
 ## Part 10 — Turn on the GitHub workflows
 
-The two automation files, `ci.yml` (checks) and `deploy.yml` (publishes the site), are parked in `ci/github-workflows/`. GitHub only runs them from `.github/workflows/`. They were parked because the command-line login that pushed them lacked GitHub's `workflow` permission. **The GitHub website doesn't have that limit**, so you can move them there.
+The two automation files, `ci.yml` (checks) and `deploy.yml` (publishes the site), are parked in `ci/github-workflows/`. GitHub only runs them from `.github/workflows/`. They were parked because the command-line login that pushed them lacked GitHub's `workflow` permission, and that login still doesn't have it. **The main way to turn them on is to move the files in the GitHub website editor** (steps 39 and 40). The website doesn't need that permission.
 
 **39. Move `deploy.yml`.** — Phone OK (desktop mode), easier on a computer
 - Open https://github.com/bhartman21/mcl-portal/blob/main/ci/github-workflows/deploy.yml
@@ -502,7 +503,7 @@ Same steps for https://github.com/bhartman21/mcl-portal/blob/main/ci/github-work
 
 Moving the files removes them from `ci/github-workflows/`. The leftover `ci/github-workflows/README.md` can be deleted later by B.O.B.
 
-**Alternative:** let B.O.B. do it from the command line. It runs `gh auth refresh -h github.com -s workflow`, which shows an 8-character code. You open **https://github.com/login/device** on your phone, type the code, and approve. That approval works fine on a phone.
+**Secondary path — only if you are already on a computer whose GitHub login has the `workflow` permission:** you can move the files from the command line. If that login doesn't have the permission yet, `gh auth refresh -h github.com -s workflow` shows an 8-character code; open **https://github.com/login/device**, type the code, and approve. The project's command-line login still lacks the `workflow` scope, so this is not something the project bots can do for you. Use the website steps above.
 
 **Order tip:** do Part 9 (secrets) **before** Part 10. Then the first push to `main` deploys straight away. If you did Part 10 first, that's fine: see step 41.
 
@@ -554,7 +555,7 @@ This is the only time roles are edited outside the app. The console ignores the 
 | Open https://mcl-portal.web.app | The portal home page, with **no** "Local Demo Mode: data stays in this browser" strip above the header. |
 | Sign in | The sign-in email arrives and the link signs you in. |
 | Header after step 43 | An **Admin** menu appears. |
-| **Admin → Detachments** (page title **Detachment Directory**) | The Florida starter list of 52 detachments, including #54 Morris F. Dixon Jr. and #819 SSgt. Ted Archambault (Crystal River), already verified. A few rows (#549, #1055, #1072, #1476) show **Needs Verification**; that's expected. |
+| **Admin → Detachments** (page title **Detachment Directory**) | The Florida starter list of 52 detachments, including #54 Morris F. Dixon Jr. and #819 SSgt. Ted Archambault (Crystal River), already verified. A few rows (#549, #1072, #1476) show **Needs Verification**; that's expected. **#1055 Lou Ehlers** is also flagged in the starter list, but it is not a routine Needs Verification row. The National locator lists #1055 as Yakima, WA, and it is not on the DoF district page. Leave it as it is until Billy decides, per OPEN_QUESTIONS #21. |
 | Firestore → Data | `users`, `settings` and `detachments` collections exist. |
 | Storage → Rules | The rules you pasted are shown (they mention `ad-images`). |
 | GitHub → Actions | Green checks on **Deploy to Firebase Hosting** (and **CI**). |
@@ -609,7 +610,7 @@ Marked *Unverified* above:
 - The **Firebase console → Functions → budgetGuard → Logs** path (step 26). It comes from B.O.B.'s README, not from Google's docs.
 - The optional GitHub "Deploy budget-guard" workflow and its extra roles (step 33). It's untested.
 - The wording of the Storage permission prompt, and the manual IAM role names.
-- Whether **Firebase Hosting Admin** plus **Firebase Rules Admin** alone would be enough in place of Firebase Admin.
+- Whether the two roles in step 32 (**Firebase Hosting Admin** and **Firebase Rules Admin**) are enough for the Storage rules deploy. If a deploy fails on permissions, add **Firebase Admin** (the fallback in step 32).
 - Firestore array-editing controls.
 - Copying the key file on iPhone and Android.
 
