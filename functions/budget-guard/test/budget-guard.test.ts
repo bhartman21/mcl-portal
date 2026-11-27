@@ -2,9 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { BillingClient, handleBudgetNotification, Logger, parseBudgetNotification } from '../src/budget-guard';
 
 /** A Cloud Billing budget notification as the budget publishes it, base64-encoded like Pub/Sub data. */
-function budgetMessage(costAmount: unknown, budgetAmount: unknown = 10, extra: Record<string, unknown> = {}): string {
+function budgetMessage(costAmount: unknown, budgetAmount: unknown = 20, extra: Record<string, unknown> = {}): string {
   const body = {
-    budgetDisplayName: 'mcl-portal $10/month',
+    budgetDisplayName: 'mcl-portal $20/month',
     alertThresholdExceeded: 1.0,
     costAmount,
     costIntervalStart: '2026-11-01T07:00:00Z',
@@ -46,7 +46,7 @@ describe('handleBudgetNotification', () => {
 
   it('at budget (cost == budget): detaches billing from this project', async () => {
     const billing = fakeBilling();
-    const outcome = await handleBudgetNotification({ ...base, messageData: budgetMessage(10), billing, logger: fakeLogger() });
+    const outcome = await handleBudgetNotification({ ...base, messageData: budgetMessage(20), billing, logger: fakeLogger() });
     expect(outcome).toBe('billing-disabled');
     expect(billing.isBillingEnabled).toHaveBeenCalledWith('projects/mcl-portal');
     expect(billing.disableBilling).toHaveBeenCalledWith('projects/mcl-portal');
@@ -55,7 +55,7 @@ describe('handleBudgetNotification', () => {
   it('over budget: detaches billing and logs it', async () => {
     const billing = fakeBilling();
     const logger = fakeLogger();
-    const outcome = await handleBudgetNotification({ ...base, messageData: budgetMessage(12.34), billing, logger });
+    const outcome = await handleBudgetNotification({ ...base, messageData: budgetMessage(24.68), billing, logger });
     expect(outcome).toBe('billing-disabled');
     expect(billing.disableBilling).toHaveBeenCalledTimes(1);
     expect(logger.error.mock.calls.some(([m]) => String(m).includes('billing DETACHED from projects/mcl-portal'))).toBe(true);
@@ -63,13 +63,13 @@ describe('handleBudgetNotification', () => {
 
   it('uses whatever project ID the runtime provides (not hardcoded)', async () => {
     const billing = fakeBilling();
-    await handleBudgetNotification({ ...base, projectId: 'other-proj-123', messageData: budgetMessage(11), billing, logger: fakeLogger() });
+    await handleBudgetNotification({ ...base, projectId: 'other-proj-123', messageData: budgetMessage(22), billing, logger: fakeLogger() });
     expect(billing.disableBilling).toHaveBeenCalledWith('projects/other-proj-123');
   });
 
   it('billing already disabled: skips the detach', async () => {
     const billing = fakeBilling(false);
-    const outcome = await handleBudgetNotification({ ...base, messageData: budgetMessage(15), billing, logger: fakeLogger() });
+    const outcome = await handleBudgetNotification({ ...base, messageData: budgetMessage(30), billing, logger: fakeLogger() });
     expect(outcome).toBe('already-disabled');
     expect(billing.disableBilling).not.toHaveBeenCalled();
   });
@@ -77,7 +77,7 @@ describe('handleBudgetNotification', () => {
   it('dry run: logs what it would do and never detaches', async () => {
     const billing = fakeBilling();
     const logger = fakeLogger();
-    const outcome = await handleBudgetNotification({ ...base, dryRun: true, messageData: budgetMessage(10.5), billing, logger });
+    const outcome = await handleBudgetNotification({ ...base, dryRun: true, messageData: budgetMessage(21), billing, logger });
     expect(outcome).toBe('dry-run');
     expect(billing.disableBilling).not.toHaveBeenCalled();
     expect(logger.warn.mock.calls.some(([m]) => String(m).includes('DRY RUN'))).toBe(true);
@@ -95,7 +95,7 @@ describe('handleBudgetNotification', () => {
     ['empty data', ''],
     ['missing data', undefined],
     ['JSON array', Buffer.from('[1,2]').toString('base64')],
-    ['missing costAmount', Buffer.from(JSON.stringify({ budgetAmount: 10 })).toString('base64')],
+    ['missing costAmount', Buffer.from(JSON.stringify({ budgetAmount: 20 })).toString('base64')],
     ['non-numeric costAmount', budgetMessage('lots')],
     ['zero budgetAmount', budgetMessage(5, 0)],
   ])('malformed message (%s): logs an error and does nothing', async (_label, data) => {
@@ -110,14 +110,14 @@ describe('handleBudgetNotification', () => {
 
   it('accepts numeric strings for amounts', async () => {
     const billing = fakeBilling();
-    const outcome = await handleBudgetNotification({ ...base, messageData: budgetMessage('10.00', '10'), billing, logger: fakeLogger() });
+    const outcome = await handleBudgetNotification({ ...base, messageData: budgetMessage('20.00', '20'), billing, logger: fakeLogger() });
     expect(outcome).toBe('billing-disabled');
   });
 
   it('cannot read billing status: assumes enabled and detaches (as in Google\'s sample)', async () => {
     const billing = fakeBilling(new Error('PERMISSION_DENIED'));
     const logger = fakeLogger();
-    const outcome = await handleBudgetNotification({ ...base, messageData: budgetMessage(10), billing, logger });
+    const outcome = await handleBudgetNotification({ ...base, messageData: budgetMessage(20), billing, logger });
     expect(outcome).toBe('billing-disabled');
     expect(logger.warn).toHaveBeenCalled();
     expect(billing.disableBilling).toHaveBeenCalled();
@@ -128,14 +128,14 @@ describe('handleBudgetNotification', () => {
     billing.disableBilling.mockRejectedValueOnce(new Error('PERMISSION_DENIED'));
     const logger = fakeLogger();
     await expect(
-      handleBudgetNotification({ ...base, messageData: budgetMessage(11), billing, logger })
+      handleBudgetNotification({ ...base, messageData: budgetMessage(22), billing, logger })
     ).rejects.toThrow('PERMISSION_DENIED');
     expect(logger.error.mock.calls.some(([m]) => String(m).includes('FAILED to detach'))).toBe(true);
   });
 
   it('missing project ID: does not call the billing API', async () => {
     const billing = fakeBilling();
-    const outcome = await handleBudgetNotification({ ...base, projectId: '', messageData: budgetMessage(11), billing, logger: fakeLogger() });
+    const outcome = await handleBudgetNotification({ ...base, projectId: '', messageData: budgetMessage(22), billing, logger: fakeLogger() });
     expect(outcome).toBe('no-project');
     expect(billing.isBillingEnabled).not.toHaveBeenCalled();
   });
@@ -145,9 +145,9 @@ describe('parseBudgetNotification', () => {
   it('reads the fields from a real-shaped notification', () => {
     expect(parseBudgetNotification(budgetMessage(3.5))).toMatchObject({
       costAmount: 3.5,
-      budgetAmount: 10,
+      budgetAmount: 20,
       currencyCode: 'USD',
-      budgetDisplayName: 'mcl-portal $10/month',
+      budgetDisplayName: 'mcl-portal $20/month',
     });
   });
 });

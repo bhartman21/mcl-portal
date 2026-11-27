@@ -95,3 +95,12 @@ See `features/RIBBON_RACK.md` and PROJECTPLAN “Future / optional”.
 | VAVS roles | Members log own; det/dept reps monitor & modify; audit trail |
 
 22. ~~**Budget-guard re-link**~~ **Decided (Nov 16, 2026): no override; raise the budget first, then re-link.** Original question: if Billy re-links billing while the month's cost is still over the budget ($20 since Nov 16, 2026), `budget-guard` detaches it again. Add an override switch, or is "raise the budget first, then re-link" enough?
+
+23. **Ad owners placing their own ad in a book** (from T.E.D. bug #43 and B.O.B.'s PR #42): PR #42 blocks every owner, admins included, from placing their own approved ad in a book, as an extension of the no-self-review rule. Keep that, or allow it because only already-approved ads can be placed? Waiting on Billy.
+
+24. **One book per ad?** PR #42 follows ARCHITECTURE's single `bookId`, so an ad can sit in only one book. Should an approved ad be reusable across books (for example, the same ad in two conventions)?
+
+25. **Who can see approved-ad images?** Storage download URLs are bearer links: anyone who has the link can open the image. That ties into B.O.B.'s earlier question about who may see images on approved ads. Is that acceptable, or should images be served only through rules-checked reads?
+
+26. **Orphaned uploads:** images uploaded to Storage but never saved on an ad stay there. Cleaning them up automatically would need a Cloud Function (only `budget-guard` exists today). Accept them for now, clean up by hand, or add a cleanup function?
+
