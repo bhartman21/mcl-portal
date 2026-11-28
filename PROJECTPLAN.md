@@ -100,7 +100,7 @@ Runnable app on Firebase Hosting (or local `ng serve`) with login, role claims/d
 - [ ] Approver queue for staff roles. Approvers cannot review their own ads; admins may self-approve only with a required reason (audited, other admins notified). Admins can undo an approval or rejection with a reason (back to submitted, no submission used). Decided Nov 14, 2026.
 - [ ] Print / Save PDF via browser print for book preview (MVP).
 - [ ] Signed-in users can create drafts (**decided** Nov 14, 2026; company accounts later).
-- [ ] **Ad data on Firestore + Storage** (added Nov 14, 2026): the first build saves ads only in browser localStorage, so approvers on other computers can't see them. All ad, book, and size data must live in Firestore, with images in Storage. Remove localStorage as the source of truth.
+- [x] **Ad data on Firestore + Storage** (added Nov 14, 2026; done in PR #42, merged Nov 28, 2026, fd84367): the first build saves ads only in browser localStorage, so approvers on other computers can't see them. All ad, book, and size data must live in Firestore, with images in Storage. Remove localStorage as the source of truth.
 - [ ] **Submission limit and lock** (decided Nov 14, 2026): `submissionCount`/`maxSubmissions` (3), lock after the 3rd rejection, enforced in the UI and Firestore rules.
 - [ ] **Admin lock reset + audit**: department or national admins reset a locked ad (count to 0, back to draft); each reset is written to `audits`.
 - [ ] Withdraw (submitted back to draft) and draft-only delete, enforced in rules.
