@@ -14,23 +14,24 @@ describe('AdEditorComponent: locked ads', () => {
   let service: AdBookService;
   let adId: string | null;
 
-  function newAd(): string {
-    return service.createAd({
+  async function newAd(): Promise<string> {
+    const ad = await service.createAd({
       title: 'My ad',
       sizeId: 'full',
       imageUrl: 'data:image/png;base64,AAAA',
       fit: 'cover',
       position: { x: 50, y: 50 },
-    }).id;
+    });
+    return ad.id;
   }
 
   /** Uses all 3 submissions, each rejected, so the ad ends up `rejected` + `locked`. */
-  function lockAd(id: string): void {
+  async function lockAd(id: string): Promise<void> {
     for (let i = 0; i < 3; i++) {
       auth.signInAs('alice');
-      service.submitAd(id);
+      await service.submitAd(id);
       auth.signInAs('approver', ['member', 'adBookApprover']);
-      service.rejectAd(id, 'Please fix the logo');
+      await service.rejectAd(id, 'Please fix the logo');
     }
     auth.signInAs('alice');
   }
@@ -64,9 +65,9 @@ describe('AdEditorComponent: locked ads', () => {
     auth.signInAs('alice');
   });
 
-  it('hides Save Draft and Submit for Approval on a locked ad and says an admin can reset it', () => {
-    const id = newAd();
-    lockAd(id);
+  it('hides Save Draft and Submit for Approval on a locked ad and says an admin can reset it', async () => {
+    const id = await newAd();
+    await lockAd(id);
     adId = id;
     const { el, buttons } = render();
     expect(buttons()).not.toContain('Save Draft');
@@ -78,8 +79,8 @@ describe('AdEditorComponent: locked ads', () => {
   });
 
   it('disables the editing fields on a locked ad so changes cannot be made', async () => {
-    const id = newAd();
-    lockAd(id);
+    const id = await newAd();
+    await lockAd(id);
     adId = id;
     const { fixture, el } = render();
     await fixture.whenStable();
@@ -89,11 +90,11 @@ describe('AdEditorComponent: locked ads', () => {
     expect(title.disabled).toBe(true);
   });
 
-  it('still offers Save Draft and Submit for Approval on a rejected ad that is not locked', () => {
-    const id = newAd();
-    service.submitAd(id);
+  it('still offers Save Draft and Submit for Approval on a rejected ad that is not locked', async () => {
+    const id = await newAd();
+    await service.submitAd(id);
     auth.signInAs('approver', ['member', 'adBookApprover']);
-    service.rejectAd(id, 'Please fix the logo');
+    await service.rejectAd(id, 'Please fix the logo');
     auth.signInAs('alice');
     adId = id;
     const { el, buttons } = render();
@@ -102,11 +103,11 @@ describe('AdEditorComponent: locked ads', () => {
     expect(el.querySelector('[data-testid="locked-ad-note"]')).toBeNull();
   });
 
-  it('offers Save Draft and Submit for Approval again after an admin resets the lock', () => {
-    const id = newAd();
-    lockAd(id);
+  it('offers Save Draft and Submit for Approval again after an admin resets the lock', async () => {
+    const id = await newAd();
+    await lockAd(id);
     auth.signInAs('dept', ['member', 'departmentAdmin']);
-    service.resetLock(id, 'Fresh start');
+    await service.resetLock(id, 'Fresh start');
     auth.signInAs('alice');
     adId = id;
     const { el, buttons } = render();

@@ -23,6 +23,11 @@ export interface AdBook {
   status: AdBookStatus;
   pageSize: 'letter';
   adIds: string[];
+  /**
+   * How many ads in `adIds` each user owns (uid -> count), kept in step with every placement and
+   * removal and checked by firestore.rules. Owners of any ad in a book cannot reorder it (#46).
+   */
+  ownerCounts?: Record<string, number>;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -41,6 +46,7 @@ export interface AdLockReset {
 
 export interface AdItem {
   id: string;
+  /** The book this approved ad is placed in (set by an approver with the placement). */
   bookId?: string;
   departmentId: 'dof';
   sizeId: string;
@@ -59,6 +65,12 @@ export interface AdItem {
   createdByName?: string;
   createdByType: 'member' | 'company' | 'guest';
   companyName?: string;
+  /** Storage object path `ad-images/{uid}/{adId}/{file}` (issue #4). */
+  imagePath?: string;
+  /**
+   * Display URL. With Firebase it is resolved at runtime from `imagePath` and never stored in
+   * Firestore; in local demo mode (no Firebase config) it holds the browser-only data URL.
+   */
   imageUrl?: string;
   imageName?: string;
   fit: 'cover' | 'contain';

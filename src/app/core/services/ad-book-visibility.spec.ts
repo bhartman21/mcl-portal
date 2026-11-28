@@ -10,7 +10,7 @@ describe('AdBookService book visibility (#9)', () => {
   let auth: FakeAuth;
   let service: AdBookService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     localStorage.clear();
     auth = new FakeAuth();
     TestBed.configureTestingModule({
@@ -21,10 +21,10 @@ describe('AdBookService book visibility (#9)', () => {
     });
     service = TestBed.inject(AdBookService);
     auth.signInAs('approver', ['member', 'adBookApprover']);
-    const draft = service.createBook({ title: 'Draft book', eventName: 'Fall' });
-    service.updateBookStatus(draft.id, 'draft');
-    const locked = service.createBook({ title: 'Locked book', eventName: 'Fall' });
-    service.updateBookStatus(locked.id, 'locked');
+    const draft = await service.createBook({ title: 'Draft book', eventName: 'Fall' });
+    await service.updateBookStatus(draft.id, 'draft');
+    const locked = await service.createBook({ title: 'Locked book', eventName: 'Fall' });
+    await service.updateBookStatus(locked.id, 'locked');
   });
 
   it('approvers see every book', () => {

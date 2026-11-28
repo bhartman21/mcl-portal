@@ -12,14 +12,15 @@ describe('AdBookHubComponent', () => {
   let auth: FakeAuth;
   let service: AdBookService;
 
-  function newAd(): string {
-    return service.createAd({
+  async function newAd(): Promise<string> {
+    const ad = await service.createAd({
       title: 'My ad',
       sizeId: 'full',
       imageUrl: 'data:image/png;base64,AAAA',
       fit: 'cover',
       position: { x: 50, y: 50 },
-    }).id;
+    });
+    return ad.id;
   }
 
   function buttonTexts(): string[] {
@@ -44,25 +45,25 @@ describe('AdBookHubComponent', () => {
     auth.signInAs('alice');
   });
 
-  it('offers Withdraw to Draft on submitted ads only (#6)', () => {
-    const id = newAd();
+  it('offers Withdraw to Draft on submitted ads only (#6)', async () => {
+    const id = await newAd();
     expect(buttonTexts()).not.toContain('Withdraw to Draft');
-    service.submitAd(id);
+    await service.submitAd(id);
     expect(buttonTexts()).toContain('Withdraw to Draft');
 
     auth.signInAs('approver', ['member', 'adBookApprover']);
-    service.approveAd(id);
+    await service.approveAd(id);
     auth.signInAs('alice');
     expect(buttonTexts()).not.toContain('Withdraw to Draft');
   });
 
-  it('shows the submission count and hides Edit/Submit on a locked ad (#5)', () => {
-    const id = newAd();
+  it('shows the submission count and hides Edit/Submit on a locked ad (#5)', async () => {
+    const id = await newAd();
     for (let i = 0; i < 3; i++) {
       auth.signInAs('alice');
-      service.submitAd(id);
+      await service.submitAd(id);
       auth.signInAs('approver', ['member', 'adBookApprover']);
-      service.rejectAd(id, 'Please fix the logo');
+      await service.rejectAd(id, 'Please fix the logo');
     }
     auth.signInAs('alice');
     const fixture = TestBed.createComponent(AdBookHubComponent);

@@ -63,6 +63,11 @@
             </div>
 
             <h3 class="h6 fw-bold mb-2">Place Approved Ad</h3>
+            @if (b.status === 'open' && ownUnplacedAds().length > 0) {
+              <p class="mcl-muted small mb-2" data-testid="own-ads-note">
+                Your own approved ads aren't listed here. A different approver must place them.
+              </p>
+            }
             @if (b.status !== 'open') {
               <p class="mcl-muted small mb-0">
                 This book is <strong>{{ b.status }}</strong>. Reopen it to add or reorder ads.
@@ -90,6 +95,11 @@
         <div class="col-lg-7">
           <div class="mcl-card mcl-card-navy p-4 h-100">
             <h2 class="h6 fw-bold mb-3">Placed Ads ({{ placedAds().length }})</h2>
+            @if (b.status === 'open' && ownsAdInBook() && placedAds().length > 1) {
+              <p class="mcl-muted small mb-2" data-testid="own-ad-order-note">
+                You have your own ad in this book, so a different approver must set the page order.
+              </p>
+            }
             @if (placedAds().length === 0) {
               <p class="mcl-muted small mb-0">No ads placed in this book yet.</p>
             } @else {
@@ -107,24 +117,30 @@
                         <button
                           type="button"
                           class="btn btn-outline-secondary"
-                          title="Move up"
-                          (click)="adBook.moveAdInBook(b.id, item.ad.id, -1)"
+                          [title]="ownsAdInBook() ? reorderBlockedTitle : 'Move up'"
+                          [attr.aria-label]="ownsAdInBook() ? reorderBlockedTitle : 'Move up'"
+                          [disabled]="ownsAdInBook()"
+                          (click)="move(item.ad.id, -1)"
                         >
                           <i class="bi bi-arrow-up"></i>
                         </button>
                         <button
                           type="button"
                           class="btn btn-outline-secondary"
-                          title="Move down"
-                          (click)="adBook.moveAdInBook(b.id, item.ad.id, 1)"
+                          [title]="ownsAdInBook() ? reorderBlockedTitle : 'Move down'"
+                          [attr.aria-label]="ownsAdInBook() ? reorderBlockedTitle : 'Move down'"
+                          [disabled]="ownsAdInBook()"
+                          (click)="move(item.ad.id, 1)"
                         >
                           <i class="bi bi-arrow-down"></i>
                         </button>
                         <button
                           type="button"
                           class="btn btn-outline-danger"
-                          title="Remove from book"
-                          (click)="adBook.removeAdFromBook(b.id, item.ad.id)"
+                          [title]="adBook.isOwnAd(item.ad) ? 'A different approver must remove your own ad' : 'Remove from book'"
+                          [attr.aria-label]="adBook.isOwnAd(item.ad) ? 'A different approver must remove your own ad' : 'Remove from book'"
+                          [disabled]="adBook.isOwnAd(item.ad)"
+                          (click)="remove(item.ad.id)"
                         >
                           <i class="bi bi-x-lg"></i>
                         </button>

@@ -40,49 +40,54 @@ export class AdBookHubComponent {
     }
   }
 
-  submitAd(id: string): void {
+  async submitAd(id: string): Promise<void> {
     this.errorMsg.set(null);
     this.notice.set(null);
     try {
-      this.adBook.submitAd(id);
+      await this.adBook.submitAd(id);
       this.notice.set('Ad submitted to the Approval Queue.');
     } catch (err) {
       this.errorMsg.set(err instanceof Error ? err.message : 'Unable to submit ad.');
     }
   }
 
-  recallAd(id: string): void {
+  async recallAd(id: string): Promise<void> {
     this.errorMsg.set(null);
     this.notice.set(null);
     try {
-      this.adBook.recallToDraft(id);
+      await this.adBook.recallToDraft(id);
       this.notice.set('Ad withdrawn to draft. This does not give back a submission.');
     } catch (err) {
       this.errorMsg.set(err instanceof Error ? err.message : 'Unable to withdraw ad.');
     }
   }
 
-  deleteAd(id: string): void {
+  async deleteAd(id: string): Promise<void> {
     this.errorMsg.set(null);
     this.notice.set(null);
     try {
-      this.adBook.deleteAd(id);
+      await this.adBook.deleteAd(id);
       this.notice.set('Draft deleted.');
     } catch (err) {
       this.errorMsg.set(err instanceof Error ? err.message : 'Unable to delete ad.');
     }
   }
 
-  createBook(): void {
+  async createBook(): Promise<void> {
     if (!this.newBookTitle.trim() || !this.newBookEvent.trim()) return;
-    this.adBook.createBook({
-      title: this.newBookTitle,
-      eventName: this.newBookEvent,
-    });
-    this.newBookTitle = '';
-    this.newBookEvent = '';
-    this.showNewBookForm.set(false);
-    this.notice.set('Event book created.');
+    this.errorMsg.set(null);
+    try {
+      await this.adBook.createBook({
+        title: this.newBookTitle,
+        eventName: this.newBookEvent,
+      });
+      this.newBookTitle = '';
+      this.newBookEvent = '';
+      this.showNewBookForm.set(false);
+      this.notice.set('Event book created.');
+    } catch (err) {
+      this.errorMsg.set(err instanceof Error ? err.message : 'Unable to create the event book.');
+    }
   }
 }
 
